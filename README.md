@@ -50,3 +50,13 @@ Check code formating
 ```bash
     npm run format:check
 ```
+
+Run tests once
+```bash
+    npm run test:run
+```
+
+Run tests in watch mode
+```bash
+    npm test
+```
