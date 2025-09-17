@@ -7,10 +7,13 @@ function LoginScreen() {
   const [nombre, setNombre] = useState('');
 
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+
+  const backgroundStyle = {
+    backgroundImage: "url('/bg-login.png')",
+  };
   
-  // Ejecuta cuando se mandan los datos
   function handleSubmit(event){
-    event.preventDefault(); // Previene el comportamiento por defecto de los inputs
+    event.preventDefault();
 
     console.log(nombre);
     console.log(fechaNacimiento);
@@ -25,7 +28,7 @@ function LoginScreen() {
   }
 
   return (
-    <div className="screen-container">
+    <div className="screen-container" style={backgroundStyle}>
       <div className="input-container">
         <h1>Ingresa tus datos</h1>
 
