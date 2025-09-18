@@ -7,10 +7,6 @@ function LoginScreen() {
   const [nombre, setNombre] = useState('');
 
   const [fechaNacimiento, setFechaNacimiento] = useState('');
-
-  const backgroundStyle = {
-    backgroundImage: "url('/bg-login.png')",
-  };
   
   function handleSubmit(event){
     event.preventDefault();
@@ -28,7 +24,7 @@ function LoginScreen() {
   }
 
   return (
-    <div className="screen-container" style={backgroundStyle}>
+    <div className="screen-container">
       <div className="input-container">
         <h1>Ingresa tus datos</h1>
 
@@ -43,7 +39,7 @@ function LoginScreen() {
               required
               placeholder="Ingresar nombre" />
           </div>
-          <div className="input-goup">
+          <div className="input-group">
             <label htmlFor="fechaNacimiento">Fecha de nacimiento: </label>
             <input 
               type="date"
