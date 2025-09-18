@@ -4,25 +4,80 @@
   box-sizing: border-box;
 }
 
-body, html {
+html, body {
   height: 100%;
-  font-family: 'Segoe UI', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Limelight', sans-serif;
+}
+
+h1 {
+  padding: 0 0 50px 0;
+  color: #B49150;
+  text-shadow:
+    -2px -2px 0 #531107,
+     2px -2px 0 #3D0800,
+    -2px  2px 0 #3D0800,
+     2px  2px 0 #3D0800;
 }
 
 .screen-container {
-  background-size: 'cover';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('/bg-login.png');
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  height: 100vh;
-  width: 100vw;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+}
+
+.input-container {
+  width: 500px;
+  margin-right: 100px;
+
+  background-color: #2e06009d;
+  padding: 32px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.input-group input {
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }
 
 .submit-btn {
   color: #B49150;
   background-color: #3D0800;
-  border-radius: 2px;
-  border: 3px #B49150 solid;
+  border: 2px solid #B49150;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.6s ease;
+}
+
+.submit-btn:hover {
+  background-color: #4e0a00;
 }
