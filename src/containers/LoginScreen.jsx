@@ -31,7 +31,8 @@ function LoginScreen() {
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="nombre">Nombre: </label>
-            <input 
+            <input
+              className='nombre-input' 
               type="text" 
               id="nombre" 
               value={nombre}
@@ -41,7 +42,8 @@ function LoginScreen() {
           </div>
           <div className="input-group">
             <label htmlFor="fechaNacimiento">Fecha de nacimiento: </label>
-            <input 
+            <input
+              className='fecha-input'
               type="date"
               id="fechaNacimiento"
               value={fechaNacimiento}
