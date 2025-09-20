@@ -1,0 +1,23 @@
+.pantalla-creacion {
+  min-height: 100vh;
+  min-width: 100vw;
+  margin: 0;
+  background-image: url('./assets/background_crear_partida.jpeg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: #000;
+  display: flex;           
+  align-items: center;        
+  justify-content: flex-end;
+}
+
+.form-container {
+  padding: 2rem;
+  border-radius: 1rem;
+  width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
