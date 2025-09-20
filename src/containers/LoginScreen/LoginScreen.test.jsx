@@ -63,7 +63,7 @@ describe('LoginScreen', () => {
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), {
       target: { value: '2000-01-01' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/ i }));
 
     // Segundo ingreso con mismo nombre y avatar
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
