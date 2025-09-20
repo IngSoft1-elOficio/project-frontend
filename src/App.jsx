@@ -1,19 +1,16 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-
+//import Lobby from './containers/LobbyScreen';
 function App() {
   const [count, setCount] = useState(0)
 
+	//return <Lobby></Lobby>
   return (
     <AppProvider>
-	  <BrowserRouter>
-	  <div className="App">
-		<Routes>
-      			<Route path="/"	element={<div>
+	  <div className="App"><div>
 	  			<div>
         				<a href="https://vite.dev" target="_blank">
           					<img src={viteLogo} className="logo" alt="Vite logo" />
@@ -34,11 +31,8 @@ function App() {
       				<p className="read-the-docs">
         				Click on the Vite and React logos to learn more
       				</p>	
-	  		</div>} />
-	  		{ /* Otras rutas  */ }
-	  	</Routes>
-	  </div>
-	  </BrowserRouter>
+	  		</div>
+			</div>
     </AppProvider>
   )
 }
