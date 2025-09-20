@@ -21,3 +21,30 @@
   align-items: flex-start;
 }
 
+.cantidad-jugadores-container {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+/* Botones */
+.btn-cantidad-jugador {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #825012;
+  border-radius: 8px;
+  background-color: #3D0800;
+  color: #B49150;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;      
+  align-items: center;     
+  justify-content: center;
+}
+
+.btn-cantidad-jugador-activo {
+  background-color: #FFD700;
+  color: #000;
+  border-color: #B49150;
+}
