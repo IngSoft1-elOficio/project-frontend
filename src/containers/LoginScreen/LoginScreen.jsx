@@ -16,7 +16,7 @@ function LoginScreen() {
     event.preventDefault();
 
     if (!nombre || !fechaNacimiento || !avatar) {
-      setError('Todos los campos son obligatorios');
+      setError('todos los campos son obligatorios');
       return;
     }
 
