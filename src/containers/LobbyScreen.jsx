@@ -1,25 +1,37 @@
-import ProfileCard from './ProfileCard';
-import Button from './Button';
+import ProfileCard from '../components/ProfileCard'
+import Button from '../components/Button'
+import Background from '../components/Background'
 
 function LobbyScreen() {
-return (
-    <div
-      className="min-h-screen bg-cover bg-center relative"
-      style={{ backgroundImage: "url('/fondo.jpeg')" }}
-    >
-      <div className="relative z-10 flex items-center pt-40 justify-end h-screen pr-36">
-      <div className="rounded-xl shadow-lg p-6 flex items-center gap-6">
+  const player = {
+    name: 'Jugador',
+    avatar: '/images/icon_2.png',
+    birthdate: '21/09/1995',
+  }
 
-      <div className="flex flex-col gap-4 space-y-6">
-            <Button color="green">Crear partida</Button>
-            <Button color="blue">Unirse a partida</Button>
-            <Button color="red">Salir</Button>
-      </div>
-    
-    </div>
-    </div>
+  const elementsPosition =
+    'flex flex-col justify-center items-end h-screen pe-48'
+
+  const buttonSeparation = 'flex flex-col pt-12 gap-5'
+
+  return (
+    <div>
+      <Background>
+        <div className={`${elementsPosition}`}>
+          <ProfileCard
+            name={player.name}
+            avatar={player.avatar}
+            birthdate={player.birthdate}
+          />
+          <div className={`${buttonSeparation}`}>
+            <Button>Crear partida</Button>
+            <Button>Unirse a partida</Button>
+            <Button>Salir</Button>
+          </div>
+        </div>
+      </Background>
     </div>
   )
 }
 
-export default LobbyScreen;
+export default LobbyScreen
