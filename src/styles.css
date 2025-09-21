@@ -21,6 +21,13 @@
   align-items: flex-start;
 }
 
+.error-message {
+  color: #ff3333;
+  margin-top: 1rem;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
 .cantidad-jugadores-container {
   display: flex;
   flex-direction: row;
@@ -47,4 +54,14 @@
   background-color: #FFD700;
   color: #000;
   border-color: #B49150;
+}
+
+.btn-continuar {
+  background-color: #3D0800;
+  color: #B49150;
+  border: 2px solid #825012;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
 }
