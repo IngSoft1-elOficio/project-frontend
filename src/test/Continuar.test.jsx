@@ -4,32 +4,40 @@ import Continuar from '../components/Continuar';
 
 describe('Continuar', () => {
   it('muestra el botón', () => {
-    render(<Continuar nombre="Partida" jugadores={2} onContinue={() => {}} />);
+    render(
+      <Continuar nombre="Partida" jugadores={2} onContinue={() => {}} setError={() => {}} />
+    );
     expect(screen.getByText('Crear Partida')).toBeInTheDocument();
   });
 
   it('llama a onContinue si nombre y jugadores son válidos', () => {
     const onContinue = vi.fn();
-    render(<Continuar nombre="Partida" jugadores={2} onContinue={onContinue} />);
+    const setError = vi.fn();
+    render(
+      <Continuar nombre="Partida" jugadores={2} onContinue={onContinue} setError={setError} />
+    );
     fireEvent.click(screen.getByText('Crear Partida'));
+    expect(setError).toHaveBeenCalledWith('');
     expect(onContinue).toHaveBeenCalled();
   });
 
-  it('muestra alerta si el nombre está vacío', () => {
-    window.alert = vi.fn(); // Mock alert
+  it('setea error si el nombre está vacío', () => {
     const onContinue = vi.fn();
-    render(<Continuar nombre="" jugadores={2} onContinue={onContinue} />);
+    const setError = vi.fn();
+    render(<Continuar nombre="" jugadores={2} onContinue={onContinue} setError={setError} />);
     fireEvent.click(screen.getByText('Crear Partida'));
-    expect(window.alert).toHaveBeenCalledWith("El nombre de la partida no puede estar vacío");
+    expect(setError).toHaveBeenCalledWith("El nombre de la partida no puede estar vacío");
     expect(onContinue).not.toHaveBeenCalled();
   });
 
-  it('muestra alerta si no hay jugadores seleccionados', () => {
-    window.alert = vi.fn(); // Mock alert
+  it('setea error si no hay jugadores seleccionados', () => {
     const onContinue = vi.fn();
-    render(<Continuar nombre="Partida" jugadores={null} onContinue={onContinue} />);
+    const setError = vi.fn();
+    render(
+      <Continuar nombre="Partida" jugadores={null} onContinue={onContinue} setError={setError} />
+    );
     fireEvent.click(screen.getByText('Crear Partida'));
-    expect(window.alert).toHaveBeenCalledWith("Selecciona la cantidad de jugadores");
+    expect(setError).toHaveBeenCalledWith("Selecciona la cantidad de jugadores");
     expect(onContinue).not.toHaveBeenCalled();
   });
 });

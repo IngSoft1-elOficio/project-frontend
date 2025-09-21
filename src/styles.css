@@ -1,67 +1,46 @@
 .pantalla-creacion {
-  min-height: 100vh;
-  min-width: 100vw;
-  margin: 0;
-  background-image: url('./assets/background_crear_partida.jpeg');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-color: #000;
-  display: flex;           
-  align-items: center;        
-  justify-content: flex-end;
+  @apply fixed inset-0 
+         bg-black bg-[url('./assets/background_crear_partida.jpeg')] 
+         bg-no-repeat bg-cover bg-center
+         flex items-center justify-end;
 }
 
 .form-container {
-  padding: 2rem;
-  border-radius: 1rem;
-  width: 480px;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  align-items: flex-start;
+  @apply p-8 rounded-2xl w-[480px]
+         flex flex-col gap-8 items-start;
 }
 
 .error-message {
-  color: #ff3333;
-  margin-top: 1rem;
-  font-weight: bold;
-  font-size: 1rem;
+  @apply text-red-500 mt-4 font-bold text-base;
+}
+
+.nombre-partida-input {
+  @apply w-full px-4 py-2 border-2 rounded-lg mt-2
+         border-[#825012] bg-[#3D0800] text-white
+         focus:outline-none focus:ring-2 focus:ring-yellow-500;
 }
 
 .cantidad-jugadores-container {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  margin-top: 0.5rem;
+  @apply flex flex-row gap-2 mt-2;
 }
 
 /* Botones */
 .btn-cantidad-jugador {
-  width: 40px;
-  height: 40px;
-  border: 2px solid #825012;
-  border-radius: 8px;
-  background-color: #3D0800;
-  color: #B49150;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;      
-  align-items: center;     
-  justify-content: center;
+  @apply w-10 h-10 border-2 rounded-lg font-bold cursor-pointer
+         flex items-center justify-center
+         border-[#825012] bg-[#3D0800] text-[#B49150]
+         hover:bg-[#4d1008] hover:text-yellow-400
+         focus:ring-2 focus:ring-yellow-500;
 }
 
 .btn-cantidad-jugador-activo {
-  background-color: #FFD700;
-  color: #000;
-  border-color: #B49150;
+  @apply bg-[#FFD700] text-black border-[#B49150]
+         hover:bg-[#FFD700] hover:text-black;
 }
 
 .btn-continuar {
-  background-color: #3D0800;
-  color: #B49150;
-  border: 2px solid #825012;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: bold;
-  cursor: pointer;
+  @apply bg-[#3D0800] text-[#B49150] border-2 border-[#825012]
+         px-5 py-2.5 rounded-xl font-bold cursor-pointer
+         hover:bg-[#4d1008] hover:text-yellow-400
+         focus:ring-2 focus:ring-yellow-500;
 }

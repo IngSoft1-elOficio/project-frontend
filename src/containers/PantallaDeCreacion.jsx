@@ -22,7 +22,7 @@ export default function PantallaDeCreacion() {
       });
 
       if (response.status === 409) {
-        setError("Ya existe una partida con ese nombre.");
+        setError("Ya existe una partida con ese nombre");
         return;
       }
 
@@ -32,31 +32,22 @@ export default function PantallaDeCreacion() {
       navigate(`/lobby/${data.id_partida}`);
     }
     catch(error){
-      setError("Error al crear la partida.");
+      setError("Error al crear la partida");
     }
   };
 
   return (
-    <div className="
-    fixed inset-0
-    bg-black bg-[url('./assets/background_crear_partida.jpeg')]
-    bg-no-repeat bg-cover bg-center
-    flex items-center justify-end
-    "
-    >
-      <div className="
-      p-8 rounded-2xl w-[480px]
-      flex flex-col gap-8 items-start
-      "
-      >
-        {error && <p className="text-[#ff3333] mt-4 font-bold text-base">{error}</p>}
-        <NombreDePartida nombre={nombre} setNombre={setNombre} />
+    <div className="pantalla-creacion">
+      <div className="form-container">
+        <NombreDePartida nombre={nombre} setNombre={setNombre} setError={setError}/>
         <CantidadDeJugadores jugadores={jugadores} setJugadores={setJugadores} />
         <Continuar
           nombre={nombre}
           jugadores={jugadores}
           onContinue={handleContinue}
+          setError={setError}
         />
+        {error && <p className="error-message">{error}</p>}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from './App.jsx'
 import PantallaDeCreacion from "./containers/PantallaDeCreacion.jsx";
 import './index.css';
+import './styles.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
