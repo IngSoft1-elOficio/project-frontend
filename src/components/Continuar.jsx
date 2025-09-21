@@ -13,7 +13,7 @@ export default function Continuar({ nombre, jugadores, onContinue }) {
 
   return (
     <button onClick={validar} className="btn-continuar">
-      Continuar
+      Crear Partida
     </button>
   );
 }

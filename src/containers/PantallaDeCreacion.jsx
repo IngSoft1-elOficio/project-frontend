@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { v4 as uuidv4 } from 'uuid';
 import NombreDePartida from "../components/NombreDePartida";
 import CantidadDeJugadores from "../components/CantidadDeJugadores";
 import Continuar from "../components/Continuar";
@@ -9,14 +10,21 @@ export default function PantallaDeCreacion() {
   const [jugadores, setJugadores] = useState(null);
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const jugadorId = localStorage.getItem('jugadorId') || uuidv4();
+  localStorage.setItem('jugadorId', jugadorId);
 
   const handleContinue = async () => {
     try{
       const response = await fetch("http://localhost:4000/api/newgame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, jugadores }),
+        body: JSON.stringify({ nombre, jugadores, host: jugadorId }),
       });
+
+      if (response.status === 409) {
+        setError("Ya existe una partida con ese nombre.");
+        return;
+      }
 
       if (!response.ok) throw new Error();
 
