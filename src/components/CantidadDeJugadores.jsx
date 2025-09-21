@@ -3,13 +3,18 @@ export default function CantidadDeJugadores({ jugadores, setJugadores }) {
 
   return (
     <div>
-      <label>Cantidad de jugadores:</label>
-      <div className="cantidad-jugadores-container">
+      <label className="flex flex-col items-start text-[#FFD700]">Cantidad de jugadores:</label>
+      <div className="flex flex-row gap-2 mt-2">
         {opciones.map((num) => (
           <button
             key={num}
             onClick={() => setJugadores(num)}
-            className={`btn-cantidad-jugador${jugadores === num ? " btn-cantidad-jugador-activo" : ""}`}
+            className={`"
+            w-10 h-10 border-2 border-[#825012] rounded-lg
+            bg-[#3D0800] text-[#B49150] font-bold
+            cursor-pointer flex items-center justify-center
+            "
+            ${jugadores === num ? " bg-[#FFD700] text-black border-[#B49150]" : ""}`}
             >
             {num}
           </button>

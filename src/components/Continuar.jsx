@@ -12,7 +12,11 @@ export default function Continuar({ nombre, jugadores, onContinue }) {
   };
 
   return (
-    <button onClick={validar} className="btn-continuar">
+    <button onClick={validar} className="
+    bg-[#3D0800] text-[#B49150] border-2 border-[#825012]
+    px-5 py-2.5 rounded-xl font-bold cursor-pointer
+    "
+    >
       Crear Partida
     </button>
   );

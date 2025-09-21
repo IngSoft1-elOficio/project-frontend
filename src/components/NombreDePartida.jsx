@@ -1,7 +1,7 @@
 export default function NombreDePartida({ nombre, setNombre }) {
   return (
     <div>
-      <label>Nombre de la partida: </label>
+      <label className="text-[#FFD700]">Nombre de la partida: </label>
       <input
         type="text"
         value={nombre}
