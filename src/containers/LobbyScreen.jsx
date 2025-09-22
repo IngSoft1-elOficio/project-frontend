@@ -1,12 +1,21 @@
+import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import ProfileCard from '../components/ProfileCard'
 import Button from '../components/Button'
 import Background from '../components/Background'
 
 function LobbyScreen() {
-  const player = {
+  const navigate = useNavigate()
+
+  const [player, setPlayer] = useState({
     name: 'Jugador',
-    avatar: '/images/icon_2.png',
+    avatar: '/images/avatar_4.png',
     birthdate: '21/09/1995',
+  })
+
+  const handleLogout = () => {
+    setPlayer({ name: '', avatar: '', birthdate: '' })
+    navigate('/ingreso')
   }
 
   const elementsPosition =
@@ -24,9 +33,9 @@ function LobbyScreen() {
             birthdate={player.birthdate}
           />
           <div className={`${buttonSeparation}`}>
-            <Button>Crear partida</Button>
-            <Button>Unirse a partida</Button>
-            <Button>Salir</Button>
+            <Button onClick={() => navigate('/newgame')}>Crear partida</Button>
+            <Button onClick={() => navigate('/games')}>Unirse a partida</Button>
+            <Button onClick={handleLogout}>Salir</Button>
           </div>
         </div>
       </Background>
