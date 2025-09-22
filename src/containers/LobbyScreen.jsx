@@ -14,6 +14,9 @@ function LobbyScreen() {
     dispatch({ type: actionTypes.LOGOUT })
   }
 
+  const isLoggedIn =
+    player.name !== '' && player.avatar !== '' && player.birthdate !== ''
+
   console.log('[LobbyScreen] Estado player:', player)
 
   const elementsPosition =
@@ -21,21 +24,40 @@ function LobbyScreen() {
 
   const buttonSeparation = 'flex flex-col pt-12 gap-5'
 
+  const errorStyle =
+    'font-[Limelight] text-4xl w-64 text-center text-red-600 pb-4'
+  const errorMsgStyle =
+    'font-[Limelight] text-4xl w-64 text-center text-white pb-8'
+
   return (
     <div>
       <Background>
-        <div className={`${elementsPosition}`}>
-          <ProfileCard
-            name={player.name}
-            avatar={player.avatar}
-            birthdate={player.birthdate}
-          />
-          <div className={`${buttonSeparation}`}>
-            <Button onClick={() => navigate('/newgame')}>Crear partida</Button>
-            <Button onClick={() => navigate('/games')}>Unirse a partida</Button>
-            <Button onClick={handleLogout}>Salir</Button>
+        {isLoggedIn ? (
+          <div className={`${elementsPosition}`}>
+            <ProfileCard
+              name={player.name}
+              avatar={player.avatar}
+              birthdate={player.birthdate}
+            />
+            <div className={`${buttonSeparation}`}>
+              <Button onClick={() => navigate('/newgame')}>
+                Crear partida
+              </Button>
+              <Button onClick={() => navigate('/games')}>
+                Unirse a partida
+              </Button>
+              <Button onClick={handleLogout}>Salir</Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className={`${elementsPosition}`}>
+            <p className={`${errorStyle}`}>¡ERROR!</p>
+            <p className={`${errorMsgStyle}`}>
+              Debes iniciar sesion para acceder al lobby
+            </p>
+            <Button onClick={() => navigate('/ingreso')}>Ingreso</Button>
+          </div>
+        )}
       </Background>
     </div>
   )

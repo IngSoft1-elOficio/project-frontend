@@ -1,7 +1,7 @@
 export default function ProfileCard({ name, avatar, birthdate }) {
-  if (!name && !avatar && !birthdate) {
-    return null
-  }
+  //if (!name && !avatar && !birthdate) {
+  //  return null
+  //}
 
   const cardColors = 'border-[#825012]'
   const cardSize = 'w-64 h-64'
