@@ -1,4 +1,8 @@
 export default function ProfileCard({ name, avatar, birthdate }) {
+  if (!name && !avatar && !birthdate) {
+    return null
+  }
+
   const cardColors = 'border-[#825012]'
   const cardSize = 'w-64 h-64'
   const cardPosition = 'flex flex-col items-center justify-center p-6 gap-2'

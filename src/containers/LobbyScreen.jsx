@@ -1,22 +1,20 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useAppContext, useAppDispatch } from '../context/AppContext'
+import { actionTypes } from '../context/appState'
 import ProfileCard from '../components/ProfileCard'
 import Button from '../components/Button'
 import Background from '../components/Background'
 
 function LobbyScreen() {
   const navigate = useNavigate()
-
-  const [player, setPlayer] = useState({
-    name: 'Jugador',
-    avatar: '/images/avatar_4.png',
-    birthdate: '21/09/1995',
-  })
+  const { player } = useAppContext()
+  const dispatch = useAppDispatch()
 
   const handleLogout = () => {
-    setPlayer({ name: '', avatar: '', birthdate: '' })
-    navigate('/ingreso')
+    dispatch({ type: actionTypes.LOGOUT })
   }
+
+  console.log('[LobbyScreen] Estado player:', player)
 
   const elementsPosition =
     'flex flex-col justify-center items-end h-screen pe-48'

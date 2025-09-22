@@ -1,13 +1,15 @@
-import { createContext, useContext, useReducer } from 'react';
-import { appReducer, initialState } from './appState';
+import { createContext, useContext, useReducer } from 'react'
+import { appReducer, initialState, actionTypes } from './appState'
 
 // Contexts
-const AppContext = createContext();
-const AppDispatchContext = createContext();
+const AppContext = createContext()
+const AppDispatchContext = createContext()
 
 // Provider
 export const AppProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [state, dispatch] = useReducer(appReducer, initialState)
+
+  console.log('[AppProvider] estado actual:', state)
 
   return (
     <AppContext.Provider value={state}>
@@ -15,22 +17,22 @@ export const AppProvider = ({ children }) => {
         {children}
       </AppDispatchContext.Provider>
     </AppContext.Provider>
-  );
-};
+  )
+}
 
 // Hooks
 export const useAppContext = () => {
-  const context = useContext(AppContext);
+  const context = useContext(AppContext)
   if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
+    throw new Error('useAppContext must be used within an AppProvider')
   }
-  return context;
-};
+  return context
+}
 
 export const useAppDispatch = () => {
-  const context = useContext(AppDispatchContext);
+  const context = useContext(AppDispatchContext)
   if (context === undefined) {
-    throw new Error('useAppDispatch must be used within an AppProvider');
+    throw new Error('useAppDispatch must be used within an AppProvider')
   }
-  return context;
-};
+  return context
+}
