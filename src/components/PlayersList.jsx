@@ -1,4 +1,3 @@
-// src/components/PlayersList.jsx
 export default function PlayersList({ players = [], ownerId }) {
   if (!players || players.length === 0) {
     return (
@@ -8,19 +7,17 @@ export default function PlayersList({ players = [], ownerId }) {
     );
   }
 
-  // Helper para obtener un identificador estable del jugador
-  const getPid = (p) => p?.id ?? p?.userId ?? p?.uid ?? p?.name;
+
 
   return (
     <ul className="divide-y divide-[#825012]/40">
-      {players.map((p, i) => {
-        const pid = getPid(p);
-        const isHost =
-          ownerId != null && String(pid) === String(ownerId);
+      {players.map((p,i) => {
+      const playerId = p.id;
+      const isHost = ownerId == playerId;
 
         return (
           <li
-            key={pid ?? i}
+            key={playerId}
             className="flex items-center justify-between px-6 py-4"
           >
             <span className="truncate">
@@ -29,7 +26,7 @@ export default function PlayersList({ players = [], ownerId }) {
                   👑
                 </span>
               )}
-              {p?.name ?? pid ?? `Jugador ${i + 1}`}
+              {p?.name ?? `Jugador ${i + 1}`}
             </span>
 
             <span className="text-sm opacity-80">
