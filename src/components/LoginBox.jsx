@@ -1,7 +1,42 @@
 import "../containers/LoginScreen/LoginScreen.css";
-import '../index.css';
+import { useNavigate } from 'react-router-dom';
+import { useAppContext, useAppDispatch } from '../context/AppContext.jsx';
+import { actionTypes } from '../context/userContext';
+import AvatarSelector from './AvatarSelector';
 
-function Login({error, nombre, setNombre, avatar, handleSubmit,fechaNacimiento, setFechaNacimiento}) {
+function LoginBox() {
+  const navigate = useNavigate();
+  const { nombre, fechaNacimiento, avatar, error, usuarios } = useAppContext();
+  const dispatch = useAppDispatch();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (!nombre || !fechaNacimiento || !avatar) {
+      dispatch({ type: actionTypes.SET_ERROR, payload: 'todos los campos son obligatorios' });
+      return;
+    }
+
+    const fecha = new Date(fechaNacimiento);
+    const hoy = new Date();
+    if (fecha > hoy) {
+      dispatch({ type: actionTypes.SET_ERROR, payload: 'Fecha de nacimiento incorrecta' });
+      return;
+    }
+
+    const existe = usuarios.some(u => u.nombre === nombre && u.avatar === avatar);
+    if (existe) {
+      dispatch({ type: actionTypes.SET_ERROR, payload: 'Ya existe un usuario con el mismo nombre y avatar' });
+      return;
+    }
+
+    const nuevoUsuario = { nombre, fechaNacimiento, avatar };
+    dispatch({ type: actionTypes.ADD_USUARIO, payload: nuevoUsuario });
+    dispatch({ type: actionTypes.RESET_FORM });
+
+    navigate('/lobby');
+  };
+
   return (
     <div className="screen-container">
       <div className="input-container">
@@ -17,7 +52,7 @@ function Login({error, nombre, setNombre, avatar, handleSubmit,fechaNacimiento, 
               id="nombre"
               name="nombre"
               value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              onChange={(e) => dispatch({ type: actionTypes.SET_NOMBRE, payload: e.target.value })}
               placeholder="Ingresar nombre"
               required
               autoComplete="off"
@@ -26,20 +61,17 @@ function Login({error, nombre, setNombre, avatar, handleSubmit,fechaNacimiento, 
 
           <div className="input-group">
             <label htmlFor="avatar">Avatar:</label>
-            <select
-              id="avatar"
-              value={avatar}
-              onChange={(e) => setAvatar(e.target.value)}
-              required
-            >
-              <option value="" disabled>
-                Seleccioná un avatar
-              </option>
-              {/* Agregar mas en el futuro */}
-              <option value="avatar1">Avatar 1</option>
-              <option value="avatar2">Avatar 2</option>
-              <option value="avatar3">Avatar 3</option>
-            </select>
+            <AvatarSelector
+              selected={avatar}
+              onChange={(value) => dispatch({ type: actionTypes.SET_AVATAR, payload: value })}
+              options={[
+                { value: 'avatar1', src: './public/avatar1.jpg' },
+                { value: 'avatar2', src: './public/avatar2.jpg' },
+                { value: 'avatar3', src: './public/avatar3.jpg' },
+                { value: 'avatar4', src: './public/avatar4.jpg' },
+                { value: 'avatar5', src: './public/avatar5.jpg' },
+              ]}
+            />
           </div>
 
           <div className="input-group">
@@ -49,18 +81,16 @@ function Login({error, nombre, setNombre, avatar, handleSubmit,fechaNacimiento, 
               id="fechaNacimiento"
               name="fechaNacimiento"
               value={fechaNacimiento}
-              onChange={(e) => setFechaNacimiento(e.target.value)}
+              onChange={(e) => dispatch({ type: actionTypes.SET_FECHA, payload: e.target.value })}
               required
             />
           </div>
 
-          <button type="submit" className="submit-btn">
-            Ingresar
-          </button>
+          <button type="submit" className="submit-btn">Ingresar</button>
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-export default Login;
+export default LoginBox;
