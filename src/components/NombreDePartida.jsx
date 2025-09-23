@@ -1,14 +1,14 @@
-export default function NombreDePartida({ nombre, setNombre, setError }) {
+export default function NombreDePartida({ nombre_partida, setNombrePartida, setError }) {
   return (
     <div>
-      <label className="text-[#FFD700]">Nombre de la partida: </label>
+      <label className="text-[#FFD700] font-[Limelight]">Nombre de la partida: </label>
       <input
         type="text"
-        value={nombre}
-        maxLength={20}
+        value={nombre_partida}
+        maxLength={200}
         onChange={(e) => 
           { 
-            setNombre(e.target.value);
+            setNombrePartida(e.target.value);
             setError("");
           }
         }

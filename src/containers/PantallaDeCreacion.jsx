@@ -1,24 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { v4 as uuidv4 } from 'uuid';
+import { usePartidaContext, usePartidaDispatch, actionTypes } from "../context/PartidaContext";
+import { userContext } from "../context/userContext";
 import NombreDePartida from "../components/NombreDePartida";
 import CantidadDeJugadores from "../components/CantidadDeJugadores";
 import Continuar from "../components/Continuar";
 
 export default function PantallaDeCreacion() {
-  const [nombre, setNombre] = useState("");
-  const [jugadores, setJugadores] = useState(null);
+  const { nombre_partida, jugadores } = usePartidaContext();
+  const { nombre, avatar, fechaNacimiento } = userContext();
+  const dispatch = usePartidaDispatch();
   const navigate = useNavigate();
   const [error, setError] = useState("");
-  const jugadorId = localStorage.getItem('jugadorId') || uuidv4();
-  localStorage.setItem('jugadorId', jugadorId);
-
+ 
   const handleContinue = async () => {
     try{
       const response = await fetch("http://localhost:4000/api/newgame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, jugadores, host: jugadorId }),
+        body: JSON.stringify({ nombre_partida, jugadores, nombre, avatar, fechaNacimiento, host_id: true }),
       });
 
       if (response.status === 409) {
@@ -29,7 +29,7 @@ export default function PantallaDeCreacion() {
       if (!response.ok) throw new Error();
 
       const data = await response.json();
-      navigate(`/lobby/${data.id_partida}`);
+      navigate(`/game_join/${data.id_partida}`);
     }
     catch(error){
       setError("Error al crear la partida");
@@ -39,10 +39,15 @@ export default function PantallaDeCreacion() {
   return (
     <div className="pantalla-creacion">
       <div className="form-container">
-        <NombreDePartida nombre={nombre} setNombre={setNombre} setError={setError}/>
-        <CantidadDeJugadores jugadores={jugadores} setJugadores={setJugadores} />
+        <NombreDePartida nombre_partida={nombre_partida} setNombrePartida={(value) =>
+            dispatch({ type: actionTypes.SET_NOMBRE_PARTIDA, payload: value })} 
+            setError={setError}
+        />
+        <CantidadDeJugadores jugadores={jugadores} setJugadores={(value) =>
+            dispatch({ type: actionTypes.SET_JUGADORES, payload: value })}
+        />
         <Continuar
-          nombre={nombre}
+          nombre={nombre_partida}
           jugadores={jugadores}
           onContinue={handleContinue}
           setError={setError}

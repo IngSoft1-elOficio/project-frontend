@@ -3,7 +3,7 @@ export default function CantidadDeJugadores({ jugadores, setJugadores }) {
 
   return (
     <div>
-      <label className="flex items-start text-[#FFD700]">Cantidad de jugadores:</label>
+      <label className="flex items-start text-[#FFD700] font-[Limelight] ">Cantidad de jugadores:</label>
       <div className="cantidad-jugadores-container">
         {opciones.map((num) => (
           <button

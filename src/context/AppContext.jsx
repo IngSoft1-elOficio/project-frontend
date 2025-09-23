@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer } from 'react'
+import { PartidaProvider } from "./PartidaContext";
 
 // Estado inicial
 const initialState = {
@@ -28,12 +29,14 @@ export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState)
 
   return (
+    <PartidaProvider>
     <AppContext.Provider value={state}>
       <AppDispatchContext.Provider value={dispatch}>
         {children}
       </AppDispatchContext.Provider>
     </AppContext.Provider>
-  )
+    </PartidaProvider>
+  );
 }
 
 // Hooks 
