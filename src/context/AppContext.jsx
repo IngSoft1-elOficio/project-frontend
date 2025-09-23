@@ -7,7 +7,7 @@ const AppDispatchContext = createContext()
 
 // Provider
 export const AppProvider = ({ children }) => {
-  /* Code to persist log of player, use this and delete const from below
+  /* //Code to persist log of player, use this and delete const from below
   const persistedState =
     JSON.parse(localStorage.getItem('appState')) || initialState
 

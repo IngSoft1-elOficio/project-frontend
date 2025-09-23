@@ -1,6 +1,10 @@
-//Background with gradient color and image
+//Generic background image
+//Takes:
+// - children: represent internal elements => allows render childs inside
 export default function Background({ children }) {
+  //Background image style
   const bgImageStyle = 'bg-no-repeat bg-center bg-cover'
+  //Background image size
   const bgImageSize = 'w-screen h-screen'
 
   return (

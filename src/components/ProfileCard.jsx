@@ -1,28 +1,33 @@
+//Generic ProfileCard that shows player data
+//Takes:
+// - name: string with player name
+// - avatar: string with image URL
+// - birthdate: string with player birthdate
 export default function ProfileCard({ name, avatar, birthdate }) {
-  //if (!name && !avatar && !birthdate) {
-  //  return null
-  //}
-
+  //Container colors, size, position and style (card)
   const cardColors = 'border-[#825012]'
   const cardSize = 'w-64 h-64'
   const cardPosition = 'flex flex-col items-center justify-center p-6 gap-2'
   const cardStyle = 'bg-black/40 rounded-xl border'
 
-  const imageSize = 'w-40 h-40'
-  const imageStyle = 'rounded-full border-4'
-  const imageColor = 'border-[#825012]'
+  //Avatar size, style and border color
+  const avatarSize = 'w-40 h-40'
+  const avatarStyle = 'rounded-full border-4'
+  const avatarColor = 'border-[#825012]'
 
-  const textStyle = 'text-lg font-bold text-[#B49150]'
+  //Name style
+  const nameStyle = 'text-lg font-bold text-[#B49150]'
 
+  //Date style
   const dateStyle = 'text-center text-sm text-gray-300'
   return (
     <div className={`${cardSize} ${cardPosition} ${cardStyle} ${cardColors}`}>
       <img
         src={avatar}
         alt={name}
-        className={`${imageSize} ${imageStyle} ${imageColor}`}
+        className={`${avatarSize} ${avatarStyle} ${avatarColor}`}
       />
-      <h2 className={`${textStyle}`}>{name}</h2>
+      <h2 className={`${nameStyle}`}>{name}</h2>
       <p className={`${dateStyle}`}>Fecha de nacimiento: {birthdate}</p>
     </div>
   )
