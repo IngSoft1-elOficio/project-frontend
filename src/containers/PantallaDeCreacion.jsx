@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { usePartidaContext, usePartidaDispatch, actionTypes } from "../context/PartidaContext";
-import { userContext } from "../context/userContext";
+// import { userContext } from "../context/userContext";
 import NombreDePartida from "../components/NombreDePartida";
 import CantidadDeJugadores from "../components/CantidadDeJugadores";
 import Continuar from "../components/Continuar";
 
 export default function PantallaDeCreacion() {
   const { nombre_partida, jugadores } = usePartidaContext();
-  const { nombre, avatar, fechaNacimiento } = userContext();
+ // const { nombre, avatar, fechaNacimiento } = userContext();
   const dispatch = usePartidaDispatch();
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -18,7 +18,7 @@ export default function PantallaDeCreacion() {
       const response = await fetch("http://localhost:4000/api/newgame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre_partida, jugadores, nombre, avatar, fechaNacimiento, host_id: true }),
+        body: JSON.stringify({ nombre_partida, jugadores, host_id: true /*nombre, avatar, fechaNacimiento,*/ }),
       });
 
       if (response.status === 409) {
