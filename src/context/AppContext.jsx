@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer } from 'react'
 import { lobbyReducer, initialLobbyState } from './userStateLobby'
-import { userReducer, initialUserState } from './userContext';
+import { userReducer, initialUserState } from './userContext'
 
 // Contexts
 const AppContext = createContext();
@@ -28,13 +28,15 @@ export const AppProvider = ({ children }) => {
   //console.log('[AppProvider] estado actual:', state)
 
   return (
+    <PartidaProvider>
     <AppContext.Provider value={state}>
       <AppDispatchContext.Provider value={dispatch}>
         {children}
       </AppDispatchContext.Provider>
     </AppContext.Provider>
+    </PartidaProvider>
   );
-};
+}
 
 // Hooks
 export const useAppContext = () => {
