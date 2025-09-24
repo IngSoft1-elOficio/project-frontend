@@ -1,74 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../context/AppContext";
 import PlayersList from "../components/PlayersList";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
-import { getGameMock } from "../mocks/game";
-import { socket, bootMockRealtime } from "../mocks/realtime";
+
+import { useAppContext } from "../context/AppContext";
 
 export default function GameJoin() {
-  const id = 123; //reemplazar por useParams
-  const currentUserId = "32"; //pedir del local.storage
+  const { usuarios , game_id } = useAppContext();
+  //supongamos dispacth ADD_USUARIO es  [{ user_id: "26", nombre: "yo", avatar: "/img1.png", host: true } , {...} ]
+  const hostUser = usuarios.find(u => u.host === true);
+  const host_id = hostUser.user_id ;
   const navigate = useNavigate();
-
-  const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [gameName, setGameName] = useState("");
-  const [ownerId, setOwnerId] = useState(null);
-  const [status, setStatus] = useState("waiting");
+  const [status, setStatus] = useState('waiting');
 
-  const isOwner = ownerId != null && currentUserId === ownerId;
+  useEffect () => {
+    const onParticipants = PlayersList (usuarios,host_id);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const data = await getGameMock(id); //remplazar por await fetch
-      if (cancelled) return;
 
-      setGameName(data.name);
-      setOwnerId(data.ownerId);
-      setStatus(data.status);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [id]);
+  };
+
+
+
 
   useEffect(() => {
-    if (!id || !currentUserId) return;
-
-    bootMockRealtime({ gameId: id, userId: currentUserId });
-
-    const onParticipants = ({ participants_list }) => {
-      setPlayers((participants_list ?? []).map(p => ({ id: String(p.user_id) })));
-    };
-
-    const onPlayerConnected = ({ user_id, game_id }) => {
-      if (String(game_id) !== String(id)) return;
-      setPlayers(prev =>
-        prev.some(p => String(p.id) === String(user_id))
-          ? prev
-          : [...prev, { id: String(user_id) }]
-      );
-    };
-
-    socket.on("get_participants", onParticipants);
-    socket.on("player_connected", onPlayerConnected);
-
-    return () => {
-      socket.off("get_participants", onParticipants);
-      socket.off("player_connected", onPlayerConnected);
-    
-    };
-  }, [id, currentUserId]);
-
-  
-  useEffect(() => {
-    if (status === "started") navigate(`/game/${id}`);
+    if (status === "started") navigate(`/game/${game_id}`);
   }, [status, id, navigate]);
 
   const handleStart = () => {
-    if (!isOwner) return;
+    if (!hostUser) return;
     setStatus("started");
   };
 

@@ -1,17 +1,14 @@
+import { useAppContext } from "../context/AppContext";
+
 export default function PlayersList({ players = [], ownerId }) {
-  if (!players || players.length === 0) {
-    return (
-      <p className="px-6 py-4 italic text-[#B49150]/80">
-        Aún no hay jugadores.
-      </p>
-    );
+      const {usuarios} = useAppContext();
   }
 
 
 
   return (
     <ul className="divide-y divide-[#825012]/40">
-      {players.map((p,i) => {
+      {usuarios.map((p,i) => {
       const playerId = p.id;
       const isHost = ownerId == playerId;
 
