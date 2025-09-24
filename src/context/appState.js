@@ -4,8 +4,10 @@ export const initialState = {
   nombre: '',
   avatar: '',
   fechaNacimiento: '',
+  host: false,
   error: '',
-  user_id: ''
+  user_id: '',
+  game_id: '',
 };
 
 // Tipos de acción
@@ -15,6 +17,8 @@ export const actionTypes = {
   SET_FECHA: 'SET_FECHA',
   SET_ERROR: 'SET_ERROR',
   SET_USER_ID: 'SET_USER_ID',
+  SET_HOST: 'SET_HOST',
+  SET_GAME_ID: 'SET_GAME_ID',
   ADD_USUARIO: 'ADD_USUARIO',
   RESET: 'RESET',
 };
@@ -34,6 +38,10 @@ export const appReducer = (state, action) => {
       return { ...state, usuarios: [...state.usuarios, action.payload] };
     case actionTypes.SET_USER_ID:
       return {...state, user_id: action.payload };
+    case actionTypes.SET_GAME_ID:
+      return {...state, game_id: action.payload };
+    case actionTypes.SET_HOST:
+      return {...state, host: action.payload };
     case actionTypes.RESET:
       return initialState;
     default:
