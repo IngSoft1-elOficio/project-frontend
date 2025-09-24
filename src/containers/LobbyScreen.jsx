@@ -1,18 +1,19 @@
 import { useNavigate } from 'react-router-dom'
 import { useAppContext, useAppDispatch } from '../context/AppContext'
-import { actionTypes } from '../context/userStateLobby'
+import { lobbyActionTypes } from '../context/userStateLobby'
 import LobbyContent from '../components/LobbyContent'
 import LobbyError from '../components/LobbyError'
 import Background from '../components/Background'
 
 function LobbyScreen() {
   const navigate = useNavigate() //Works like buttons with links
-  const { player } = useAppContext() //Access player data from global context
-  const dispatch = useAppDispatch() //Allow to send actions to appReducer
+  const { lobbyState } = useAppContext()
+  const { player } = lobbyState
+  const { lobbyDispatch } = useAppDispatch()
 
   //Logout: delete player data from global context
   const handleLogout = () => {
-    dispatch({ type: actionTypes.LOGOUT })
+    lobbyDispatch({ type: lobbyActionTypes.LOGOUT })
     navigate('/ingreso')
   }
 

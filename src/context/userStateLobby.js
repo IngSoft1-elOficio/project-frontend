@@ -1,5 +1,5 @@
 // Estado inicial
-export const initialState = {
+export const initialLobbyState = {
   player: {
     name: 'Jugador',
     host: false,
@@ -9,17 +9,17 @@ export const initialState = {
 }
 
 // Tipos de acción
-export const actionTypes = {
+export const lobbyActionTypes = {
   //SET_PLAYER: 'SET_PLAYER',
   LOGOUT: 'LOGOUT',
 }
 
 // Reducer
-export const appReducer = (state, action) => {
+export const lobbyReducer = (state, action) => {
   switch (action.type) {
     //case actionTypes.SET_PLAYER:
     //return { ...state, player: action.payload }
-    case actionTypes.LOGOUT:
+    case lobbyActionTypes.LOGOUT:
       return {
         ...state,
         player: { name: '', host: false, avatar: '', birthdate: '' },
