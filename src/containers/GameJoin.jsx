@@ -35,27 +35,28 @@ export default function GameJoin() {
 
 
 
-  return (
-    <main className="relative min-h-dvh overflow-x-hidden">
-      <div
-        className="fixed inset-0 z-0 bg-[url('/background.png')] bg-cover bg-center"
-        aria-hidden
-      />
-      <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
-        <h1 className="mb-6 text-3xl font-bold text-[#F4CC6F]">
-          Partida: <span className="font-black">{game_id || "Sin nombre"}</span>
-        </h1>
+return (
+  <main className="relative min-h-dvh overflow-x-hidden">
+    <div
+      className="fixed inset-0 z-0 bg-[url('/background.png')] bg-cover bg-center"
+      aria-hidden
+    />
+    <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
+      <h1 className="mb-6 text-3xl font-bold text-[#F4CC6F] font-limelight">
+        Partida: <span className="font-black">{game_id || "Sin nombre"}</span>
+      </h1>
 
-        <Card title="Jugadores" className="mb-8">
-          <PlayersList players={usuarios} hostId={host_id} />
-        </Card>
+      <Card title="Jugadores" className="mb-8 font-limelight">
+        <PlayersList players={usuarios} hostId={host_id} />
+      </Card>
 
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
-          <Button onClick={handleStart} disabled={!hostUser}>
-            Iniciar partida
-          </Button>
-        </div>
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+        <Button onClick={handleStart} disabled={!hostUser} className="font-limelight">
+          Iniciar partida
+        </Button>
       </div>
-    </main>
-  );
+    </div>
+  </main>
+);
 }
+
