@@ -2,6 +2,7 @@
 export const initialState = {
   player: {
     name: 'Jugador',
+    host: false,
     avatar: '/images/avatar_4.png',
     birthdate: '21/09/1995',
   },
@@ -19,7 +20,10 @@ export const appReducer = (state, action) => {
     //case actionTypes.SET_PLAYER:
     //return { ...state, player: action.payload }
     case actionTypes.LOGOUT:
-      return { ...state, player: { name: '', avatar: '', birthdate: '' } }
+      return {
+        ...state,
+        player: { name: '', host: false, avatar: '', birthdate: '' },
+      }
     default:
       return state
   }

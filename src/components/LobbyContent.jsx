@@ -20,6 +20,7 @@ export default function LobbyContent({ player, navigate, handleLogout }) {
       {/* Card with player data */}
       <ProfileCard
         name={player.name}
+        host={player.host}
         avatar={player.avatar}
         birthdate={player.birthdate}
       />

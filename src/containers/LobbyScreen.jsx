@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAppContext, useAppDispatch } from '../context/AppContext'
-import { actionTypes } from '../context/appState'
+import { actionTypes } from '../context/userStateLobby'
 import LobbyContent from '../components/LobbyContent'
 import LobbyError from '../components/LobbyError'
 import Background from '../components/Background'
@@ -13,15 +13,15 @@ function LobbyScreen() {
   //Logout: delete player data from global context
   const handleLogout = () => {
     dispatch({ type: actionTypes.LOGOUT })
-    navigate('ingreso')
+    navigate('/ingreso')
   }
 
   //Condition to be logged
   const isLoggedIn =
     player.name !== '' && player.avatar !== '' && player.birthdate !== ''
 
-  //Print player status from [LobbyScreen] in console (appState should be equal)
-  console.log('[LobbyScreen] Estado player:', player)
+  //Print player status from [LobbyScreen] in console (userStateLobby should be equal)
+  //console.log('[LobbyScreen] Estado player:', player)
 
   //If player loged shows buttons with player data
   //if not then shows an error message with a button to "login"
