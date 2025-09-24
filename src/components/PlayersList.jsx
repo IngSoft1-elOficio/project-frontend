@@ -1,16 +1,10 @@
-import { useAppContext } from "../context/AppContext";
-
-export default function PlayersList({ players = [], ownerId }) {
-      const {usuarios} = useAppContext();
-  }
-
-
-
+export default function PlayersList({ players = [], hostId }) {
+      
   return (
     <ul className="divide-y divide-[#825012]/40">
-      {usuarios.map((p,i) => {
-      const playerId = p.id;
-      const isHost = ownerId == playerId;
+      {players.map((p,i) => {
+      const playerId = p.user_id;
+      const isHost = hostId == playerId;
 
         return (
           <li
@@ -23,7 +17,7 @@ export default function PlayersList({ players = [], ownerId }) {
                   👑
                 </span>
               )}
-              {p?.name ?? `Jugador ${i + 1}`}
+              {p?.nombre ?? `Jugador ${i + 1}`}
             </span>
 
             <span className="text-sm opacity-80">
