@@ -1,5 +1,5 @@
 // Estado inicial
-export const initialState = {
+export const initialUserState = {
   usuarios: [],
   nombre: '',
   avatar: '',
@@ -8,7 +8,7 @@ export const initialState = {
 };
 
 // Tipos de acción
-export const actionTypes = {
+export const userActionTypes = {
   SET_NOMBRE: 'SET_NOMBRE',
   SET_AVATAR: 'SET_AVATAR',
   SET_FECHA: 'SET_FECHA',
@@ -18,19 +18,19 @@ export const actionTypes = {
 };
 
 // Reducer
-export const appReducer = (state, action) => {
+export const userReducer = (state, action) => {
   switch (action.type) {
-    case actionTypes.SET_NOMBRE:
+    case userActionTypes.SET_NOMBRE:
       return { ...state, nombre: action.payload };
-    case actionTypes.SET_AVATAR:
+    case userActionTypes.SET_AVATAR:
       return { ...state, avatar: action.payload };
-    case actionTypes.SET_FECHA:
+    case userActionTypes.SET_FECHA:
       return { ...state, fechaNacimiento: action.payload };
-    case actionTypes.SET_ERROR:
+    case userActionTypes.SET_ERROR:
       return { ...state, error: action.payload };
-    case actionTypes.ADD_USUARIO:
+    case userActionTypes.ADD_USUARIO:
       return { ...state, usuarios: [...state.usuarios, action.payload] };
-    case actionTypes.RESET:
+    case userActionTypes.RESET:
       return {
         ...state,
         nombre: '',

@@ -1,38 +1,40 @@
 import "../containers/LoginScreen/LoginScreen.css";
 import { useNavigate } from 'react-router-dom';
 import { useAppContext, useAppDispatch } from '../context/AppContext.jsx';
-import { actionTypes } from '../context/userContext';
+import { userActionTypes } from '../context/userContext';
 import AvatarSelector from './AvatarSelector';
 
 function LoginBox() {
   const navigate = useNavigate();
   const { nombre, fechaNacimiento, avatar, error, usuarios } = useAppContext();
-  const dispatch = useAppDispatch();
+  const { userDispatch, lobbyDispatch } = useAppDispatch();
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
     if (!nombre || !fechaNacimiento || !avatar) {
-      dispatch({ type: actionTypes.SET_ERROR, payload: 'todos los campos son obligatorios' });
+      userDispatch({ type: userActionTypes.SET_ERROR, payload: 'todos los campos son obligatorios' });
       return;
     }
 
     const fecha = new Date(fechaNacimiento);
     const hoy = new Date();
     if (fecha > hoy) {
-      dispatch({ type: actionTypes.SET_ERROR, payload: 'Fecha de nacimiento incorrecta' });
+      userDispatch({ type: userActionTypes.SET_ERROR, payload: 'Fecha de nacimiento incorrecta' });
       return;
     }
 
     const existe = usuarios.some(u => u.nombre === nombre && u.avatar === avatar);
     if (existe) {
-      dispatch({ type: actionTypes.SET_ERROR, payload: 'Ya existe un usuario con el mismo nombre y avatar' });
+      userDispatch({ type: userActionTypes.SET_ERROR, payload: 'Ya existe un usuario con el mismo nombre y avatar' });
       return;
     }
 
     const nuevoUsuario = { nombre, fechaNacimiento, avatar };
-    dispatch({ type: actionTypes.ADD_USUARIO, payload: nuevoUsuario });
-    dispatch({ type: actionTypes.RESET_FORM });
+    userDispatch({ type: userActionTypes.ADD_USUARIO, payload: nuevoUsuario });
+    userDispatch({ type: userActionTypes.RESET_FORM });
+
+    lobbyDispatch({ type: lobbyActionTypes.LOGIN, payload: nuevoUsuario });
 
     navigate('/lobby');
   };
@@ -52,7 +54,7 @@ function LoginBox() {
               id="nombre"
               name="nombre"
               value={nombre}
-              onChange={(e) => dispatch({ type: actionTypes.SET_NOMBRE, payload: e.target.value })}
+              onChange={(e) => dispatch({ type: userActionTypes.SET_NOMBRE, payload: e.target.value })}
               placeholder="Ingresar nombre"
               required
               autoComplete="off"
@@ -63,7 +65,7 @@ function LoginBox() {
             <label htmlFor="avatar">Avatar:</label>
             <AvatarSelector
               selected={avatar}
-              onChange={(value) => dispatch({ type: actionTypes.SET_AVATAR, payload: value })}
+              onChange={(value) => dispatch({ type: userActionTypes.SET_AVATAR, payload: value })}
               options={[
                 { value: 'avatar1', src: './public/avatar1.jpg' },
                 { value: 'avatar2', src: './public/avatar2.jpg' },
@@ -81,7 +83,7 @@ function LoginBox() {
               id="fechaNacimiento"
               name="fechaNacimiento"
               value={fechaNacimiento}
-              onChange={(e) => dispatch({ type: actionTypes.SET_FECHA, payload: e.target.value })}
+              onChange={(e) => dispatch({ type: userActionTypes.SET_FECHA, payload: e.target.value })}
               required
             />
           </div>
