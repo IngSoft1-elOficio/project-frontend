@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import PlayersList from "../components/PlayersList";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
 export default function GameJoin() {
+  const { gameId } = useParams();
   const { usuarios , game_id } = useAppContext();
   //supongamos dispacth ADD_USUARIO es  [{ user_id: "26", nombre: "yo", avatar: "/img1.png", host: true } , {...} ]
   const hostUser = usuarios.find(u => u.host === true);

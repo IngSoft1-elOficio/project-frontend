@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
        <Routes>
           <Route path ="/" element ={<App />}></Route>
-          <Route path = "/game_join/123" element = {<GameJoin/>}></Route>
+          <Route path = "/game_join/:gameId" element = {<GameJoin/>}></Route>
         </Routes>
       </BrowserRouter>
     </AppProvider>
