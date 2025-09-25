@@ -1,43 +1,49 @@
 // Estado inicial
-export const initialUserState = {
+export const initialState = {
   usuarios: [],
   nombre: '',
   avatar: '',
   fechaNacimiento: '',
+  host: false,
   error: '',
+  user_id: '',
+  game_id: '',
 };
 
 // Tipos de acción
-export const userActionTypes = {
+export const actionTypes = {
   SET_NOMBRE: 'SET_NOMBRE',
   SET_AVATAR: 'SET_AVATAR',
   SET_FECHA: 'SET_FECHA',
   SET_ERROR: 'SET_ERROR',
+  SET_USER_ID: 'SET_USER_ID',
+  SET_HOST: 'SET_HOST',
+  SET_GAME_ID: 'SET_GAME_ID',
   ADD_USUARIO: 'ADD_USUARIO',
   RESET: 'RESET',
 };
 
 // Reducer
-export const userReducer = (state, action) => {
+export const appReducer = (state, action) => {
   switch (action.type) {
-    case userActionTypes.SET_NOMBRE:
+    case actionTypes.SET_NOMBRE:
       return { ...state, nombre: action.payload };
-    case userActionTypes.SET_AVATAR:
+    case actionTypes.SET_AVATAR:
       return { ...state, avatar: action.payload };
-    case userActionTypes.SET_FECHA:
+    case actionTypes.SET_FECHA:
       return { ...state, fechaNacimiento: action.payload };
-    case userActionTypes.SET_ERROR:
+    case actionTypes.SET_ERROR:
       return { ...state, error: action.payload };
-    case userActionTypes.ADD_USUARIO:
+    case actionTypes.ADD_USUARIO:
       return { ...state, usuarios: [...state.usuarios, action.payload] };
-    case userActionTypes.RESET:
-      return {
-        ...state,
-        nombre: '',
-        avatar: '',
-        fechaNacimiento: '',
-        error: '',
-      };
+    case actionTypes.SET_USER_ID:
+      return {...state, user_id: action.payload };
+    case actionTypes.SET_GAME_ID:
+      return {...state, game_id: action.payload };
+    case actionTypes.SET_HOST:
+      return {...state, host: action.payload };
+    case actionTypes.RESET:
+      return initialState;
     default:
       return state;
   }

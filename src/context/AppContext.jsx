@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer } from 'react'
 import { lobbyReducer, initialLobbyState } from './userStateLobby'
 import { userReducer, initialUserState } from './userContext'
 
+
 // Contexts
 const AppContext = createContext();
 const AppDispatchContext = createContext();
