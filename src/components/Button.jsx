@@ -16,4 +16,3 @@ export default function Button({ onClick, children, disabled = false, className 
     </button>
   );
 }
-
