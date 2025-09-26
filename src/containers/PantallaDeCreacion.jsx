@@ -1,3 +1,4 @@
+import "../styles.css"
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useUser } from "../context/UserContext.jsx";
@@ -5,6 +6,8 @@ import { useGame } from "../context/GameContext.jsx";
 import NombreDePartida from "../components/NombreDePartida";
 import CantidadDeJugadores from "../components/CantidadDeJugadores";
 import Continuar from "../components/Continuar";
+import ProfileCard from "../components/ProfileCard.jsx";
+import LobbyError from "../components/LobbyError.jsx";
 
 export default function PantallaDeCreacion() {
   const navigate = useNavigate();
@@ -16,6 +19,7 @@ export default function PantallaDeCreacion() {
     nombre_partida: "",
     jugadores: 2
   });
+
   const [error, setError] = useState("");
 
   const handleContinue = async () => {
@@ -75,7 +79,15 @@ export default function PantallaDeCreacion() {
 
   return (
     <div className="pantalla-creacion">
+      { userState.name ? 
       <div className="form-container">
+        <ProfileCard
+                name={userState.name}
+                host={userState.isHost}
+                avatar={userState.avatarPath}
+                birthdate={userState.birthdate}
+              />
+
         <NombreDePartida 
           nombre_partida={gameForm.nombre_partida} 
           setNombrePartida={setNombrePartida}
@@ -95,7 +107,7 @@ export default function PantallaDeCreacion() {
         />
         
         {error && <p className="error-message">{error}</p>}
-      </div>
+      </div> : <LobbyError navigate={navigate}/> }
     </div>
   );
 }

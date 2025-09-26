@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import PlayersList from './PlayersList';  // mismo directorio
+import PlayersList from '../components/PlayersList';  // mismo directorio
 
 describe('PlayersList', () => {
   it('muestra la lista de jugadores', () => {

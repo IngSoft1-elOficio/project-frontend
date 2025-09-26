@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import LoginBox from "../../components/LoginBox";
-import { UserProvider } from '../../context/UserContext.jsx'; // ⬅️ changed
+import LoginBox from "../components/LoginBox.jsx";
+import { UserProvider } from '../context/UserContext.jsx'; // ⬅️ changed
 
 // Mock de useNavigate
 const navigateMock = vi.fn();
@@ -45,7 +45,7 @@ describe('LoginBox', () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
 
-    fireEvent.click(screen.getByAltText('avatar1'));
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
 
     const futureDate = new Date();
     futureDate.setFullYear(futureDate.getFullYear() + 1);
@@ -60,7 +60,7 @@ describe('LoginBox', () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
 
-    fireEvent.click(screen.getByAltText('avatar1'));
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
@@ -75,13 +75,13 @@ describe('LoginBox', () => {
 
     // Primer ingreso
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
-    fireEvent.click(screen.getByAltText('avatar1'));
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
 
     // Segundo ingreso con los mismos datos
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
-    fireEvent.click(screen.getByAltText('avatar1'));
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
   });

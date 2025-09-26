@@ -1,4 +1,3 @@
-import './App.css'
 import LoginScreen from './containers/LoginScreen/LoginScreen'
 
 function App() {
