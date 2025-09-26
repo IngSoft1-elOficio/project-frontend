@@ -79,7 +79,7 @@ export default function PantallaDeCreacion() {
 
   return (
     <div className="pantalla-creacion">
-      { userState.name ? 
+      { // userState.name ? 
       <div className="form-container">
         <ProfileCard
                 name={userState.name}
@@ -107,7 +107,8 @@ export default function PantallaDeCreacion() {
         />
         
         {error && <p className="error-message">{error}</p>}
-      </div> : <LobbyError navigate={navigate}/> }
+      </div> // : <LobbyError navigate={navigate}/> 
+      }
     </div>
   );
 }

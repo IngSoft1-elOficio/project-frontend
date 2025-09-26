@@ -71,7 +71,7 @@ export const GameProvider = ({ children }) => {
 
   useEffect(() => {
 
-    if (gameInitialState.gameId == null) return;
+    // if (gameInitialState.gameId == null) return; Descomentar para correr test
 
     const socket = io('http://localhost:8000');
 

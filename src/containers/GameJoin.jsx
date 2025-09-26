@@ -54,7 +54,7 @@ export default function GameJoin() {
         aria-hidden
       />
 
-      { userState.name && gameState.gameId ? 
+      { // userState.name && gameState.gameId ? 
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
         <h1 className="mb-6 text-3xl font-bold text-[#F4CC6F] font-limelight">
           Partida:{" "}
@@ -74,7 +74,8 @@ export default function GameJoin() {
             Iniciar partida
           </Button>
         </div>
-      </div> : <LobbyError navigate={navigate} /> }
+      </div> // : <LobbyError navigate={navigate} />  Descomentar para no mostrar si no esta logeado
+      }
 
     </main>
   );
