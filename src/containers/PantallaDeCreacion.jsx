@@ -15,7 +15,7 @@ export default function PantallaDeCreacion() {
  
   const handleContinue = async () => {
     try{
-      const response = await fetch("http://localhost:4000/api/newgame", {
+      const response = await fetch("http://localhost:8000/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre_partida, jugadores, host_id: true /*nombre, avatar, fechaNacimiento,*/ }),
