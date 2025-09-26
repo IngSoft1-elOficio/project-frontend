@@ -4,10 +4,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import GameJoin from './GameJoin';
-import { useAppContext } from '../context/AppContext';
+import { useGame } from '../context/GameContext';
+import { useUser } from '../context/UserContext';
 
 // Mocks
-vi.mock('../context/AppContext');
+vi.mock('../context/GameContext');
+vi.mock('../context/UserContext');
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
@@ -27,10 +29,12 @@ describe('GameJoin', () => {
   });
 
   describe('Render básico', () => {
-    it('muestra el título y game_id', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [],
-        game_id: 'TEST123',
+    it('muestra el título y gameId', () => {
+      useGame.mockReturnValue({
+        gameState: { jugadores: [], gameId: 'TEST123' },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: false },
       });
 
       renderWithRouter(<GameJoin />);
@@ -40,10 +44,12 @@ describe('GameJoin', () => {
       expect(screen.getByText('Jugadores')).toBeInTheDocument();
     });
 
-    it('muestra "Sin nombre" cuando no hay game_id', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [],
-        game_id: '',
+    it('muestra "Sin nombre" cuando no hay gameId', () => {
+      useGame.mockReturnValue({
+        gameState: { jugadores: [], gameId: '' },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: false },
       });
 
       renderWithRouter(<GameJoin />);
@@ -51,13 +57,18 @@ describe('GameJoin', () => {
       expect(screen.getByText('Sin nombre')).toBeInTheDocument();
     });
 
-    it('muestra la lista de usuarios', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [
-          { user_id: '1', nombre: 'Player1', host: true },
-          { user_id: '2', nombre: 'Player2', host: false },
-        ],
-        game_id: 'TEST123',
+    it('muestra la lista de jugadores', () => {
+      useGame.mockReturnValue({
+        gameState: {
+          jugadores: [
+            { user_id: '1', nombre: 'Player1', isHost: true },
+            { user_id: '2', nombre: 'Player2', isHost: false },
+          ],
+          gameId: 'TEST123',
+        },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: false },
       });
 
       renderWithRouter(<GameJoin />);
@@ -68,10 +79,15 @@ describe('GameJoin', () => {
   });
 
   describe('Botón iniciar', () => {
-    it('está habilitado cuando hay host', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [{ user_id: '1', nombre: 'Host', host: true }],
-        game_id: 'TEST123',
+    it('está habilitado cuando el usuario es host', () => {
+      useGame.mockReturnValue({
+        gameState: {
+          jugadores: [{ user_id: '1', nombre: 'Host', isHost: true }],
+          gameId: 'TEST123',
+        },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: true },
       });
 
       renderWithRouter(<GameJoin />);
@@ -80,10 +96,15 @@ describe('GameJoin', () => {
       expect(button).not.toBeDisabled();
     });
 
-    it('está deshabilitado cuando no hay host', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [{ user_id: '1', nombre: 'Player', host: false }],
-        game_id: 'TEST123',
+    it('está deshabilitado cuando el usuario no es host', () => {
+      useGame.mockReturnValue({
+        gameState: {
+          jugadores: [{ user_id: '1', nombre: 'Player', isHost: false }],
+          gameId: 'TEST123',
+        },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: false },
       });
 
       renderWithRouter(<GameJoin />);
@@ -93,9 +114,11 @@ describe('GameJoin', () => {
     });
 
     it('está deshabilitado con lista vacía', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [],
-        game_id: 'TEST123',
+      useGame.mockReturnValue({
+        gameState: { jugadores: [], gameId: 'TEST123' },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: false },
       });
 
       renderWithRouter(<GameJoin />);
@@ -105,9 +128,14 @@ describe('GameJoin', () => {
     });
 
     it('hace la llamada a la API al hacer click', () => {
-      useAppContext.mockReturnValue({
-        usuarios: [{ user_id: '26', nombre: 'Host', host: true }],
-        game_id: 'TEST123',
+      useGame.mockReturnValue({
+        gameState: {
+          jugadores: [{ user_id: '26', nombre: 'Host', isHost: true }],
+          gameId: 'TEST123',
+        },
+      });
+      useUser.mockReturnValue({
+        userState: { isHost: true },
       });
       fetch.mockResolvedValueOnce({ ok: true });
 
@@ -127,4 +155,3 @@ describe('GameJoin', () => {
     });
   });
 });
-
