@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PantallaDeCreacion from '../containers/PantallaDeCreacion';
-import { PartidaProvider } from '../context/PartidaContext';
+import { GameProvider } from '../context/GameContext';
+import { UserProvider } from '../context/UserContext';
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
@@ -9,7 +10,11 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const renderWithContext = (ui) => {
-  return render(<PartidaProvider>{ui}</PartidaProvider>);
+  return render(
+    <UserProvider>
+      <GameProvider>{ui}</GameProvider>
+    </UserProvider>
+  );
 };
 
 describe('PantallaDeCreacion', () => {
@@ -27,22 +32,30 @@ describe('PantallaDeCreacion', () => {
   it('muestra error si fetch falla', async () => {
     fetch.mockResolvedValue({ ok: false });
     renderWithContext(<PantallaDeCreacion />);
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Partida Test' } });
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Partida Test' },
+    });
     fireEvent.click(screen.getByText('2'));
     fireEvent.click(screen.getByText('Crear Partida'));
     await waitFor(() => {
-      expect(screen.getByText(/Error al crear la partida/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Error al crear la partida/i)
+      ).toBeInTheDocument();
     });
   });
 
   it('muestra error si el nombre ya existe', async () => {
     fetch.mockResolvedValue({ ok: false, status: 409 });
     renderWithContext(<PantallaDeCreacion />);
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Partida Repetida' } });
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Partida Repetida' },
+    });
     fireEvent.click(screen.getByText('2'));
     fireEvent.click(screen.getByText('Crear Partida'));
     await waitFor(() => {
-      expect(screen.getByText(/Ya existe una partida con ese nombre/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Ya existe una partida con ese nombre/i)
+      ).toBeInTheDocument();
     });
   });
 });

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LoginBox from "../../components/LoginBox";
-import { AppProvider } from '../../context/AppContext.jsx';
+import { UserProvider } from '../../context/UserContext.jsx'; // ⬅️ changed
 
 // Mock de useNavigate
 const navigateMock = vi.fn();
@@ -23,9 +23,9 @@ describe('LoginBox', () => {
   const renderWithProvider = () =>
     render(
       <MemoryRouter>
-        <AppProvider>
+        <UserProvider>   {/* ⬅️ changed */}
           <LoginBox />
-        </AppProvider>
+        </UserProvider>
       </MemoryRouter>
     );
 
@@ -39,14 +39,12 @@ describe('LoginBox', () => {
   it('muestra error si se envía el formulario con campos vacíos', async () => {
     renderWithProvider();
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
-
   });
 
   it('muestra error si la fecha de nacimiento es futura', async () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
 
-    // Seleccionar avatar con botón
     fireEvent.click(screen.getByAltText('avatar1'));
 
     const futureDate = new Date();
@@ -56,7 +54,6 @@ describe('LoginBox', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
-
   });
 
   it('redirige al lobby si los datos son válidos', async () => {
@@ -87,6 +84,5 @@ describe('LoginBox', () => {
     fireEvent.click(screen.getByAltText('avatar1'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
-
   });
 });

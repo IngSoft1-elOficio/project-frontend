@@ -1,31 +1,38 @@
-import { useNavigate } from 'react-router-dom'
-import { useAppContext, useAppDispatch } from '../context/AppContext'
-import { lobbyActionTypes } from '../context/userStateLobby'
-import LobbyContent from '../components/LobbyContent'
-import LobbyError from '../components/LobbyError'
-import Background from '../components/Background'
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext.jsx';
+import LobbyContent from '../components/LobbyContent';
+import LobbyError from '../components/LobbyError';
+import Background from '../components/Background';
 
 function LobbyScreen() {
-  const navigate = useNavigate() //Works like buttons with links
-  const { lobbyState } = useAppContext()
-  const { player } = lobbyState
-  const { lobbyDispatch } = useAppDispatch()
+  const navigate = useNavigate();
+  const { userState, userDispatch } = useUser();
 
-  //Logout: delete player data from global context
+  // Logout: clear user data from UserContext
   const handleLogout = () => {
-    lobbyDispatch({ type: lobbyActionTypes.LOGOUT })
-    navigate('/ingreso')
-  }
+    userDispatch({ type: 'CLEAR_USER' });
+    navigate('/');
+  };
 
-  //Condition to be logged
-  const isLoggedIn =
-    player.name !== '' && player.avatar !== '' && player.birthdate !== ''
+  // Condition to be logged - check if user has required data
+  const isLoggedIn = 
+    userState.name !== '' && 
+    userState.avatarPath !== '' && 
+    userState.birthdate !== '';
 
-  //Print player status from [LobbyScreen] in console (userStateLobby should be equal)
-  //console.log('[LobbyScreen] Estado player:', player)
+  // Create player object for compatibility with existing LobbyContent component
+  const player = {
+    name: userState.name,
+    avatar: userState.avatarPath,
+    birthdate: userState.birthdate,
+    isHost: userState.isHost
+  };
 
-  //If player loged shows buttons with player data
-  //if not then shows an error message with a button to "login"
+  // Print player status from [LobbyScreen] in console
+  // console.log('[LobbyScreen] Estado player:', player);
+
+  // If player logged shows buttons with player data
+  // if not then shows an error message with a button to "login"
   return (
     <div>
       <Background>
@@ -40,7 +47,7 @@ function LobbyScreen() {
         )}
       </Background>
     </div>
-  )
+  );
 }
 
-export default LobbyScreen
+export default LobbyScreen;
