@@ -70,6 +70,9 @@ export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState);
 
   useEffect(() => {
+
+    // if (gameInitialState.gameId == null) return; Descomentar para correr test
+
     const socket = io('http://localhost:8000');
 
     // Connection events

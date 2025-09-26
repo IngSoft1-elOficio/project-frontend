@@ -7,7 +7,7 @@ import Button from '../components/Button'
 export default function LobbyError({ navigate }) {
   //Position of all elements -> adjusted to right, next to background in column
   const elementsPosition =
-    'flex flex-col justify-center items-end h-screen pe-48'
+    'flex flex-col justify-center items-end h-screen pe-48 relative z-100'
 
   //Style of error text
   const errorStyle =
@@ -22,7 +22,7 @@ export default function LobbyError({ navigate }) {
       <p className={`${errorMsgStyle}`}>
         Debes iniciar sesion para acceder al lobby
       </p>
-      <Button onClick={() => navigate('/ingreso')}>Ingreso</Button>
+      <Button onClick={() => navigate('/')}>Ingreso</Button>
     </div>
   )
 }

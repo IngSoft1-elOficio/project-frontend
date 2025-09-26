@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
-import GameJoin from './GameJoin';
+import GameJoin from '../containers/GameJoin';
 import { useGame } from '../context/GameContext';
 import { useUser } from '../context/UserContext';
 
