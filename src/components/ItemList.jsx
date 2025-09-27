@@ -1,14 +1,24 @@
 import { useNavigate } from 'react-router-dom'
 import ButtonJoin from '../components/ButtonJoin'
+import { FiLogIn } from 'react-icons/fi'
 
 //Function for a single lobby row with necessary data
 function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
-  const RowStyle = 'items-center py-3 '
+  const RowStyle = 'items-center py-2 '
   const RowTextStyle = 'text-center'
   const RowColumns = 'grid grid-cols-3'
   const RowColors = 'border-b border-[#B49150] hover:bg-white/5'
 
   const buttonJoinStyle = 'flex justify-center'
+  const buttonAndIconTogether = 'flex items-center gap-2'
+
+  const handleJoin = () => {
+    if (playersJoined >= playerQty) {
+      alert(`La sala "${name}" está llena`)
+      return
+    }
+    onJoin()
+  }
 
   return (
     <div className={`${RowColumns} ${RowStyle} ${RowTextStyle} ${RowColors}`}>
@@ -17,7 +27,12 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
         {playersJoined}/{playerQty}
       </div>
       <div className={`${buttonJoinStyle}`}>
-        <ButtonJoin onClick={onJoin}>Ingresar</ButtonJoin>
+        <ButtonJoin onClick={handleJoin}>
+          <div className={`${buttonAndIconTogether}`}>
+            <FiLogIn className="w-8 h-6" />
+            <span>Ingresar</span>
+          </div>
+        </ButtonJoin>
       </div>
     </div>
   )
@@ -29,6 +44,9 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
 // - birthdate: string with player birthdate
 export default function ItemList({ partidas }) {
   const navigate = useNavigate()
+
+  //Sort games by id ascending
+  const sortedPartidas = [...partidas].sort((a, b) => b.id - a.id)
 
   //Container colors, size, position and style (card)
   const listColors = 'border-[#825012]'
@@ -55,7 +73,7 @@ export default function ItemList({ partidas }) {
 
       {/* Game list */}
       <div className={`${GameListText} ${GameListStyle}`}>
-        {partidas.map(partida => (
+        {sortedPartidas.map(partida => (
           <ItemListRow
             key={partida.id}
             id={partida.id}
