@@ -4,7 +4,7 @@ import ProfileCard from "../../components/ProfileCard";
 import { useGame } from "../../context/GameContext.jsx";
 import { useState } from "react";
 
-export default function ProfileContainer() {
+export default function GameScreen() {
   const { userState } = useUser();
   const { gameState } = useGame();
 
