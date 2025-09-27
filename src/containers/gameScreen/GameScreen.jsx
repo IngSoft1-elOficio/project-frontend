@@ -5,7 +5,7 @@ import { useGame } from "../../context/GameContext.jsx";
 import { useState } from "react";
 import GameEndModal from "../../components/GameEndModal";
 
-export default function ProfileContainer() {
+export default function GameScreen() {
   const { userState } = useUser();
   const { gameState } = useGame();
 
