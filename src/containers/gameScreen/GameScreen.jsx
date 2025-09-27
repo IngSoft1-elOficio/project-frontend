@@ -3,6 +3,7 @@ import { useUser } from "../../context/UserContext.jsx";
 import ProfileCard from "../../components/ProfileCard";
 import { useGame } from "../../context/GameContext.jsx";
 import { useState } from "react";
+import GameEndModal from "../../components/GameEndModal";
 
 export default function ProfileContainer() {
   const { userState } = useUser();
@@ -213,6 +214,12 @@ export default function ProfileContainer() {
           </div>
         </div>
         : <></> }
+
+        {gameState.gameEnded(
+          <GameEndModal
+            message= "El asesino y cómplice ganaron"
+          />
+        )}
         
       </div>
     </main>
