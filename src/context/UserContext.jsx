@@ -4,6 +4,7 @@ import { createContext, useContext, useReducer } from 'react';
 const UserContext = createContext();
 
 const userInitialState = {
+  id: int,
   name: '',
   avatarPath: '',
   birthdate: null,
@@ -12,6 +13,12 @@ const userInitialState = {
 
 const userReducer = (state, action) => {
   switch (action.type) {
+    case 'SET_ID':
+      return {
+        ...state,
+        ...action.payload
+      }
+
     case 'SET_USER':
       return {
         ...state,
