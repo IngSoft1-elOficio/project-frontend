@@ -12,13 +12,32 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
   const buttonJoinStyle = 'flex justify-center'
   const buttonAndIconTogether = 'flex items-center gap-2'
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
+    try {
+      //Fetch state of lobby
+      const res = await fetch(`http://localhost:8000/api/game/${id}`)
+      if (!res.ok) throw new Error('Error al obtener la sala')
+      const room = await res.json()
+
+      if (room.playersJoined >= room.playerQty) {
+        alert(`La sala "${name}" está llena`)
+        return
+      }
+
+      //If not full then join
+      onJoin()
+    } catch (err) {
+      console.error('No se pudo verificar la sala', err)
+    }
+  }
+
+  /*const handleJoin = () => {
     if (playersJoined >= playerQty) {
       alert(`La sala "${name}" está llena`)
       return
     }
     onJoin()
-  }
+  }*/
 
   return (
     <div className={`${RowColumns} ${RowStyle} ${RowTextStyle} ${RowColors}`}>

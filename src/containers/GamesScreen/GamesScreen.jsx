@@ -28,30 +28,16 @@ function GamesScreen() {
   //Fetch games from backend
   const fetchPartidas = async () => {
     try {
-      /*
       const res = await fetch('http://localhost:8000/api/game_list')
       if (!res.ok) throw new Error('Error al cargar partidas')
       const data = await res.json()
-      setPartidas(data.items)*/
-
-      const mockData = {
+      setPartidas(data.items)
+      /*const mockData = {
         items: [
           { id: 1, name: 'Sala 1', playersJoined: 2, playerQty: 6 },
-          { id: 2, name: 'Sala 2', playersJoined: 5, playerQty: 6 },
-          { id: 3, name: 'Sala 3', playersJoined: 1, playerQty: 6 },
-          { id: 4, name: 'Sala 4', playersJoined: 3, playerQty: 6 },
-          { id: 5, name: 'Sala 5', playersJoined: 6, playerQty: 6 },
-          { id: 6, name: 'Sala 6', playersJoined: 4, playerQty: 6 },
-          { id: 7, name: 'Sala 7', playersJoined: 2, playerQty: 6 },
-          { id: 8, name: 'Sala 8', playersJoined: 6, playerQty: 6 },
-          { id: 9, name: 'Sala 9', playersJoined: 1, playerQty: 6 },
-          { id: 10, name: 'Sala 10', playersJoined: 5, playerQty: 6 },
-          { id: 11, name: 'Sala 11', playersJoined: 3, playerQty: 6 },
-          { id: 12, name: 'Sala 12', playersJoined: 4, playerQty: 6 },
         ],
       }
-      //Borrar este
-      setPartidas(mockData.items)
+      setPartidas(mockData.items) */
     } catch (err) {
       console.error('Error obteniendo partidas', err)
     }
@@ -61,7 +47,7 @@ function GamesScreen() {
     fetchPartidas()
   }, [])
 
-  // Condition to be logged - check if user has required data
+  //Condition to be logged - check if user has required data
   const isLoggedIn =
     userState.name !== '' &&
     userState.avatarPath !== '' &&
