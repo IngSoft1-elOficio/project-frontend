@@ -1,4 +1,4 @@
-import Button from '../components/Button'
+import ButtonJoin from '../components/ButtonJoin'
 //Takes:
 // - name: string with player name
 // - avatar: string with image URL
@@ -7,7 +7,6 @@ export default function ItemList() {
   //Container colors, size, position and style (card)
   const listColors = 'border-[#825012]'
   const listSize = 'min-w-[75%] min-h-[95%]'
-  const listPosition = 'flex flex-row items-top justify-center pt-2'
   const listStyle = 'bg-black/40 rounded-xl border absolute'
 
   //Placeholder
@@ -15,36 +14,40 @@ export default function ItemList() {
     { sala: 'Sala 1', tipo: 'Publica', jugadores: '4/5' },
     { sala: 'Sala 2', tipo: 'Publica', jugadores: '2/3' },
     { sala: 'Sala 3', tipo: 'Privada', jugadores: '1/6' },
-    { sala: 'Sala 3', tipo: 'Privada', jugadores: '1/6' },
+    { sala: 'Sala 4', tipo: 'Privada', jugadores: '1/6' },
+    { sala: 'Sala 5', tipo: 'Publica', jugadores: '4/5' },
+    { sala: 'Sala 6', tipo: 'Publica', jugadores: '2/3' },
+    { sala: 'Sala 7', tipo: 'Privada', jugadores: '1/6' },
+    { sala: 'Sala 8', tipo: 'Privada', jugadores: '1/6' },
+    { sala: 'Sala 9', tipo: 'Publica', jugadores: '4/5' },
+    { sala: 'Sala 10', tipo: 'Publica', jugadores: '2/3' },
+    { sala: 'Sala 11', tipo: 'Privada', jugadores: '1/6' },
   ]
   return (
-    <div className={`${listSize} ${listPosition} ${listStyle} ${listColors}`}>
-      <table className="w-full text-center">
-        {/* Titles */}
-        <thead>
-          <tr className="text-white border-b border-[#B49150]">
-            <th className="text-white text-2xl">Sala.....</th>
-            <th className="text-white text-2xl">Tipo.....</th>
-            <th className="text-white text-2xl">Jugadores</th>
-          </tr>
-        </thead>
-        {/* Game list */}
-        <tbody className="text-white text-lg">
-          {partidas.map((partida, index) => (
-            <tr
-              key={index}
-              className="border-b border-[#B49150] hover:bg-[#4a0a00]"
-            >
-              <td>{partida.sala}</td>
-              <td>{partida.tipo}</td>
-              <td>{partida.jugadores}</td>
-              <td>
-                <Button onClick={() => navigate('/')}>Ingresar</Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className={`${listSize} ${listStyle} ${listColors}`}>
+      {/* Titles */}
+      <div className="grid grid-cols-4 text-center text-white text-2xl border-b border-[#B49150]">
+        <div>Sala</div>
+        <div>Tipo</div>
+        <div>Jugadores</div>
+        <div>{/* Button */}</div>
+      </div>
+      {/* Game list */}
+      <div className="text-white text-lg max-h-[90vh] overflow-y-auto">
+        {partidas.map((partida, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-4 items-center text-center py-3 border-b border-[#B49150] hover:bg-white/5"
+          >
+            <div>{partida.sala}</div>
+            <div>{partida.tipo}</div>
+            <div>{partida.jugadores}</div>
+            <div className="flex justify-center">
+              <ButtonJoin onClick={() => navigate('/')}>Ingresar</ButtonJoin>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
