@@ -9,7 +9,16 @@ const gameInitialState = {
   turnoActual: null,
   jugadores: [],
   mazos: {},
-  mano: [],
+  mano: [/*
+        {
+          player_id: 1,
+          id: 1,
+          name: "Miss Marple",
+          type: "detective",
+          img: "path/to/miss_marple.png",
+          is_in: "HAND"
+        },*/
+  ],
   secretos: [],
   gameEnded: false,
   ganaste: null,
@@ -60,7 +69,23 @@ const gameReducer = (state, action) => {
     
     case 'RESET_GAME':
       return gameInitialState;
-    
+
+    case 'TOGGLE_SELECT_CARD':
+      return {
+        ...state,
+        mano: state.mano.map(carta =>
+          carta.id === action.payload
+            ? { ...carta, is_in: carta.is_in === "SELECT" ? "HAND" : "SELECT" }
+            : carta
+        )
+      };
+
+    case 'CLEAR_SELECTION':
+      return {
+        ...state,
+        mano: state.mano.map(carta => ({ ...carta, is_in: "HAND" }))
+      };
+
     default:
       return state;
   }

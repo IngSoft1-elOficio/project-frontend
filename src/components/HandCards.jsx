@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useGame } from "../context/GameContext";
 import brent from "../assets/detective_brent.png";
 import marple from "../assets/detective_marple.png";
@@ -22,18 +23,18 @@ import pointsuspicions from "../assets/event_pointsuspicions.png";
 import notsofast from "../assets/instant_notsofast.png";
 
 export default function HandCards() {
-  const { gameState } = useGame();
+  const { gameState, gameDispatch } = useGame();
   const hand = gameState.mano || [];
 
   const normalizeName = (name = "") =>
     name
       .toString()
-      .normalize("NFD")                  
-      .replace(/[\u0300-\u036f]/g, "")     // eliminar acentos
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")         // quitar caracteres especiales (excepto espacios)
+      .replace(/[^a-z0-9\s]/g, "")
       .trim()
-      .replace(/\s+/g, " ");               // colapsar espacios
+      .replace(/\s+/g, " ");
 
   const IMAGE_MAP = {
     "lady eileen bundle brent": brent,
@@ -65,27 +66,43 @@ export default function HandCards() {
     return IMAGE_MAP[key] ?? null;
   };
 
+  const cardSelected = (card) => {
+    gameDispatch({ type: "TOGGLE_SELECT_CARD", payload: card.id });
+  };
+
   return (
     <div style={{
       display: "flex",
       gap: "12px",
       justifyContent: "center",
-      alignItems: "center",      
+      alignItems: "center",
       width: "100%",
-      minHeight: "170vh"          
+      minHeight: "170vh"
     }}>
-      {hand.map((card) => (
-        <button 
-          key={card.id}
-          style={{ border: "none" }}
-        >
-          <img 
-            src={getCardsImage(card)} 
-            alt={`secret-${card.name}`}
-            style={{ width: 80, height: 110, objectFit: "cover" }}  
-          />
-        </button>
-      ))}
+      {hand.map((card) => {
+        const src = getCardsImage(card);
+        const isSelected = card.is_in === "SELECT";
+
+        return (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => cardSelected(card)}
+            style={{
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                boxShadow: isSelected ? "0 0 0 3px rgba(255,209,92,0.95)" : "none"
+            }}
+          >
+              <img
+                src={src}
+                alt={card.name}
+                style={{ width: 80, height: 110, objectFit: "cover", display: "block", borderRadius: 6 }}
+              />
+          </button>
+        );
+      })}
     </div>
   );
 }
