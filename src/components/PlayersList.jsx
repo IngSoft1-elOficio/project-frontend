@@ -8,7 +8,7 @@ export default function PlayersList({ players = [], hostId }) {
 
         return (
           <li
-            key={"playerId" + "i"}
+            key={playerId}
             className="flex items-center justify-between px-6 py-4"
           >
             <span className="truncate">
