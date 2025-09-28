@@ -1,36 +1,36 @@
-import "../../index.css"
-import { useUser } from "../../context/UserContext.jsx";
-import ProfileCard from "../../components/ProfileCard";
-import { useGame } from "../../context/GameContext.jsx";
-import { useState } from "react";
-import GameEndModal from "../../components/GameEndModal";
+import '../../index.css'
+import { useUser } from '../../context/UserContext.jsx'
+import ProfileCard from '../../components/ProfileCard'
+import { useGame } from '../../context/GameContext.jsx'
+import { useState } from 'react'
+import GameEndModal from '../../components/GameEndModal'
 
 export default function GameScreen() {
-  const { userState } = useUser();
-  const { gameState } = useGame();
+  const { userState } = useUser()
+  const { gameState } = useGame()
 
-  const [selectedCards, setSelectedCards] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [selectedCards, setSelectedCards] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-   const handleCardSelect = (cardId) => {
+  const handleCardSelect = cardId => {
     setSelectedCards(prev => {
       if (prev.includes(cardId)) {
-        return prev.filter(id => id !== cardId);
+        return prev.filter(id => id !== cardId)
       } else {
-        return [...prev, cardId];
+        return [...prev, cardId]
       }
-    });
-  };
+    })
+  }
 
   const handleDiscard = async () => {
     if (selectedCards.length === 0) {
-      setError('Debes seleccionar al menos una carta para descartar');
-      return;
+      setError('Debes seleccionar al menos una carta para descartar')
+      return
     }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
       const response = await fetch(`/game/${roomId}/discard`, {
@@ -39,33 +39,32 @@ export default function GameScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          card_ids: selectedCards
-        })
-      });
+          card_ids: selectedCards,
+        }),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(getErrorMessage(response.status, errorData));
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
       }
 
-      const data = await response.json();
-      
+      const data = await response.json()
+
       // Log game state with response data
-      console.log('Discard successful:', data);
-      
+      console.log('Discard successful:', data)
+
       // Clear selected cards after successful discard
-      setSelectedCards([]);
-      
+      setSelectedCards([])
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleSkip = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
       const response = await fetch(`/game/${roomId}/skip`, {
@@ -74,57 +73,56 @@ export default function GameScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          rule: "auto"
-        })
-      });
+          rule: 'auto',
+        }),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(getErrorMessage(response.status, errorData));
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
       }
 
-      const data = await response.json();
-      
+      const data = await response.json()
+
       // Log game state with response data
-      console.log('Skip successful:', data);
-      
+      console.log('Skip successful:', data)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
-        return 'Error de validación: cartas inválidas o lista vacía';
+        return 'Error de validación: cartas inválidas o lista vacía'
       case 403:
-        return 'No es tu turno';
+        return 'No es tu turno'
       case 404:
-        return 'Sala no encontrada';
+        return 'Sala no encontrada'
       case 409:
-        return 'Reglas de descarte no cumplidas';
+        return 'Reglas de descarte no cumplidas'
       default:
-        return errorData?.message || 'Error desconocido';
+        return errorData?.message || 'Error desconocido'
     }
-  };
+  }
 
   return (
     <main
       className="relative min-h-screen overflow-x-hidden"
       style={{
         backgroundImage: "url('/background.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center"
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     >
       {/* Error display */}
-        {error && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="relative z-10 h-screen p-4">
         {/* Profile Card - Upper Left */}
@@ -139,9 +137,11 @@ export default function GameScreen() {
 
         {/* Secretos - Top Center */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">Secretos</h2>
+          <h2 className="text-white text-xl font-bold mb-4 text-center">
+            Secretos
+          </h2>
           <div className="flex space-x-3">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3].map(i => (
               <div
                 key={i}
                 className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
@@ -152,11 +152,13 @@ export default function GameScreen() {
 
         {/* Mazos Placeholder */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">Mazos</h2>
+          <h2 className="text-white text-xl font-bold mb-4 text-center">
+            Mazos
+          </h2>
           <div className="flex flex-col items-center space-y-3">
             {/* Top row - 2 cards */}
             <div className="flex space-x-3">
-              {[1, 2].map((i) => (
+              {[1, 2].map(i => (
                 <div
                   key={i}
                   className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
@@ -165,7 +167,7 @@ export default function GameScreen() {
             </div>
             {/* Bottom row PLaceholder */}
             <div className="flex space-x-3">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3].map(i => (
                 <div
                   key={i}
                   className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
@@ -177,9 +179,11 @@ export default function GameScreen() {
 
         {/* Cartas en mano placeholder */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">Cartas en mano</h2>
+          <h2 className="text-white text-xl font-bold mb-4 text-center">
+            Cartas en mano
+          </h2>
           <div className="flex space-x-3">
-            {[1, 2, 3, 4, 5].map((cardId) => (
+            {[1, 2, 3, 4, 5].map(cardId => (
               <div
                 key={cardId}
                 onClick={() => handleCardSelect(cardId)}
@@ -193,35 +197,35 @@ export default function GameScreen() {
           </div>
         </div>
 
-        { gameState.turnoActual == userState.name ? /* Interfaz de acciones de turno placeholder */
+        {gameState.turnoActual ==
+        userState.name /* Interfaz de acciones de turno placeholder */ ? (
           <div className="absolute bottom-4 right-4">
-          <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
-          <div className="flex flex-col space-y-3">
-            <button 
-              onClick={handleSkip}
-              disabled={loading}
-              className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]" 
-            >
-              {loading ? 'Procesando...' : 'Skip'}
-            </button>
-            <button
-              onClick={handleDiscard}
-              disabled={loading || selectedCards.length === 0}
-              className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]" 
-            >
-              {loading ? 'Procesando...' : 'Discard'}
-            </button>
+            <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={handleSkip}
+                disabled={loading}
+                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
+              >
+                {loading ? 'Procesando...' : 'Skip'}
+              </button>
+              <button
+                onClick={handleDiscard}
+                disabled={loading || selectedCards.length === 0}
+                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
+              >
+                {loading ? 'Procesando...' : 'Discard'}
+              </button>
+            </div>
           </div>
-        </div>
-        : <></> }
-
-        {gameState.gameEnded(
-          <GameEndModal
-            message= "El asesino y cómplice ganaron"
-          />
+        ) : (
+          <></>
         )}
-        
+
+        {gameState?.gameEnded && (
+          <GameEndModal message="El asesino y cómplice ganaron" />
+        )}
       </div>
     </main>
-  );
+  )
 }
