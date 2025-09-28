@@ -12,7 +12,7 @@ import LobbyError from "../components/LobbyError.jsx";
 export default function PantallaDeCreacion() {
   const navigate = useNavigate();
   const { userState, userDispatch } = useUser();
-  const { gameState, gameDispatch } = useGame();
+  const { gameState, gameDispatch, connectToGame  } = useGame();
   
   // Local state for game creation form
   const [gameForm, setGameForm] = useState({
@@ -26,15 +26,20 @@ export default function PantallaDeCreacion() {
     try {
       // Prepare the request data with user info
       const requestData = {
-        nombre_partida: gameForm.nombre_partida,
-        jugadores: gameForm.jugadores,
-        host_id: true, // This user will be the host
-        nombre: userState.name,
-        avatar: userState.avatarPath,
-        fechaNacimiento: userState.birthdate
+          room: {
+              nombre_partida: gameForm.nombre_partida,
+              jugadores: gameForm.jugadores
+          },
+          player: {
+              nombre: userState.name,
+              avatar: userState.avatarPath,
+              fechaNacimiento: userState.birthdate
+          }
       };
 
-      const response = await fetch("http://localhost:8000/api/game", {
+      console.log(requestData);
+
+      const response = await fetch("http://localhost:8000/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
@@ -48,16 +53,44 @@ export default function PantallaDeCreacion() {
       if (!response.ok) throw new Error();
 
       const data = await response.json();
+      console.log("Response data:", data);
+    
+      // Update user context with the host player data
+      const hostPlayer = data.players.find(player => player.is_host) || data.players[0];
+      userDispatch({ 
+        type: 'SET_USER', 
+        payload: {
+          id: hostPlayer.id,
+          name: hostPlayer.name,
+          avatarPath: hostPlayer.avatar, // Map avatar to avatarPath
+          birthdate: hostPlayer.birthdate,
+          isHost: hostPlayer.is_host
+        }
+      });
       
-      // Set user as host since they created the game
-      userDispatch({ type: 'SET_HOST', payload: true });
+      // Initialize game with room and players data
+      gameDispatch({ 
+        type: 'INITIALIZE_GAME', 
+        payload: {
+          room: {
+            id: data.room.id,
+            name: data.room.name,
+            playerQty: data.room.player_qty,
+            status: data.room.status,
+            hostId: data.room.host_id
+          },
+          players: data.players
+        }
+      });
       
-      // You might want to initialize some game state here if needed
-      // gameDispatch({ type: 'SET_GAME_ID', payload: data.id_partida });
-
+      // Conectar con el websocket
+      console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
+      connectToGame(data.room.id, hostPlayer.id);
+      
       navigate(`/game_join/${data.id_partida}`);
+
     } catch (error) {
-      setError("Error al crear la partida");
+      setError("Error al crear la partida: ", error);
     }
   };
 
