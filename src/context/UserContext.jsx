@@ -4,7 +4,7 @@ import { createContext, useContext, useReducer } from 'react';
 const UserContext = createContext();
 
 const userInitialState = {
-  id: int,
+  id: null,
   name: '',
   avatarPath: '',
   birthdate: null,

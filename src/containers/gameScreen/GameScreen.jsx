@@ -3,10 +3,19 @@ import { useUser } from "../../context/UserContext.jsx";
 import ProfileCard from "../../components/ProfileCard";
 import { useGame } from "../../context/GameContext.jsx";
 import { useState } from "react";
+import Deck from "../../components/Deck.jsx";
+import Discard from "../../components/Discard.jsx";
+
 
 export default function ProfileContainer() {
   const { userState } = useUser();
   const { gameState } = useGame();
+
+  // Debug logs 
+  // console.log('GameState completo:', gameState);
+  // console.log('GameState mazos:', gameState.mazos);
+  // console.log('GameState turnoActual:', gameState.turnoActual);
+
 
   const [selectedCards, setSelectedCards] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -155,12 +164,12 @@ export default function ProfileContainer() {
           <div className="flex flex-col items-center space-y-3">
             {/* Top row - 2 cards */}
             <div className="flex space-x-3">
-              {[1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
-                />
-              ))}
+              <Deck cardsLeft={gameState.mazos?.mazo_principal ?? 0} />
+              <Discard
+                topDiscardedCard={gameState.mazos?.top_descarte?.img ?? null}
+                counterDiscarded={gameState.mazos?.mazo_descarte ?? 0}
+              />
+              
             </div>
             {/* Bottom row PLaceholder */}
             <div className="flex space-x-3">
