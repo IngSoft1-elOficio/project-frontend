@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useGame } from "../context/GameContext";
 import brent from "../assets/detective_brent.png";
 import marple from "../assets/detective_marple.png";
@@ -22,8 +21,8 @@ import onemore from "../assets/event_onemore.png";
 import pointsuspicions from "../assets/event_pointsuspicions.png";
 import notsofast from "../assets/instant_notsofast.png";
 
-export default function HandCards() {
-  const { gameState, gameDispatch } = useGame();
+export default function HandCards({ selectedCards, onSelect }) {
+  const { gameState } = useGame();
   const hand = gameState.mano || [];
 
   const normalizeName = (name = "") =>
@@ -66,10 +65,6 @@ export default function HandCards() {
     return IMAGE_MAP[key] ?? null;
   };
 
-  const cardSelected = (card) => {
-    gameDispatch({ type: "TOGGLE_SELECT_CARD", payload: card.id });
-  };
-
   return (
     <div style={{
       display: "flex",
@@ -77,22 +72,22 @@ export default function HandCards() {
       justifyContent: "center",
       alignItems: "center",
       width: "100%",
-      minHeight: "170vh"
+      minHeight: "40vh"
     }}>
       {hand.map((card) => {
         const src = getCardsImage(card);
-        const isSelected = card.is_in === "SELECT";
+        const isSelected = selectedCards.includes(card.id);
 
         return (
           <button
             key={card.id}
             type="button"
-            onClick={() => cardSelected(card)}
+            onClick={() => onSelect(card.id)}
             style={{
                 border: "none",
                 borderRadius: 8,
                 cursor: "pointer",
-                boxShadow: isSelected ? "0 0 0 3px rgba(255,209,92,0.95)" : "none"
+                boxShadow: isSelected ? "0 0 0 3px gold" : "none",
             }}
           >
               <img
