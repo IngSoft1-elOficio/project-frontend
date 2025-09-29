@@ -47,7 +47,8 @@ const gameReducer = (state, action) => {
     case 'UPDATE_GAME_STATE_PUBLIC':
       return {
         ...state,
-        gameId: action.payload.game_id,
+        roomId: action.payload.room_id || state.roomId, // Fallback to existing roomId
+        gameId: action.payload.game_id || state.gameId, // Fallback to existing gameId
         started: action.payload.status,
         turnoActual: action.payload.turno_actual,
         jugadores: action.payload.jugadores,
@@ -81,20 +82,18 @@ export const GameProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   // Function to connect to socket
-  const connectToGame = useCallback((gameId, userId) => {
+  const connectToGame = useCallback((roomId, userId) => {
     // Disconnect existing connection if any
     if (socketRef.current) {
       socketRef.current.disconnect();
       socketRef.current = null;
     }
 
-    if (!gameId) return;
-
-    console.log('Connecting to game:', gameId);
+    console.log('Connecting to game:', roomId);
 
     const socket = io('http://localhost:8000', {
       query: {
-        game_id: gameId,
+        room_id: roomId,
         user_id: userId
       },
       transports: ['websocket', 'polling'],
@@ -105,12 +104,12 @@ export const GameProvider = ({ children }) => {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('Socket connected to game:', gameId);
+      console.log('Socket connected to game:', roomId);
       gameDispatch({ type: 'SOCKET_CONNECTED' });
     });
 
     socket.on('connected', (data) => {
-      console.log('✅ Backend confirmed connection and auto-joined room:', data);
+      console.log('✅ Backend confirmed connection and auto-joined room:', roomId);
       gameDispatch({ type: 'SOCKET_CONNECTED' });
     });
 
@@ -122,8 +121,18 @@ export const GameProvider = ({ children }) => {
     // Game events
     socket.on('game_state_public', (data) => {
       console.log('🔵 Received game_state_public:', data);
-      gameDispatch({ type: 'UPDATE_GAME_STATE_PUBLIC', payload: data });
-      console.log("updated game state public");
+      gameDispatch({
+        type: 'UPDATE_GAME_STATE_PUBLIC',
+        payload: {
+          roomId: data.room_id,
+          status: data.status,
+          turno_actual: data.turno_actual,
+          jugadores: data.jugadores,
+          mazos: data.mazos,
+          timestamp: data.timestamp,
+          gameEnded: false
+        }
+      });
     });
 
     socket.on('game_state_private', (data) => {
@@ -151,7 +160,7 @@ export const GameProvider = ({ children }) => {
   // Function to disconnect from socket
   const disconnectFromGame = useCallback(() => {
     if (socketRef.current) {
-      console.log('Disconnecting from game');
+      console.log('Disconnecting from game: room_id = ', room_id);
       socketRef.current.disconnect();
       socketRef.current = null;
       gameDispatch({ type: 'SOCKET_DISCONNECTED' });

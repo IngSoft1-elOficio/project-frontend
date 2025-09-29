@@ -8,10 +8,18 @@ import Button from '../../components/Button'
 import ItemList from '../../components/ItemList'
 import ProfileCard from '../../components/ProfileCard'
 import LobbyError from '../../components/LobbyError'
+import { useGame } from '../../context/GameContext.jsx'
 
 function GamesScreen() {
   const navigate = useNavigate()
   const { userState } = useUser()
+  const { gameState } = useGame()
+ 
+  useEffect(() => {
+      console.log("Game state at join games: ", gameState);
+      console.log("User state at join games: ", userState);
+  }, [gameState, userState])
+
   const [partidas, setPartidas] = useState([])
   //Position of Buttons and ProfileCard
   const elementsPosition = 'flex flex-col justify-center items-end h-screen'

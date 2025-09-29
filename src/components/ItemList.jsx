@@ -34,11 +34,18 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
           body: JSON.stringify(requestData),
         });
 
+        if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al unirse a la partida");
+        }
 
       const data = await response.json();
       console.log("Response data:", data);
 
       const playerJoining = data.players.find(player => player.name == userState.name);
+      if (!playerJoining) {
+        throw new Error("Jugador no encontrado en la respuesta");
+      }
     
       userDispatch({ 
         type: 'SET_USER', 

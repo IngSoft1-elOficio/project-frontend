@@ -1,13 +1,20 @@
 // src/components/LoginBox.jsx
 import "../containers/LoginScreen/LoginScreen.css";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext.jsx';
 import AvatarSelector from './AvatarSelector';
+import { useGame } from "../context/GameContext.jsx";
 
 function LoginBox() {
   const navigate = useNavigate();
+  const { gameState } = useGame()
   const { userState, userDispatch } = useUser();
+
+  useEffect(() => {
+      console.log("Game state at login: ", gameState);
+      console.log("User state at login: ", userState);
+  }, [gameState, userState])
   
   // Local form state
   const [formData, setFormData] = useState({

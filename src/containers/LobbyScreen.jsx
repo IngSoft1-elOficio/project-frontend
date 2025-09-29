@@ -4,10 +4,18 @@ import { useUser } from '../context/UserContext.jsx';
 import LobbyContent from '../components/LobbyContent';
 import LobbyError from '../components/LobbyError';
 import Background from '../components/Background';
+import { useEffect } from "react";
+import { useGame } from "../context/GameContext.jsx";
 
 function LobbyScreen() {
   const navigate = useNavigate();
   const { userState, userDispatch } = useUser();
+  const { gameState } = useGame()
+
+  useEffect(() => {
+        console.log("Game state at lobby: ", gameState);
+        console.log("User state at lobby: ", userState);
+    }, [gameState, userState])
 
   // Logout: clear user data from UserContext
   const handleLogout = () => {

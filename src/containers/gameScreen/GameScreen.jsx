@@ -8,11 +8,16 @@ import Discard from "../../components/Discard.jsx";
 import GameEndModal from '../../components/GameEndModal'
 import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
-
+import { useEffect } from "react";
 
 export default function GameScreen() {
   const { userState } = useUser()
   const { gameState } = useGame()
+
+  useEffect(() => {
+      console.log("Game state at play game: ", gameState);
+      console.log("User state at playgame: ", userState);
+  }, [gameState, userState])
 
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
