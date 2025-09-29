@@ -17,7 +17,7 @@ export default function PlayersList({ players = [], hostId }) {
                   👑
                 </span>
               )}
-              {p?.nombre ?? `Jugador ${i + 1}`}
+              {p?.name ?? `Jugador ${i + 1}`}
             </span>
 
             <span className="text-sm opacity-80">

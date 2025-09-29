@@ -1,4 +1,3 @@
-import React from 'react';
 import "../containers/LoginScreen/LoginScreen.css";
 
 export default function AvatarSelector({ selected, onChange, options }) {
@@ -11,7 +10,7 @@ export default function AvatarSelector({ selected, onChange, options }) {
           className={`avatar-btn ${selected === avatar.value ? 'selected' : ''}`}
           onClick={() => onChange(avatar.value)}
         >
-          <img src={avatar.src} alt={avatar.value} />
+          <img src={avatar.value} alt={avatar.value} />
         </button>
       ))}
     </div>

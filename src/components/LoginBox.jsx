@@ -105,11 +105,11 @@ function LoginBox() {
               selected={formData.avatar}
               onChange={(value) => handleInputChange('avatar', value)}
               options={[
-                { value: 'avatar1', src: './public/avatar1.jpg' },
-                { value: 'avatar2', src: './public/avatar2.jpg' },
-                { value: 'avatar3', src: './public/avatar3.jpg' },
-                { value: 'avatar4', src: './public/avatar4.jpg' },
-                { value: 'avatar5', src: './public/avatar5.jpg' },
+                { value: './public/avatar1.jpg' },
+                { value: './public/avatar2.jpg' },
+                { value: './public/avatar3.jpg' },
+                { value: './public/avatar4.jpg' },
+                { value: './public/avatar5.jpg' },
               ]}
             />
           </div>

@@ -1,4 +1,4 @@
-// __tests__/GameContext.test.jsx
+// __tests__/SocketIOAndContext.test.jsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
@@ -8,7 +8,8 @@ import { GameProvider, useGame } from '../context/GameContext.jsx';
 const mockSocket = {
   on: vi.fn(),
   disconnect: vi.fn(),
-  emit: vi.fn()
+  emit: vi.fn(),
+  id: 'mock-socket-id'
 };
 
 vi.mock('socket.io-client', () => ({
@@ -17,7 +18,7 @@ vi.mock('socket.io-client', () => ({
 
 // Test component that uses the GameContext
 const TestComponent = () => {
-  const { gameState, gameDispatch } = useGame();
+  const { gameState, gameDispatch, connectToGame, disconnectFromGame } = useGame();
   
   return (
     <div>
@@ -29,11 +30,28 @@ const TestComponent = () => {
       <div data-testid="secrets-size">{gameState.secretos.length}</div>
       <div data-testid="game-ended">{gameState.gameEnded ? 'ended' : 'playing'}</div>
       <div data-testid="win-status">{gameState.ganaste === null ? 'unknown' : (gameState.ganaste ? 'won' : 'lost')}</div>
+      <div data-testid="joined-room">{gameState.joinedRoom ? 'joined' : 'not-joined'}</div>
+      <div data-testid="backend-connected">{gameState.backendConnected ? 'backend-connected' : 'backend-not-connected'}</div>
+      
       <button 
         onClick={() => gameDispatch({ type: 'RESET_GAME' })}
         data-testid="reset-button"
       >
         Reset
+      </button>
+      
+      <button 
+        onClick={() => connectToGame(123, 456)}
+        data-testid="connect-button"
+      >
+        Connect to Game
+      </button>
+      
+      <button 
+        onClick={() => disconnectFromGame()}
+        data-testid="disconnect-button"
+      >
+        Disconnect
       </button>
     </div>
   );
@@ -63,17 +81,33 @@ describe('GameContext', () => {
     expect(screen.getByTestId('secrets-size')).toHaveTextContent('0');
     expect(screen.getByTestId('game-ended')).toHaveTextContent('playing');
     expect(screen.getByTestId('win-status')).toHaveTextContent('unknown');
+    expect(screen.getByTestId('joined-room')).toHaveTextContent('not-joined');
+    expect(screen.getByTestId('backend-connected')).toHaveTextContent('backend-not-connected');
   });
 
-  it('should handle socket connection', async () => {
+  it('should handle manual connection to game', async () => {
     render(
       <GameProvider>
         <TestComponent />
       </GameProvider>
     );
 
-    // Simulate socket connect event
-    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')[1];
+    // Initially no socket event listeners should be registered
+    expect(mockSocket.on).not.toHaveBeenCalled();
+
+    // Click connect button to trigger socket connection
+    const connectButton = screen.getByTestId('connect-button');
+    
+    act(() => {
+      connectButton.click();
+    });
+
+    // Now socket should be created and event listeners registered
+    expect(mockSocket.on).toHaveBeenCalled();
+    
+    // Find and trigger the connect handler
+    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')?.[1];
+    expect(connectHandler).toBeDefined();
     
     act(() => {
       connectHandler();
@@ -91,20 +125,61 @@ describe('GameContext', () => {
       </GameProvider>
     );
 
-    // First connect
-    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')[1];
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
+    // Get connect handler and trigger it
+    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')?.[1];
     act(() => {
       connectHandler();
     });
 
-    // Then disconnect
-    const disconnectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'disconnect')[1];
+    // Get disconnect handler and trigger it
+    const disconnectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'disconnect')?.[1];
+    expect(disconnectHandler).toBeDefined();
+    
     act(() => {
-      disconnectHandler();
+      disconnectHandler('client namespace disconnect');
     });
 
     await waitFor(() => {
       expect(screen.getByTestId('connected')).toHaveTextContent('disconnected');
+    });
+  });
+
+  it('should handle backend connected event', async () => {
+    render(
+      <GameProvider>
+        <TestComponent />
+      </GameProvider>
+    );
+
+    // Connect to game
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
+    // Find and trigger connected event from backend
+    const connectedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connected')?.[1];
+    expect(connectedHandler).toBeDefined();
+
+    const mockConnectedData = {
+      message: 'Conectado exitosamente',
+      user_id: 456,
+      game_id: 123,
+      sid: 'mock-socket-id'
+    };
+
+    act(() => {
+      connectedHandler(mockConnectedData);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('joined-room')).toHaveTextContent('joined');
     });
   });
 
@@ -114,6 +189,12 @@ describe('GameContext', () => {
         <TestComponent />
       </GameProvider>
     );
+
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
 
     const mockGameStatePublic = {
       game_id: 'test-game-123',
@@ -126,7 +207,8 @@ describe('GameContext', () => {
       timestamp: '2023-01-01T00:00:00.000Z'
     };
 
-    const gameStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_public')[1];
+    const gameStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_public')?.[1];
+    expect(gameStateHandler).toBeDefined();
     
     act(() => {
       gameStateHandler(mockGameStatePublic);
@@ -146,6 +228,12 @@ describe('GameContext', () => {
       </GameProvider>
     );
 
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
     const mockGameStatePrivate = {
       user_id: 'player1',
       mano: ['card1', 'card2', 'card3'],
@@ -153,7 +241,8 @@ describe('GameContext', () => {
       timestamp: '2023-01-01T00:00:00.000Z'
     };
 
-    const privateStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_private')[1];
+    const privateStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_private')?.[1];
+    expect(privateStateHandler).toBeDefined();
     
     act(() => {
       privateStateHandler(mockGameStatePrivate);
@@ -172,6 +261,12 @@ describe('GameContext', () => {
       </GameProvider>
     );
 
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
     const mockGameEndResult = {
       type: 'game_ended',
       user_id: 'player1',
@@ -179,7 +274,8 @@ describe('GameContext', () => {
       timestamp: '2023-01-01T00:00:00.000Z'
     };
 
-    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')[1];
+    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')?.[1];
+    expect(actionResultHandler).toBeDefined();
     
     act(() => {
       actionResultHandler(mockGameEndResult);
@@ -198,6 +294,12 @@ describe('GameContext', () => {
       </GameProvider>
     );
 
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
     const mockGameEndResult = {
       type: 'game_ended',
       user_id: 'player1',
@@ -205,7 +307,8 @@ describe('GameContext', () => {
       timestamp: '2023-01-01T00:00:00.000Z'
     };
 
-    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')[1];
+    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')?.[1];
+    expect(actionResultHandler).toBeDefined();
     
     act(() => {
       actionResultHandler(mockGameEndResult);
@@ -224,7 +327,12 @@ describe('GameContext', () => {
       </GameProvider>
     );
 
-    // First, set some game state
+    // Connect and set some game state first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
     const mockGameStatePublic = {
       game_id: 'test-game-123',
       turno_actual: 'player1',
@@ -233,7 +341,7 @@ describe('GameContext', () => {
       timestamp: '2023-01-01T00:00:00.000Z'
     };
 
-    const gameStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_public')[1];
+    const gameStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_public')?.[1];
     act(() => {
       gameStateHandler(mockGameStatePublic);
     });
@@ -258,34 +366,67 @@ describe('GameContext', () => {
     });
   });
 
-  it('should setup all socket event listeners', () => {
+  it('should setup all socket event listeners after connection', () => {
     render(
       <GameProvider>
         <TestComponent />
       </GameProvider>
     );
 
-    // Verify all expected event listeners are registered
+    // Initially no listeners
+    expect(mockSocket.on).not.toHaveBeenCalled();
+
+    // Connect to game
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
+    // Verify all expected event listeners are registered after connection
     const eventNames = mockSocket.on.mock.calls.map(call => call[0]);
     expect(eventNames).toContain('connect');
     expect(eventNames).toContain('disconnect');
+    expect(eventNames).toContain('connected');
     expect(eventNames).toContain('game_state_public');
     expect(eventNames).toContain('game_state_private');
     expect(eventNames).toContain('player_action_result');
+    expect(eventNames).toContain('connect_error');
   });
 
-  it('should cleanup socket connection on unmount', () => {
-    const { unmount } = render(
+  it('should handle manual disconnection', () => {
+    render(
       <GameProvider>
         <TestComponent />
       </GameProvider>
     );
 
+    // Connect first
+    const connectButton = screen.getByTestId('connect-button');
+    act(() => {
+      connectButton.click();
+    });
+
     expect(mockSocket.disconnect).not.toHaveBeenCalled();
 
-    unmount();
+    // Manually disconnect
+    const disconnectButton = screen.getByTestId('disconnect-button');
+    act(() => {
+      disconnectButton.click();
+    });
 
     expect(mockSocket.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('should not create socket connection on mount', () => {
+    render(
+      <GameProvider>
+        <TestComponent />
+      </GameProvider>
+    );
+
+    // Socket should not be created on mount - only when connectToGame is called
+    expect(mockSocket.on).not.toHaveBeenCalled();
+    expect(mockSocket.disconnect).not.toHaveBeenCalled();
   });
 
   it('should throw error when useGame is used outside GameProvider', () => {
@@ -297,5 +438,34 @@ describe('GameContext', () => {
     }).toThrow('useGame must be used within a GameProvider');
 
     consoleSpy.mockRestore();
+  });
+
+  it('should handle multiple connections properly', () => {
+    render(
+      <GameProvider>
+        <TestComponent />
+      </GameProvider>
+    );
+
+    const connectButton = screen.getByTestId('connect-button');
+    
+    // First connection
+    act(() => {
+      connectButton.click();
+    });
+    
+    const firstCallCount = mockSocket.on.mock.calls.length;
+    expect(firstCallCount).toBeGreaterThan(0);
+    
+    // Second connection should disconnect first and create new one
+    act(() => {
+      connectButton.click();
+    });
+    
+    // Should have called disconnect once for cleanup
+    expect(mockSocket.disconnect).toHaveBeenCalledOnce();
+    
+    // Should have more socket.on calls for the new connection
+    expect(mockSocket.on.mock.calls.length).toBeGreaterThan(firstCallCount);
   });
 });

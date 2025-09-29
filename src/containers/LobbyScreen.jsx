@@ -1,3 +1,4 @@
+import "../index.css"
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext.jsx';
 import LobbyContent from '../components/LobbyContent';
@@ -28,8 +29,7 @@ function LobbyScreen() {
     isHost: userState.isHost
   };
 
-  // Print player status from [LobbyScreen] in console
-  // console.log('[LobbyScreen] Estado player:', player);
+  console.log(userState);
 
   // If player logged shows buttons with player data
   // if not then shows an error message with a button to "login"

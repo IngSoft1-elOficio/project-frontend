@@ -1,6 +1,6 @@
 //LobbyScreen.test.jsx
 import { render, screen, fireEvent } from '@testing-library/react'
-import LobbyScreen from './LobbyScreen'
+import LobbyScreen from '../containers/LobbyScreen'
 import { useUser, UserProvider } from '../context/UserContext'
 import { vi } from 'vitest'
 
