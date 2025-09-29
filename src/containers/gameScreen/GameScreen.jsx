@@ -43,6 +43,7 @@ export default function GameScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          HTTP_USER_ID: userState.id,
         },
         body: JSON.stringify({
           card_ids: selectedCards,
@@ -77,6 +78,7 @@ export default function GameScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          HTTP_USER_ID: userState.id,
         },
         body: JSON.stringify({
           rule: 'auto',
