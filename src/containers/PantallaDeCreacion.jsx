@@ -72,13 +72,7 @@ export default function PantallaDeCreacion() {
       gameDispatch({ 
         type: 'INITIALIZE_GAME', 
         payload: {
-          room: {
-            id: data.room.id,
-            name: data.room.name,
-            playerQty: data.room.player_qty,
-            status: data.room.status,
-            hostId: data.room.host_id
-          },
+          room: data.room,
           players: data.players
         }
       });

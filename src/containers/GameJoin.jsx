@@ -5,25 +5,33 @@ import PlayersList from "../components/PlayersList";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import LobbyError from "../components/LobbyError.jsx";
+import { useEffect } from "react";
 
 export default function GameJoin() {
   const navigate = useNavigate();
 
   // Contexts
-  const { gameState } = useGame();
+  const { gameState, gameDispatch } = useGame();
   const { userState } = useUser();
 
   const { gameId, jugadores } = gameState;
-  
+
+  useEffect(() => {
+    console.log("Estado started actualizado:", gameState.started);
+  }, [gameState.started]);
+
   const handleStart = async () => {
     if (!userState.isHost) return;
+
+    console.log('🚀 Starting game, socket connected?', gameState.connected);
+    console.log('🎮 Current gameId:', gameState.gameId);
     
     try {
       const payload = { user_id: userState.id }; // or whatever variable holds the current user's ID
       console.log("Sending payload:", payload); // Debug log
       
       const response = await fetch(
-        `http://localhost:8000/game/${gameId}/start`,
+        `http://localhost:8000/game/${gameState.roomId}/start`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -42,7 +50,7 @@ export default function GameJoin() {
       const data = await response.json();
       console.log("Partida iniciada:", data);
 
-      navigate(`/game/${gameState.id}`)
+      navigate(`/game/${gameState.gameId}`)
 
     } catch (error) {
       console.error("Fallo en handleStart:", error);

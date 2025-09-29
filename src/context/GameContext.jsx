@@ -6,7 +6,9 @@ const GameContext = createContext();
 
 const gameInitialState = {
   gameId: null,
+  roomId: null,
   turnoActual: null,
+  started: null,
   jugadores: [],
   mazos: {},
   mano: [],
@@ -34,15 +36,11 @@ const gameReducer = (state, action) => {
         ...state,
         gameId: action.payload
       };
-    case 'SET_ROOM_INFO':
-      return {
-        ...state,
-        roomInfo: action.payload
-      };
     case 'INITIALIZE_GAME':
       return {
         ...state,
-        gameId: action.payload.room.id,
+        gameId: action.payload.room.game_id,  
+        roomId: action.payload.room.id,       
         roomInfo: action.payload.room,
         jugadores: action.payload.players
       };
@@ -50,6 +48,7 @@ const gameReducer = (state, action) => {
       return {
         ...state,
         gameId: action.payload.game_id,
+        started: action.payload.status,
         turnoActual: action.payload.turno_actual,
         jugadores: action.payload.jugadores,
         mazos: action.payload.mazos,
@@ -122,11 +121,20 @@ export const GameProvider = ({ children }) => {
 
     // Game events
     socket.on('game_state_public', (data) => {
+      console.log('🔵 Received game_state_public:', data);
       gameDispatch({ type: 'UPDATE_GAME_STATE_PUBLIC', payload: data });
+      console.log("updated game state public");
     });
 
     socket.on('game_state_private', (data) => {
+      console.log('🟢 Received game_state_private:', data);
       gameDispatch({ type: 'UPDATE_GAME_STATE_PRIVATE', payload: data });
+      console.log("updated game state private");
+    });
+
+    // Add a catch-all listener to see ALL events
+    socket.onAny((eventName, ...args) => {
+      console.log('📡 Socket received event:', eventName, args);
     });
 
     socket.on('player_action_result', (data) => {
@@ -138,7 +146,6 @@ export const GameProvider = ({ children }) => {
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
     });
-
   }, []);
 
   // Function to disconnect from socket
