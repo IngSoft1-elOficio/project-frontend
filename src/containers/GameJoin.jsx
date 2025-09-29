@@ -14,35 +14,40 @@ export default function GameJoin() {
   const { userState } = useUser();
 
   const { gameId, jugadores } = gameState;
-  const { isHost } = userState;
-
-  // Host player
-  const hostUser = jugadores.find((u) => u.isHost === true);
-  const hostId = hostUser?.user_id;
-
+  
   const handleStart = async () => {
-    if (!isHost) return;
-
+    if (!userState.isHost) return;
+    
     try {
+      const payload = { user_id: userState.id }; // or whatever variable holds the current user's ID
+      console.log("Sending payload:", payload); // Debug log
+      
       const response = await fetch(
         `http://localhost:8000/game/${gameId}/start`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: hostId }),
+          body: JSON.stringify(payload),
         }
       );
-
+      
+      console.log("Response status:", response.status); // Debug log
+      
       if (!response.ok) {
-        throw new Error("Error al iniciar partida");
+        const errorData = await response.json();
+        console.error("Error response:", errorData); // Debug log
+        throw new Error(errorData.detail || "Error al iniciar partida");
       }
+      
+      const data = await response.json();
+      console.log("Partida iniciada:", data);
 
-      // Opcional: podrías navegar a la pantalla de juego
-      // navigate(`/game/${gameId}`);
+      navigate(`/game/${gameState.id}`)
+
     } catch (error) {
       console.error("Fallo en handleStart:", error);
     }
-  };
+  };  
 
   return (
     <main className="relative min-h-dvh overflow-x-hidden">
@@ -60,13 +65,13 @@ export default function GameJoin() {
         </h1>
 
         <Card title="Jugadores" className="mb-8 font-limelight">
-          <PlayersList players={jugadores} hostId={hostId} />
+          <PlayersList players={jugadores} />
         </Card>
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
           <Button
             onClick={handleStart}
-            disabled={!isHost}
+            disabled={!userState.isHost}
             className="font-limelight"
           >
             Iniciar partida

@@ -87,7 +87,7 @@ export default function PantallaDeCreacion() {
       console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
       connectToGame(data.room.id, hostPlayer.id);
       
-      navigate(`/game_join/${data.id_partida}`);
+      navigate(`/game_join/${data.room.id}`);
 
     } catch (error) {
       setError("Error al crear la partida: ", error);

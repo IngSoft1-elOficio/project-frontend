@@ -37,21 +37,20 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
 
       const data = await response.json();
       console.log("Response data:", data);
+
+      const playerJoining = data.players.find(player => player.name == userState.name);
     
-      // Update user context with the host player data
-      const hostPlayer = data.players.find(player => player.is_host) || data.players[0];
       userDispatch({ 
         type: 'SET_USER', 
         payload: {
-          id: hostPlayer.id,
-          name: hostPlayer.name,
-          avatarPath: hostPlayer.avatar, // Map avatar to avatarPath
-          birthdate: hostPlayer.birthdate,
-          isHost: hostPlayer.is_host
+          id: playerJoining.id,
+          name: playerJoining.name,
+          avatarPath: playerJoining.avatar, // Map avatar to avatarPath
+          birthdate: playerJoining.birthdate,
+          isHost: playerJoining.is_host
         }
       });
       
-      // Initialize game with room and players data
       gameDispatch({ 
         type: 'INITIALIZE_GAME', 
         payload: {
@@ -66,11 +65,9 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
         }
       });
       
-      // Conectar con el websocket
-      console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
-      connectToGame(data.room.id, hostPlayer.id);
+      console.log('Connecting with gameId:', data.room.id, 'userId:', playerJoining.id);
+      connectToGame(data.room.id, playerJoining.id);
 
-      //If not full then join
       onJoin()
       
     } catch (err) {

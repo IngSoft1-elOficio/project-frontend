@@ -7,6 +7,7 @@ import Deck from "../../components/Deck.jsx";
 import Discard from "../../components/Discard.jsx";
 import GameEndModal from '../../components/GameEndModal'
 import HandCards from "../../components/HandCards.jsx";
+import Secrets from "../../components/Secrets.jsx"
 
 
 export default function GameScreen() {
@@ -144,14 +145,7 @@ export default function GameScreen() {
           <h2 className="text-white text-xl font-bold mb-4 text-center">
             Secretos
           </h2>
-          <div className="flex space-x-3">
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
-              />
-            ))}
-          </div>
+          <Secrets />
         </div>
 
         {/* Mazos Placeholder */}
@@ -167,16 +161,6 @@ export default function GameScreen() {
                 topDiscardedCard={gameState.mazos?.top_descarte?.img ?? null}
                 counterDiscarded={gameState.mazos?.mazo_descarte ?? 0}
               />
-              
-            </div>
-            {/* Bottom row PLaceholder */}
-            <div className="flex space-x-3">
-              {[1, 2, 3].map(i => (
-                <div
-                  key={i}
-                  className="w-16 h-24 bg-gray-600 bg-opacity-80 rounded-lg border-2 border-gray-400"
-                />
-              ))}
             </div>
           </div>
         </div>
