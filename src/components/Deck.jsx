@@ -1,5 +1,5 @@
 import card_back from '../assets/01-card_back.png';
-export default function Discard({ cardsLeft }) {
+export default function Deck({ cardsLeft }) {
     return (
         <div className="flex flex-col items-center">
             <div className="top-card">
