@@ -1,13 +1,13 @@
-import "../../index.css"
-import { useUser } from "../../context/UserContext.jsx";
-import ProfileCard from "../../components/ProfileCard";
-import { useGame } from "../../context/GameContext.jsx";
-import { useState } from "react";
-import Deck from "../../components/Deck.jsx";
-import Discard from "../../components/Discard.jsx";
+import '../../index.css'
+import { useUser } from '../../context/UserContext.jsx'
+import ProfileCard from '../../components/ProfileCard'
+import { useGame } from '../../context/GameContext.jsx'
+import { useState } from 'react'
+import Deck from '../../components/Deck.jsx'
+import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
-import HandCards from "../../components/HandCards.jsx";
-
+import HandCards from '../../components/HandCards.jsx'
+import ButtonGame from '../../components/ButtonGame.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -16,6 +16,8 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const roomId = gameState?.gameId || gameState?.roomId
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -37,7 +39,7 @@ export default function GameScreen() {
     setError(null)
 
     try {
-      const response = await fetch(`/game/${roomId}/discard`, {
+      const response = await fetch(`/api/game/${roomId}/discard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +73,7 @@ export default function GameScreen() {
     setError(null)
 
     try {
-      const response = await fetch(`/game/${roomId}/skip`, {
+      const response = await fetch(`/api/game/${roomId}/skip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +169,6 @@ export default function GameScreen() {
                 topDiscardedCard={gameState.mazos?.top_descarte?.img ?? null}
                 counterDiscarded={gameState.mazos?.mazo_descarte ?? 0}
               />
-              
             </div>
             {/* Bottom row PLaceholder */}
             <div className="flex space-x-3">
@@ -186,7 +187,10 @@ export default function GameScreen() {
           <h2 className="text-white text-xl font-bold mb-4 text-center">
             Cartas en mano
           </h2>
-          <HandCards selectedCards={selectedCards} onSelect={handleCardSelect} />
+          <HandCards
+            selectedCards={selectedCards}
+            onSelect={handleCardSelect}
+          />
         </div>
 
         {gameState.turnoActual ==
@@ -194,20 +198,22 @@ export default function GameScreen() {
           <div className="absolute bottom-4 right-4">
             <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
             <div className="flex flex-col space-y-3">
-              <button
-                onClick={handleSkip}
-                disabled={loading}
-                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
-              >
-                {loading ? 'Procesando...' : 'Skip'}
-              </button>
-              <button
+              {/* Botones */}
+              {/* Botón para descartar cartas */}
+              <ButtonGame
                 onClick={handleDiscard}
-                disabled={loading || selectedCards.length === 0}
-                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
+                disabled={selectedCards.length === 0 || loading}
               >
-                {loading ? 'Procesando...' : 'Discard'}
-              </button>
+                Descartar
+              </ButtonGame>
+
+              {/* Botón para saltar turno */}
+              <ButtonGame
+                onClick={handleSkip}
+                disabled={loading || selectedCards.length > 0}
+              >
+                Saltar Turno
+              </ButtonGame>
             </div>
           </div>
         ) : (
