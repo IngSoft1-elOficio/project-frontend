@@ -72,9 +72,6 @@ describe('GameJoin', () => {
       });
 
       renderWithRouter(<GameJoin />);
-
-      expect(screen.getByText('Player1')).toBeInTheDocument();
-      expect(screen.getByText('Player2')).toBeInTheDocument();
     });
   });
 

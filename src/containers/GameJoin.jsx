@@ -44,8 +44,6 @@ export default function GameJoin() {
     }
   };
 
-  console.log(userState)
-
   return (
     <main className="relative min-h-dvh overflow-x-hidden">
       
