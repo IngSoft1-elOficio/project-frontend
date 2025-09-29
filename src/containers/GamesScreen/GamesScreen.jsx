@@ -60,6 +60,8 @@ function GamesScreen() {
     isHost: userState.isHost,
   }
 
+  console.log(partidas)
+
   return (
     <div>
       <BackgroundList>

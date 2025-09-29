@@ -1,9 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 import ButtonJoin from '../components/ButtonJoin'
 import { FiLogIn } from 'react-icons/fi'
+import { useUser } from '../context/UserContext'
+import { useGame } from '../context/GameContext'
 
 //Function for a single lobby row with necessary data
 function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
+
+  const { userState, userDispatch } = useUser();
+  const { gameState, gameDispatch, connectToGame  } = useGame();
+
   const RowStyle = 'items-center py-2 '
   const RowTextStyle = 'text-center'
   const RowColumns = 'grid grid-cols-3'
@@ -14,18 +20,59 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
 
   const handleJoin = async () => {
     try {
-      //Fetch state of lobby
-      const res = await fetch(`http://localhost:8000/api/game/${id}`)
-      if (!res.ok) throw new Error('Error al obtener la sala')
-      const room = await res.json()
+        const requestData = {
+          name: userState.name,
+          avatar: userState.avatarPath,
+          birthdate: userState.birthdate // debe estar en formato "YYYY-MM-DD"
+        };
 
-      if (room.playersJoined >= room.playerQty) {
-        alert(`La sala "${name}" está llena`)
-        return
-      }
+        console.log("join request", requestData);
+
+        const response = await fetch(`http://localhost:8000/game/${id}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestData),
+        });
+
+
+      const data = await response.json();
+      console.log("Response data:", data);
+    
+      // Update user context with the host player data
+      const hostPlayer = data.players.find(player => player.is_host) || data.players[0];
+      userDispatch({ 
+        type: 'SET_USER', 
+        payload: {
+          id: hostPlayer.id,
+          name: hostPlayer.name,
+          avatarPath: hostPlayer.avatar, // Map avatar to avatarPath
+          birthdate: hostPlayer.birthdate,
+          isHost: hostPlayer.is_host
+        }
+      });
+      
+      // Initialize game with room and players data
+      gameDispatch({ 
+        type: 'INITIALIZE_GAME', 
+        payload: {
+          room: {
+            id: data.room.id,
+            name: data.room.name,
+            playerQty: data.room.player_qty,
+            status: data.room.status,
+            hostId: data.room.host_id
+          },
+          players: data.players
+        }
+      });
+      
+      // Conectar con el websocket
+      console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
+      connectToGame(data.room.id, hostPlayer.id);
 
       //If not full then join
       onJoin()
+      
     } catch (err) {
       console.error('No se pudo verificar la sala', err)
     }
@@ -99,7 +146,7 @@ export default function ItemList({ partidas }) {
             name={partida.name}
             playersJoined={partida.playersJoined}
             playerQty={partida.playerQty}
-            onJoin={() => navigate('/')}
+            onJoin={() => navigate(`/game_join/${partida.id}`)}
           />
         ))}
       </div>

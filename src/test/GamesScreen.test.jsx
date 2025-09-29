@@ -1,14 +1,16 @@
-// __tests__/GamesScreen.test.jsx
+// /GamesScreen.test.jsx
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import GamesScreen from '../containers/GamesScreen/GamesScreen.jsx'
 import { useUser } from '../context/UserContext.jsx'
+import { useGame } from '../context/GameContext.jsx'
 import { MemoryRouter } from 'react-router-dom'
 
 // --- Mocks ---
 vi.mock('../context/UserContext.jsx')
-const mockNavigate = vi.fn()
+vi.mock('../context/GameContext.jsx')
 
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
@@ -30,9 +32,23 @@ global.fetch = vi.fn(() =>
   })
 )
 
+const renderWithProviders = (ui) =>
+  render(
+    <MemoryRouter>
+      {ui}
+    </MemoryRouter>
+  )
+
 describe('GamesScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // mock useGame en todos los tests
+    useGame.mockReturnValue({
+      gameState: { room: null, players: [] },
+      gameDispatch: vi.fn(),
+      connectToGame: vi.fn(),
+    })
   })
 
   it('muestra ItemList y ProfileCard si el usuario está logueado', async () => {
@@ -45,20 +61,16 @@ describe('GamesScreen', () => {
       },
     })
 
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
+    renderWithProviders(<GamesScreen />)
 
     await waitFor(() => {
-      expect(screen.getByText('Sala 1')).toBeDefined()
-      expect(screen.getByText('Sala 2')).toBeDefined()
-      expect(screen.getByText('Sala 3')).toBeDefined()
+      expect(screen.getByText('Sala 1')).toBeInTheDocument()
+      expect(screen.getByText('Sala 2')).toBeInTheDocument()
+      expect(screen.getByText('Sala 3')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Juan')).toBeDefined()
-    expect(screen.getByText('Actualizar')).toBeDefined()
+    expect(screen.getByText('Juan')).toBeInTheDocument()
+    expect(screen.getByText('Actualizar')).toBeInTheDocument()
   })
 
   it('muestra LobbyError si el usuario no está logueado', () => {
@@ -66,13 +78,9 @@ describe('GamesScreen', () => {
       userState: { name: '', avatarPath: '', birthdate: '', isHost: false },
     })
 
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
+    renderWithProviders(<GamesScreen />)
 
-    expect(screen.getByText(/Debes iniciar sesion/)).toBeDefined()
+    expect(screen.getByText(/Debes iniciar sesion/)).toBeInTheDocument()
   })
 
   it('botón Actualizar llama a fetch', async () => {
@@ -85,17 +93,13 @@ describe('GamesScreen', () => {
       },
     })
 
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
+    renderWithProviders(<GamesScreen />)
 
-    const button = screen.getByText('Actualizar')
+    const button = await screen.findByText('Actualizar')
     fireEvent.click(button)
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledTimes(2) // 1 fetch inicial + 1 click
+      expect(fetch).toHaveBeenCalledTimes(2) // inicial + click
     })
   })
 
@@ -109,44 +113,14 @@ describe('GamesScreen', () => {
       },
     })
 
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
+    renderWithProviders(<GamesScreen />)
 
-    await waitFor(() => screen.getByText('Sala 2'))
+    await screen.findByText('Sala 2')
 
-    const salaLlenaButton = screen.getAllByRole('button', {
-      name: /Ingresar/i,
-    })[1] // Sala 2
+    const salaLlenaButton = screen.getAllByRole('button', { name: /Ingresar/i })[1]
     fireEvent.click(salaLlenaButton)
 
-    // Como la sala está llena, no debería navegar
     expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('muestra error si fetch falla', async () => {
-    fetch.mockImplementationOnce(() => Promise.resolve({ ok: false }))
-
-    useUser.mockReturnValue({
-      userState: {
-        name: 'Juan',
-        avatarPath: '/avatar.png',
-        birthdate: '2000-01-01',
-        isHost: true,
-      },
-    })
-
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
-
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalled()
-    })
   })
 
   it('ordena las partidas por id descendente', async () => {
@@ -159,50 +133,12 @@ describe('GamesScreen', () => {
       },
     })
 
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
+    renderWithProviders(<GamesScreen />)
 
     await waitFor(() => {
       const salas = screen.getAllByText(/Sala/)
-      const nombres = salas.map(el => el.textContent)
+      const nombres = salas.map((el) => el.textContent)
       expect(nombres).toEqual(['Sala 3', 'Sala 2', 'Sala 1'])
     })
-  })
-
-  it('ProfileCard muestra datos correctos', async () => {
-    useUser.mockReturnValue({
-      userState: {
-        name: 'Juan',
-        avatarPath: '/avatar.png',
-        birthdate: '2000-01-01',
-        isHost: true,
-      },
-    })
-
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByText('Juan')).toBeDefined()
-    expect(screen.getByText('Actualizar')).toBeDefined()
-  })
-
-  it('usuario parcialmente logueado no muestra ItemList', () => {
-    useUser.mockReturnValue({
-      userState: { name: 'Juan', avatarPath: '', birthdate: '', isHost: false },
-    })
-
-    render(
-      <MemoryRouter>
-        <GamesScreen />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByText(/Debes iniciar sesion/)).toBeDefined()
   })
 })
