@@ -6,6 +6,7 @@ import { useState } from "react";
 import Deck from "../../components/Deck.jsx";
 import Discard from "../../components/Discard.jsx";
 import GameEndModal from '../../components/GameEndModal'
+import HandCards from "../../components/HandCards.jsx";
 
 
 export default function GameScreen() {
@@ -185,19 +186,7 @@ export default function GameScreen() {
           <h2 className="text-white text-xl font-bold mb-4 text-center">
             Cartas en mano
           </h2>
-          <div className="flex space-x-3">
-            {[1, 2, 3, 4, 5].map(cardId => (
-              <div
-                key={cardId}
-                onClick={() => handleCardSelect(cardId)}
-                className={`w-16 h-24 rounded-lg border-2 transition-all cursor-pointer ${
-                  selectedCards.includes(cardId)
-                    ? 'bg-blue-500 border-blue-300 transform -translate-y-2'
-                    : 'bg-gray-600 bg-opacity-80 border-gray-400 hover:bg-gray-500'
-                }`}
-              />
-            ))}
-          </div>
+          <HandCards selectedCards={selectedCards} onSelect={handleCardSelect} />
         </div>
 
         {gameState.turnoActual ==
