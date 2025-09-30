@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LoginBox from "../components/LoginBox.jsx";
 import { UserProvider } from '../context/UserContext.jsx'; // ⬅️ changed
+import { GameProvider } from '../context/GameContext.jsx';
 
 // Mock de useNavigate
 const navigateMock = vi.fn();
@@ -23,8 +24,10 @@ describe('LoginBox', () => {
   const renderWithProvider = () =>
     render(
       <MemoryRouter>
-        <UserProvider>   {/* ⬅️ changed */}
-          <LoginBox />
+        <UserProvider>
+          <GameProvider>
+            <LoginBox />
+          </GameProvider>
         </UserProvider>
       </MemoryRouter>
     );

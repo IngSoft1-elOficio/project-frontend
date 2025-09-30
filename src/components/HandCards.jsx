@@ -1,25 +1,27 @@
-import { useGame } from '../context/GameContext'
-import brent from '../assets/detective_brent.png'
-import marple from '../assets/detective_marple.png'
-import oliver from '../assets/detective_oliver.png'
-import poirot from '../assets/detective_poirot.png'
-import pyne from '../assets/detective_pyne.png'
-import quin from '../assets/detective_quin.png'
-import satterthwaite from '../assets/detective_satterthwaite.png'
-import tommyberesford from '../assets/detective_tommyberesford.png'
-import tuppenceberesford from '../assets/detective_tuppenceberesford.png'
-import blackmailed from '../assets/devious_blackmailed.png'
-import fauxpas from '../assets/devious_fauxpas.png'
-import anothervictim from '../assets/event_anothervictim.png'
-import cardsonthetable from '../assets/event_cardsonthetable.png'
-import cardtrade from '../assets/event_cardtrade.png'
-import deadcardfolly from '../assets/event_deadcardfolly.png'
-import delayescape from '../assets/event_delayescape.png'
-import earlytrain from '../assets/event_earlytrain.png'
-import lookashes from '../assets/event_lookashes.png'
-import onemore from '../assets/event_onemore.png'
-import pointsuspicions from '../assets/event_pointsuspicions.png'
-import notsofast from '../assets/Instant_notsofast.png'
+import { useGame } from "../context/GameContext";
+import cardback from "../assets/01-card_back.png";
+import murderescape from "../assets/02-murder_escapes.png";
+import brent from "../assets/detective_brent.png";
+import marple from "../assets/detective_marple.png";
+import oliver from "../assets/detective_oliver.png";
+import poirot from "../assets/detective_poirot.png";
+import pyne from "../assets/detective_pyne.png";
+import quin from "../assets/detective_quin.png";
+import satterthwaite from "../assets/detective_satterthwaite.png";
+import tommyberesford from "../assets/detective_tommyberesford.png";
+import tuppenceberesford from "../assets/detective_tuppenceberesford.png";
+import blackmailed from "../assets/devious_blackmailed.png";
+import fauxpas from "../assets/devious_fauxpas.png";
+import anothervictim from "../assets/event_anothervictim.png";
+import cardsonthetable from "../assets/event_cardsonthetable.png";
+import cardtrade from "../assets/event_cardtrade.png";
+import deadcardfolly from "../assets/event_deadcardfolly.png";
+import delayescape from "../assets/event_delayescape.png";
+import earlytrain from "../assets/event_earlytrain.png";
+import lookashes from "../assets/event_lookashes.png";
+import onemore from "../assets/event_onemore.png";
+import pointsuspicions from "../assets/event_pointsuspicions.png";
+import notsofast from "../assets/instant_notsofast.png";
 
 export default function HandCards({ selectedCards, onSelect }) {
   const { gameState } = useGame()
@@ -36,28 +38,30 @@ export default function HandCards({ selectedCards, onSelect }) {
       .replace(/\s+/g, ' ')
 
   const IMAGE_MAP = {
-    'lady eileen bundle brent': brent,
-    'miss marple': marple,
-    'ariadne oliver': oliver,
-    'hercule poirot': poirot,
-    'parker pyne': pyne,
-    'harley quin wildcard': quin,
-    'mr satterthwaite': satterthwaite,
-    'tommy beresford': tommyberesford,
-    'tuppence beresford': tuppenceberesford,
-    blackmailed: blackmailed,
-    'social faux pas': fauxpas,
-    'another victim': anothervictim,
-    'cards off the table': cardsonthetable,
-    'card trade': cardtrade,
-    'dead card folly': deadcardfolly,
-    'delay the murderer escape': delayescape,
-    'early train to paddington': earlytrain,
-    'look into the ashes': lookashes,
-    'and then there was one more': onemore,
-    'point your suspicions': pointsuspicions,
-    'not so fast you fiend': notsofast,
-  }
+    "card back": cardback,
+    "murder escapes": murderescape,
+    "detective poirot": poirot,
+    "detective marple": marple,
+    "detective satterthwaite": satterthwaite,
+    "detective pyne": pyne,
+    "detective brent": brent,
+    "detective tommy beresford": tommyberesford,
+    "detective tuppence beresford": tuppenceberesford,
+    "detective quin": quin,
+    "detective oliver": oliver,
+    "instant not so fast": notsofast,
+    "event cards on the table": cardsonthetable,
+    "event another victim": anothervictim,
+    "event dead card folly": deadcardfolly,
+    "event look ashes": lookashes,
+    "event card trade": cardtrade,
+    "event one more": onemore,
+    "event delay escape": delayescape,
+    "event early train": earlytrain,
+    "event point suspicions": pointsuspicions,
+    "devious blackmailed": blackmailed,
+    "devious faux pas": fauxpas
+  };
 
   const getCardsImage = card => {
     if (!card || !card.name) return null
@@ -66,46 +70,65 @@ export default function HandCards({ selectedCards, onSelect }) {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '12px',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        minHeight: '40vh',
-      }}
-    >
-      {hand.map(card => {
-        const src = getCardsImage(card)
-        const isSelected = selectedCards.includes(card.id)
-
+    <div style={{
+      display: "flex",
+      gap: "16px",
+      justifyContent: "center",
+      alignItems: "center",
+      flexWrap: "wrap",
+      maxWidth: "1200px"
+    }}>
+      {hand.map((card) => {
+        const src = getCardsImage(card);
+        const isSelected = selectedCards.includes(card.id);
+        
         return (
           <button
             key={card.id}
             type="button"
             onClick={() => onSelect(card.id)}
             style={{
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              boxShadow: isSelected ? '0 0 0 3px gold' : 'none',
+              border: "none",
+              background: "transparent",
+              borderRadius: "8px",
+              cursor: "pointer",
+              padding: 0,
+              outline: isSelected ? "box-shadow: 0 0 0 3px gold" : "none",
+              transition: "all 0.2s ease"
             }}
           >
-            <img
-              src={src}
-              alt={card.name}
-              style={{
-                width: 80,
-                height: 110,
-                objectFit: 'cover',
-                display: 'block',
-                borderRadius: 6,
-              }}
-            />
+            {src ? (
+              <img
+                src={src}
+                alt={card.name}
+                style={{ 
+                  width: "120px", 
+                  height: "160px", 
+                  objectFit: "cover", 
+                  display: "block", 
+                  borderRadius: "8px" 
+                }}
+              />
+            ) : (
+              <div style={{
+                width: "120px",
+                height: "160px",
+                background: "#333",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "12px",
+                textAlign: "center",
+                padding: "8px"
+              }}>
+                {card.name}
+              </div>
+            )}
           </button>
         )
       })}
     </div>
-  )
+  );
 }

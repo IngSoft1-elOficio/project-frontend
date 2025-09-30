@@ -5,7 +5,8 @@ import { useUser } from '../context/UserContext'
 import { useGame } from '../context/GameContext'
 
 //Function for a single lobby row with necessary data
-function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
+function ItemListRow({ id, name, playersJoined, playerQty }) {
+  const navigate = useNavigate(); 
 
   const { userState, userDispatch } = useUser();
   const { gameState, gameDispatch, connectToGame  } = useGame();
@@ -34,24 +35,30 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
           body: JSON.stringify(requestData),
         });
 
+        if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al unirse a la partida");
+        }
 
       const data = await response.json();
       console.log("Response data:", data);
+
+      const playerJoining = data.players.find(player => player.name == userState.name);
+      if (!playerJoining) {
+        throw new Error("Jugador no encontrado en la respuesta");
+      }
     
-      // Update user context with the host player data
-      const hostPlayer = data.players.find(player => player.is_host) || data.players[0];
       userDispatch({ 
         type: 'SET_USER', 
         payload: {
-          id: hostPlayer.id,
-          name: hostPlayer.name,
-          avatarPath: hostPlayer.avatar, // Map avatar to avatarPath
-          birthdate: hostPlayer.birthdate,
-          isHost: hostPlayer.is_host
+          id: playerJoining.id,
+          name: playerJoining.name,
+          avatarPath: playerJoining.avatar, // Map avatar to avatarPath
+          birthdate: playerJoining.birthdate,
+          isHost: playerJoining.is_host
         }
       });
       
-      // Initialize game with room and players data
       gameDispatch({ 
         type: 'INITIALIZE_GAME', 
         payload: {
@@ -66,12 +73,10 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
         }
       });
       
-      // Conectar con el websocket
-      console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
-      connectToGame(data.room.id, hostPlayer.id);
+      console.log('Connecting with gameId:', data.room.id, 'userId:', playerJoining.id);
+      connectToGame(data.room.id, playerJoining.id);
 
-      //If not full then join
-      onJoin()
+      navigate(`/game_join/${data.room.id}`)
       
     } catch (err) {
       console.error('No se pudo verificar la sala', err)
@@ -109,8 +114,6 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
 // - avatar: string with image URL
 // - birthdate: string with player birthdate
 export default function ItemList({ partidas }) {
-  const navigate = useNavigate()
-
   //Sort games by id ascending
   const sortedPartidas = [...partidas].sort((a, b) => b.id - a.id)
 
@@ -146,7 +149,6 @@ export default function ItemList({ partidas }) {
             name={partida.name}
             playersJoined={partida.playersJoined}
             playerQty={partida.playerQty}
-            onJoin={() => navigate(`/game_join/${partida.id}`)}
           />
         ))}
       </div>

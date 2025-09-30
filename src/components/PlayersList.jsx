@@ -1,11 +1,12 @@
-export default function PlayersList({ players = [], hostId }) {
-      
+export default function PlayersList({ players = [] }) {
+  console.log(players);
+  
   return (
     <ul className="divide-y divide-[#825012]/40">
-      {players.map((p,i) => {
-      const playerId = p.user_id;
-      const isHost = hostId == playerId;
-
+      {players.map((player, index) => {
+        const playerId = player.id;
+        const isHost = player.is_host; // Changed from player.isHost
+        
         return (
           <li
             key={playerId}
@@ -17,9 +18,8 @@ export default function PlayersList({ players = [], hostId }) {
                   👑
                 </span>
               )}
-              {p?.name ?? `Jugador ${i + 1}`}
+              {player?.name ?? `Jugador ${index + 1}`}
             </span>
-
             <span className="text-sm opacity-80">
               {isHost ? "Host" : "Jugador"}
             </span>

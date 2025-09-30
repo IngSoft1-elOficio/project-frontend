@@ -5,6 +5,7 @@ import back from "../assets/secret_back.png";
 import murderer from "../assets/secret_murderer.png";
 import accomplice from "../assets/secret_accomplice.png";
 
+// Secrets.jsx
 export default function Secrets() {
   const { gameState } = useGame();
   const secretos = gameState.secretos || [];
@@ -18,22 +19,36 @@ export default function Secrets() {
   };
 
   return (
-    <div style={{ display: "flex", gap: 12, justifyContent: "center", alignItems: "center", width: "100%", minHeight: 640 }}>
+    <div style={{ 
+      display: "flex", 
+      gap: "16px", 
+      justifyContent: "center", 
+      alignItems: "center" 
+    }}>
       {secretos.map((secret, index) => (
-        <button 
+        <button
           key={secret.id}
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
-          style={{ border: "none" }}
+          style={{ 
+            border: "none", 
+            background: "transparent",
+            cursor: "pointer",
+            padding: 0
+          }}
         >
-          <img 
-            src={getSecretImage(secret, hoveredIndex === index)} 
+          <img
+            src={getSecretImage(secret, hoveredIndex === index)}
             alt={`secret-${secret.id}`}
-            style={{ width: 80, height: 110, objectFit: "cover" }}  
+            style={{ 
+              width: "120px", 
+              height: "160px", 
+              objectFit: "cover",
+              borderRadius: "8px"
+            }}
           />
         </button>
       ))}
     </div>
   );
 }
-
