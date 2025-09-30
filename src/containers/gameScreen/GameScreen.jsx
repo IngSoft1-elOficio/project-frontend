@@ -9,6 +9,7 @@ import GameEndModal from '../../components/GameEndModal'
 import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
 import { useEffect } from "react";
+import ButtonGame from '../../components/ButtonGame.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -32,76 +33,75 @@ export default function GameScreen() {
       }
     })
   }
-
-  const handleDiscard = async () => {
-    if (selectedCards.length === 0) {
-      setError('Debes seleccionar al menos una carta para descartar')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch(`/game/${roomId}/discard`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          card_ids: selectedCards,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(getErrorMessage(response.status, errorData))
-      }
-
-      const data = await response.json()
-
-      // Log game state with response data
-      console.log('Discard successful:', data)
-
-      // Clear selected cards after successful discard
-      setSelectedCards([])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+const handleDiscard = async () => {
+  if (selectedCards.length === 0) {
+    setError('Debes seleccionar al menos una carta para descartar')
+    return
   }
 
-  const handleSkip = async () => {
-    setLoading(true)
-    setError(null)
+  setLoading(true)
+  setError(null)
 
-    try {
-      const response = await fetch(`/game/${roomId}/skip`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          rule: 'auto',
-        }),
-      })
+  try {
+    const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/discard`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'HTTP_USER_ID': userState.id.toString()  // Add user_id header
+      },
+      body: JSON.stringify({
+        card_ids: selectedCards,
+      }),
+    })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(getErrorMessage(response.status, errorData))
-      }
-
-      const data = await response.json()
-
-      // Log game state with response data
-      console.log('Skip successful:', data)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(getErrorMessage(response.status, errorData))
     }
+
+    const data = await response.json()
+    console.log('Discard successful:', data)
+    setSelectedCards([])
+  } catch (err) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
   }
+}
+const handleSkip = async () => {
+  setLoading(true)
+  setError(null)
+
+  console.log('Attempting skip:', {
+    turnoActual: gameState.turnoActual,
+    userId: userState.id,
+    isMyTurn: gameState.turnoActual === userState.id
+  });
+
+  try {
+    const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/skip`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userState.id
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(getErrorMessage(response.status, errorData))
+    }
+
+    const data = await response.json()
+    console.log('Skip successful:', data)
+  } catch (err) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
+  }
+}
 
   const getErrorMessage = (status, errorData) => {
     switch (status) {
@@ -146,12 +146,12 @@ export default function GameScreen() {
         </div>
 
         {/* Secretos - Top Center */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">
-            Secretos
-          </h2>
-          <Secrets />
-        </div>
+        <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
+            <h2 className="text-white text-xl font-bold mb-2 text-center">
+              Secretos
+            </h2>
+            <Secrets />
+          </div>
 
         {/* Mazos Placeholder */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
@@ -161,47 +161,50 @@ export default function GameScreen() {
           <div className="flex flex-col items-center space-y-3">
             {/* Top row - 2 cards */}
             <div className="flex space-x-3">
-              <Deck cardsLeft={gameState.mazos?.mazo_principal ?? 0} />
+              <Deck cardsLeft={gameState.mazos?.deck ?? 0} />
               <Discard
-                topDiscardedCard={gameState.mazos?.top_descarte?.img ?? null}
-                counterDiscarded={gameState.mazos?.mazo_descarte ?? 0}
+                topDiscardedCard={null}
+                counterDiscarded={gameState.mazos?.discard ?? 0}
               />
             </div>
           </div>
         </div>
 
         {/* Cartas en mano placeholder */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-6xl px-4">
+          <h2 className="text-white text-xl font-bold mb-2 text-center">
             Cartas en mano
           </h2>
           <HandCards selectedCards={selectedCards} onSelect={handleCardSelect} />
         </div>
 
         {gameState.turnoActual ==
-        userState.name /* Interfaz de acciones de turno placeholder */ ? (
+        userState.id /* Interfaz de acciones de turno placeholder */ ? (
           <div className="absolute bottom-4 right-4">
             <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
             <div className="flex flex-col space-y-3">
-              <button
-                onClick={handleSkip}
-                disabled={loading}
-                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
-              >
-                {loading ? 'Procesando...' : 'Skip'}
-              </button>
-              <button
+              {/* Botones */}
+              {/* Botón para descartar cartas */}
+              <ButtonGame
                 onClick={handleDiscard}
-                disabled={loading || selectedCards.length === 0}
-                className="px-20 py-5 font-semibold transition border-4 bg-[#3D0800] text-[#B49150] border-[#825012] hover:bg-[#4a0a00] focus:outline-none focus:ring-2 focus:ring-[#825012]/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#3D0800]"
+                disabled={selectedCards.length === 0 || loading}
               >
-                {loading ? 'Procesando...' : 'Discard'}
-              </button>
+                Descartar
+              </ButtonGame>
+
+              {/* Botón para saltar turno */}
+              <ButtonGame
+                onClick={handleSkip}
+                disabled={loading || selectedCards.length > 0}
+              >
+                Saltar Turno
+              </ButtonGame>
             </div>
           </div>
         ) : (
           <></>
         )}
+
 
         {gameState?.gameEnded && (
           <GameEndModal message="El asesino y cómplice ganaron" />

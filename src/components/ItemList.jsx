@@ -5,7 +5,8 @@ import { useUser } from '../context/UserContext'
 import { useGame } from '../context/GameContext'
 
 //Function for a single lobby row with necessary data
-function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
+function ItemListRow({ id, name, playersJoined, playerQty }) {
+  const navigate = useNavigate(); 
 
   const { userState, userDispatch } = useUser();
   const { gameState, gameDispatch, connectToGame  } = useGame();
@@ -75,7 +76,7 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
       console.log('Connecting with gameId:', data.room.id, 'userId:', playerJoining.id);
       connectToGame(data.room.id, playerJoining.id);
 
-      onJoin()
+      navigate(`/game_join/${data.room.id}`)
       
     } catch (err) {
       console.error('No se pudo verificar la sala', err)
@@ -113,8 +114,6 @@ function ItemListRow({ id, name, playersJoined, playerQty, onJoin }) {
 // - avatar: string with image URL
 // - birthdate: string with player birthdate
 export default function ItemList({ partidas }) {
-  const navigate = useNavigate()
-
   //Sort games by id ascending
   const sortedPartidas = [...partidas].sort((a, b) => b.id - a.id)
 
@@ -150,7 +149,6 @@ export default function ItemList({ partidas }) {
             name={partida.name}
             playersJoined={partida.playersJoined}
             playerQty={partida.playerQty}
-            onJoin={() => navigate(`/game_join/${partida.id}`)}
           />
         ))}
       </div>

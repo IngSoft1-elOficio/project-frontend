@@ -7,7 +7,6 @@ import NombreDePartida from "../components/NombreDePartida";
 import CantidadDeJugadores from "../components/CantidadDeJugadores";
 import Continuar from "../components/Continuar";
 import ProfileCard from "../components/ProfileCard.jsx";
-import LobbyError from "../components/LobbyError.jsx";
 
 export default function PantallaDeCreacion() {
   const navigate = useNavigate();
@@ -80,9 +79,8 @@ export default function PantallaDeCreacion() {
       // Conectar con el websocket
       console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
       connectToGame(data.room.id, hostPlayer.id);
-      
-      navigate(`/game_join/${data.room.id}`);
 
+      navigate(`/game_join/${data.room.id}`);
     } catch (error) {
       setError("Error al crear la partida: ", error);
     }

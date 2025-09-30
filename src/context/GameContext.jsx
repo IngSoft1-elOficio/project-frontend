@@ -45,17 +45,17 @@ const gameReducer = (state, action) => {
         jugadores: action.payload.players
       };
     case 'UPDATE_GAME_STATE_PUBLIC':
-      return {
-        ...state,
-        roomId: action.payload.room_id || state.roomId, // Fallback to existing roomId
-        gameId: action.payload.game_id || state.gameId, // Fallback to existing gameId
-        started: action.payload.status,
-        turnoActual: action.payload.turno_actual,
-        jugadores: action.payload.jugadores,
-        mazos: action.payload.mazos,
-        lastUpdate: action.payload.timestamp,
-        gameEnded: false
-      };
+    return {
+      ...state,
+      roomId: action.payload.room_id || state.roomId,
+      gameId: action.payload.game_id || state.gameId,
+      started: action.payload.status,
+      turnoActual: action.payload.turno_actual,
+      jugadores: action.payload.jugadores,
+      mazos: action.payload.mazos,
+      gameEnded: action.payload.game_ended || false,  // Add this
+      lastUpdate: action.payload.timestamp
+    };
     case 'UPDATE_GAME_STATE_PRIVATE':
       return {
         ...state,
@@ -123,15 +123,7 @@ export const GameProvider = ({ children }) => {
       console.log('🔵 Received game_state_public:', data);
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          roomId: data.room_id,
-          status: data.status,
-          turno_actual: data.turno_actual,
-          jugadores: data.jugadores,
-          mazos: data.mazos,
-          timestamp: data.timestamp,
-          gameEnded: false
-        }
+        payload: data  // Just pass the whole data object
       });
     });
 
@@ -154,6 +146,17 @@ export const GameProvider = ({ children }) => {
 
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
+    });
+
+    socket.on('game_finished', (data) => {
+      console.log('🏁 Game finished:', data);
+      gameDispatch({ 
+        type: 'GAME_ENDED', 
+        payload: { 
+          ganaste: data.winners.some(w => w.player_id === userId),
+          reason: data.reason 
+        } 
+      });
     });
   }, []);
 
