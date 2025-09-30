@@ -1,10 +1,10 @@
-import "../../index.css"
-import { useUser } from "../../context/UserContext.jsx";
-import ProfileCard from "../../components/ProfileCard";
-import { useGame } from "../../context/GameContext.jsx";
-import { useState } from "react";
-import Deck from "../../components/Deck.jsx";
-import Discard from "../../components/Discard.jsx";
+import '../../index.css'
+import { useUser } from '../../context/UserContext.jsx'
+import ProfileCard from '../../components/ProfileCard'
+import { useGame } from '../../context/GameContext.jsx'
+import { useState } from 'react'
+import Deck from '../../components/Deck.jsx'
+import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
 import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
@@ -23,6 +23,8 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const roomId = gameState?.gameId || gameState?.roomId
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -175,7 +177,10 @@ const handleSkip = async () => {
           <h2 className="text-white text-xl font-bold mb-2 text-center">
             Cartas en mano
           </h2>
-          <HandCards selectedCards={selectedCards} onSelect={handleCardSelect} />
+          <HandCards
+            selectedCards={selectedCards}
+            onSelect={handleCardSelect}
+          />
         </div>
 
         {gameState.turnoActual ==

@@ -24,18 +24,18 @@ import pointsuspicions from "../assets/event_pointsuspicions.png";
 import notsofast from "../assets/instant_notsofast.png";
 
 export default function HandCards({ selectedCards, onSelect }) {
-  const { gameState } = useGame();
-  const hand = gameState.mano || [];
+  const { gameState } = useGame()
+  const hand = gameState.mano || []
 
-  const normalizeName = (name = "") =>
+  const normalizeName = (name = '') =>
     name
       .toString()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/[^a-z0-9\s]/g, '')
       .trim()
-      .replace(/\s+/g, " ");
+      .replace(/\s+/g, ' ')
 
   const IMAGE_MAP = {
     "card back": cardback,
@@ -63,11 +63,11 @@ export default function HandCards({ selectedCards, onSelect }) {
     "devious faux pas": fauxpas
   };
 
-  const getCardsImage = (card) => {
-    if (!card || !card.name) return null;
-    const key = normalizeName(card.name);
-    return IMAGE_MAP[key] ?? null;
-  };
+  const getCardsImage = card => {
+    if (!card || !card.name) return null
+    const key = normalizeName(card.name)
+    return IMAGE_MAP[key] ?? null
+  }
 
   return (
     <div style={{
@@ -127,7 +127,7 @@ export default function HandCards({ selectedCards, onSelect }) {
               </div>
             )}
           </button>
-        );
+        )
       })}
     </div>
   );
