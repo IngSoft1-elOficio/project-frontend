@@ -1,5 +1,5 @@
 // GameContext.js
-import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useReducer, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 
 const GameContext = createContext();
@@ -45,17 +45,17 @@ const gameReducer = (state, action) => {
         jugadores: action.payload.players
       };
     case 'UPDATE_GAME_STATE_PUBLIC':
-    return {
-      ...state,
-      roomId: action.payload.room_id || state.roomId,
-      gameId: action.payload.game_id || state.gameId,
-      started: action.payload.status,
-      turnoActual: action.payload.turno_actual,
-      jugadores: action.payload.jugadores,
-      mazos: action.payload.mazos,
-      gameEnded: action.payload.game_ended || false,  // Add this
-      lastUpdate: action.payload.timestamp
-    };
+      return {
+        ...state,
+        roomId: action.payload.room_id || state.roomId,
+        gameId: action.payload.game_id || state.gameId,
+        started: action.payload.status,
+        turnoActual: action.payload.turno_actual,
+        jugadores: action.payload.jugadores,
+        mazos: action.payload.mazos,
+        gameEnded: action.payload.game_ended || false,
+        lastUpdate: action.payload.timestamp
+      };
     case 'UPDATE_GAME_STATE_PRIVATE':
       return {
         ...state,
@@ -123,7 +123,7 @@ export const GameProvider = ({ children }) => {
       console.log('🔵 Received game_state_public:', data);
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: data  // Just pass the whole data object
+        payload: data
       });
     });
 
@@ -133,11 +133,7 @@ export const GameProvider = ({ children }) => {
       console.log("updated game state private");
     });
 
-    // Add a catch-all listener to see ALL events
-    socket.onAny((eventName, ...args) => {
-      console.log('📡 Socket received event:', eventName, args);
-    });
-
+    // Handle player action results
     socket.on('player_action_result', (data) => {
       if (data.type === 'game_ended') {
         gameDispatch({ type: 'GAME_ENDED', payload: data });
@@ -163,15 +159,15 @@ export const GameProvider = ({ children }) => {
   // Function to disconnect from socket
   const disconnectFromGame = useCallback(() => {
     if (socketRef.current) {
-      console.log('Disconnecting from game: room_id = ', room_id);
+      console.log('Disconnecting from game: room_id = ', gameState.roomId);
       socketRef.current.disconnect();
       socketRef.current = null;
       gameDispatch({ type: 'SOCKET_DISCONNECTED' });
     }
-  }, []);
+  }, [gameState.roomId]);
 
   return (
-    <GameContext.Provider value={{ gameState, gameDispatch, connectToGame, disconnectFromGame  }}>
+    <GameContext.Provider value={{ gameState, gameDispatch, connectToGame, disconnectFromGame }}>
       {children}
     </GameContext.Provider>
   );
@@ -183,4 +179,4 @@ export const useGame = () => {
     throw new Error('useGame must be used within a GameProvider');
   }
   return context;
-};
+};  

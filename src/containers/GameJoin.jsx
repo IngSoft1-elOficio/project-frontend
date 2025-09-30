@@ -33,8 +33,8 @@ export default function GameJoin() {
     console.log('🎮 Current gameId:', gameState.gameId);
     
     try {
-      const payload = { user_id: userState.id }; // or whatever variable holds the current user's ID
-      console.log("Sending payload:", payload); // Debug log
+      const payload = { user_id: userState.id }; 
+      console.log("Sending payload:", payload);
       
       const response = await fetch(
         `http://localhost:8000/game/${gameState.roomId}/start`,
@@ -45,11 +45,11 @@ export default function GameJoin() {
         }
       );
       
-      console.log("Response status:", response.status); // Debug log
+      console.log("Response status:", response.status);
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error response:", errorData); // Debug log
+        console.error("Error response:", errorData);
         throw new Error(errorData.detail || "Error al iniciar partida");
       }
       

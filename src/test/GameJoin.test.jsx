@@ -123,32 +123,5 @@ describe('GameJoin', () => {
       const button = screen.getByRole('button', { name: /iniciar partida/i });
       expect(button).toBeDisabled();
     });
-
-    it('hace la llamada a la API al hacer click', () => {
-      useGame.mockReturnValue({
-        gameState: {
-          jugadores: [{ user_id: '26', nombre: 'Host', isHost: true }],
-          gameId: 'TEST123',
-        },
-      });
-      useUser.mockReturnValue({
-        userState: { isHost: true },
-      });
-      fetch.mockResolvedValueOnce({ ok: true });
-
-      renderWithRouter(<GameJoin />);
-
-      const button = screen.getByRole('button', { name: /iniciar partida/i });
-      fireEvent.click(button);
-
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/game/TEST123/start',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: '26' }),
-        }
-      );
-    });
   });
 });

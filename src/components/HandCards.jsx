@@ -93,7 +93,7 @@ export default function HandCards({ selectedCards, onSelect }) {
               borderRadius: "8px",
               cursor: "pointer",
               padding: 0,
-              outline: isSelected ? "4px solid gold" : "none",
+              outline: isSelected ? "box-shadow: 0 0 0 3px gold" : "none",
               transition: "all 0.2s ease"
             }}
           >
