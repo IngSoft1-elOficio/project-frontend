@@ -142,3 +142,26 @@ describe('GamesScreen', () => {
     })
   })
 })
+
+it('maneja error al cargar partidas', async () => {
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  
+  global.fetch = vi.fn(() => Promise.reject(new Error('Error de red')))
+  
+  useUser.mockReturnValue({
+    userState: {
+      name: 'Juan',
+      avatarPath: '/avatar.png',
+      birthdate: '2000-01-01',
+      isHost: true,
+    },
+  })
+
+  renderWithProviders(<GamesScreen />)
+
+  await waitFor(() => {
+    expect(errorSpy).toHaveBeenCalled()
+  })
+
+  errorSpy.mockRestore()
+})
