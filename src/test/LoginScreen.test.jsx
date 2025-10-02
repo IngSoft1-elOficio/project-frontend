@@ -88,4 +88,36 @@ describe('LoginBox', () => {
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
   });
+
+  it('muestra error si el nombre tiene más de 20 caracteres', async () => {
+    renderWithProvider();
+    fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'abcdefghijklmnopqrstu' } });
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+    expect(await screen.findByText(/no puede tener más de 20 caracteres/i)).toBeInTheDocument();
+  });
+
+  it('muestra error si el nombre tiene caracteres especiales', async () => {
+    renderWithProvider();
+    fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Juan$%' } });
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+    expect(await screen.findByText(/solo puede contener letras, números y espacios/i)).toBeInTheDocument();
+  });
+
+  it('muestra error si el nombre tiene solo espacios', async () => {
+    renderWithProvider();
+    fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: '   ' } });
+    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+    expect(await screen.findByText(/no puede estar vacío/i)).toBeInTheDocument();
+  });
 });
+
+
