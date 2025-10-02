@@ -21,8 +21,31 @@ export default function PantallaDeCreacion() {
 
   const [error, setError] = useState("");
 
+  //Validación del nombre
+  const validarNombrePartida = (nombre) => {
+    //Verificar longitud
+    if (nombre.length > 20) {
+      return 'El nombre de la partida no puede tener más de 20 caracteres';
+    }
+    
+    //Verificar caracteres especiales (solo permite letras, números, espacios y tildes)
+    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]*$/;
+    if (!regex.test(nombre)) {
+      return 'El nombre de la partida solo puede contener letras, números y espacios';
+    }
+
+    return '';
+  }
+
   const handleContinue = async () => {
     try {
+
+      const errorNombre = validarNombrePartida(gameForm.nombre_partida);
+      if (errorNombre) {
+        setError(errorNombre);
+        return;
+      }
+
       // Prepare the request data with user info
       const requestData = {
           room: {

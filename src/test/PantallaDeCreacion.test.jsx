@@ -58,4 +58,28 @@ describe('PantallaDeCreacion', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('muestra error si el nombre de la partida tiene más de 20 caracteres', async () => {
+    renderWithContext(<PantallaDeCreacion />);
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'abcdefghijklmnopqrstu' }, // 21 chars
+    });
+    fireEvent.click(screen.getByText('2'));
+    fireEvent.click(screen.getByText('Crear Partida'));
+    expect(
+      await screen.findByText(/no puede tener más de 20 caracteres/i)
+    ).toBeInTheDocument();
+  });
+
+  it('muestra error si el nombre de la partida tiene caracteres especiales', async () => {
+    renderWithContext(<PantallaDeCreacion />);
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Partida$%' },
+    });
+    fireEvent.click(screen.getByText('2'));
+    fireEvent.click(screen.getByText('Crear Partida'));
+    expect(
+      await screen.findByText(/solo puede contener letras, números y espacios/i)
+    ).toBeInTheDocument();
+  });
 });
