@@ -39,7 +39,14 @@ function GamesScreen() {
       const res = await fetch('http://localhost:8000/api/game_list')
       if (!res.ok) throw new Error('Error al cargar partidas')
       const data = await res.json()
-      setPartidas(data.items)
+      
+      const partidasNormalizadas = data.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        playersJoined: item.players_joined,
+        playerQty: item.player_qty,
+      }))
+      setPartidas(partidasNormalizadas)
       /*const mockData = {
         items: [
           { id: 1, name: 'Sala 1', playersJoined: 2, playerQty: 6 },
