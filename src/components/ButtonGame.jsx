@@ -1,4 +1,4 @@
-export default function ButtonAction({
+export default function ButtonGame({
   onClick,
   children,
   disabled = false,
