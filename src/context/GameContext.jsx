@@ -52,7 +52,7 @@ const gameReducer = (state, action) => {
         started: action.payload.status,
         turnoActual: action.payload.turno_actual,
         jugadores: action.payload.jugadores,
-        mazos: action.payload.mazos,
+        mazos: action.payload.mazos ?? state.mazos,
         gameEnded: action.payload.game_ended || false,
         lastUpdate: action.payload.timestamp
       };

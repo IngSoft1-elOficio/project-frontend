@@ -14,7 +14,7 @@ export default function GameJoin() {
   const { gameState, gameDispatch } = useGame();
   const { userState } = useUser();
 
-  useEffect(() => {
+    useEffect(() => {
       console.log("Game state at waiting: ", gameState);
       console.log("User state at waiting: ", userState);
 
@@ -54,22 +54,20 @@ export default function GameJoin() {
       }
       
       const data = await response.json();
-      console.log("Partida iniciada:", data);
+      console.log("Partida iniciada: la respuesta del post es:", data);
 
-      gameDispatch({
-        type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          room_id: gameState.roomId,
-          game_id: gameState.gameId,
-          status: 'STARTING',
-          turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-          jugadores: data.game?.players || gameState.jugadores,
-          mazos: data.game?.mazos || gameState.mazos || { deck: data.game?.deck_count || 0, discard: 0 },
-          timestamp: new Date().toISOString()
-        }
-      });
+  gameDispatch({
+    type: 'UPDATE_GAME_STATE_PUBLIC',
+    payload: {
+    turno_actual: data.turn?.current_player_id || gameState.turnoActual,
+    status: data.game?.status || 'INGAME',
+    jugadores: data.players || gameState.jugadores,
+    timestamp: new Date().toISOString()
+  }});
 
-      navigate(`/game/${gameState.room_id}`)
+
+
+      navigate(`/game/${gameState.roomId}`)
 
     } catch (error) {
       console.error("Fallo en handleStart:", error);
