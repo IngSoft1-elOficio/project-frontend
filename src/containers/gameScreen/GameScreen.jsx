@@ -135,17 +135,7 @@ const handleSkip = async () => {
           {error}
         </div>
       )}
-
-      <div className="relative z-10 h-screen p-4">
-        {/* Profile Card - Upper Left */}
-        <div className="absolute top-4 left-4">
-          <ProfileCard
-            name={userState.name}
-            host={userState.isHost}
-            avatar={userState.avatarPath}
-            birthdate={userState.birthdate}
-          />
-        </div>
+      <div>
 
         {/* Secretos - Top Center */}
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
@@ -165,8 +155,8 @@ const handleSkip = async () => {
             <div className="flex space-x-3">
               <Deck cardsLeft={gameState.mazos?.deck ?? 0} />
               <Discard
-                topDiscardedCard={null}
-                counterDiscarded={gameState.mazos?.discard ?? 0}
+                topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
+                counterDiscarded={gameState.mazos?.discard?.count ?? 0}
               />
             </div>
           </div>
@@ -209,7 +199,6 @@ const handleSkip = async () => {
         ) : (
           <></>
         )}
-
 
         {gameState?.gameEnded && (
           <GameEndModal message="El asesino y cómplice ganaron" />
