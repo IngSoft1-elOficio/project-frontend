@@ -1,5 +1,4 @@
 import { useGame } from "../context/GameContext";
-import cardback from "../assets/01-card_back.png";
 import murderescape from "../assets/02-murder_escapes.png";
 import brent from "../assets/detective_brent.png";
 import marple from "../assets/detective_marple.png";
@@ -38,7 +37,6 @@ export default function HandCards({ selectedCards, onSelect }) {
       .replace(/\s+/g, ' ')
 
   const IMAGE_MAP = {
-    "card back": cardback,
     "murder escapes": murderescape,
     "detective poirot": poirot,
     "detective marple": marple,

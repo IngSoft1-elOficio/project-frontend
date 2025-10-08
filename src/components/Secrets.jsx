@@ -5,17 +5,30 @@ import back from "../assets/secret_back.png";
 import murderer from "../assets/secret_murderer.png";
 import accomplice from "../assets/secret_accomplice.png";
 
-// Secrets.jsx
 export default function Secrets() {
   const { gameState } = useGame();
   const secretos = gameState.secretos || [];
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
+   const normalizeName = (name = '') =>
+      name
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, ' ')
+  
+    const IMAGE_MAP = {
+      "you re the murderer": murderer,
+      "you re the accomplice": accomplice
+    };
+
   const getSecretImage = (secret, isHovered) => {
     if (!isHovered) return front;
-    if (secret.name === "You're the murderer") return murderer;
-    if (secret.name === "You're the accomplice") return accomplice;
-    return back;
+    const key = normalizeName(secret.name)
+    return IMAGE_MAP[key] ?? back;
   };
 
   return (
