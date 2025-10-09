@@ -31,6 +31,7 @@ export default function GameScreen() {
       if (prev.includes(cardId)) {
         return prev.filter(id => id !== cardId)
       } else {
+        console.log('Cards selected:', prev, cardId)
         return [...prev, cardId]
       }
     })
@@ -45,6 +46,12 @@ const handleDiscard = async () => {
   setError(null)
 
   try {
+    const cardsWithOrder = selectedCards.map((cardId, index) => ({
+      order: index + 1,
+      card_id: cardId
+    }))
+    console.log('Orden de descarte:', cardsWithOrder)
+
     const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/discard`, {
       method: 'POST',
       headers: {
@@ -52,7 +59,7 @@ const handleDiscard = async () => {
         'HTTP_USER_ID': userState.id.toString()  // Add user_id header
       },
       body: JSON.stringify({
-        card_ids: selectedCards,
+        card_ids: cardsWithOrder,
       }),
     })
 
