@@ -21,8 +21,8 @@ export default function Secrets() {
         .replace(/\s+/g, ' ')
   
     const IMAGE_MAP = {
-      "you re the murderer": murderer,
-      "you re the accomplice": accomplice
+      "secret murderer": murderer,
+      "secret accomplice": accomplice
     };
 
   const getSecretImage = (secret, isHovered) => {
