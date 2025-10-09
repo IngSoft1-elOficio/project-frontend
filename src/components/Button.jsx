@@ -1,8 +1,7 @@
-export default function Button({ onClick, children, disabled = false, className = "", title }) {
+export default function Button({ onClick, children, className = "", title }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
       title={title}
       className={[
         "px-20 py-5 font-semibold transition border-4",
