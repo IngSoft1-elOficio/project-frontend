@@ -31,6 +31,7 @@ export default function GameScreen() {
       if (prev.includes(cardId)) {
         return prev.filter(id => id !== cardId)
       } else {
+        console.log('Cards selected:', prev, cardId)
         return [...prev, cardId]
       }
     })
@@ -45,6 +46,12 @@ const handleDiscard = async () => {
   setError(null)
 
   try {
+    const cardsWithOrder = selectedCards.map((cardId, index) => ({
+      order: index + 1,
+      card_id: cardId
+    }))
+    console.log('Orden de descarte:', cardsWithOrder)
+
     const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/discard`, {
       method: 'POST',
       headers: {
@@ -52,7 +59,7 @@ const handleDiscard = async () => {
         'HTTP_USER_ID': userState.id.toString()  // Add user_id header
       },
       body: JSON.stringify({
-        card_ids: selectedCards,
+        card_ids: cardsWithOrder,
       }),
     })
 
@@ -135,17 +142,7 @@ const handleSkip = async () => {
           {error}
         </div>
       )}
-
-      <div className="relative z-10 h-screen p-4">
-        {/* Profile Card - Upper Left */}
-        <div className="absolute top-4 left-4">
-          <ProfileCard
-            name={userState.name}
-            host={userState.isHost}
-            avatar={userState.avatarPath}
-            birthdate={userState.birthdate}
-          />
-        </div>
+      <div>
 
         {/* Secretos - Top Center */}
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
@@ -165,8 +162,8 @@ const handleSkip = async () => {
             <div className="flex space-x-3">
               <Deck cardsLeft={gameState.mazos?.deck ?? 0} />
               <Discard
-                topDiscardedCard={null}
-                counterDiscarded={gameState.mazos?.discard ?? 0}
+                topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
+                counterDiscarded={gameState.mazos?.discard?.count ?? 0}
               />
             </div>
           </div>
@@ -209,7 +206,6 @@ const handleSkip = async () => {
         ) : (
           <></>
         )}
-
 
         {gameState?.gameEnded && (
           <GameEndModal message="El asesino y cómplice ganaron" />

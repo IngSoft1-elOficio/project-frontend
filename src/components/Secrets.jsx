@@ -1,9 +1,5 @@
 import { useState } from "react";
 import { useGame } from "../context/GameContext";
-import front from "../assets/secret_front.png";
-import back from "../assets/secret_back.png";
-import murderer from "../assets/secret_murderer.png";
-import accomplice from "../assets/secret_accomplice.png";
 
 export default function Secrets() {
   const { gameState } = useGame();
@@ -26,9 +22,10 @@ export default function Secrets() {
     };
 
   const getSecretImage = (secret, isHovered) => {
-    if (!isHovered) return front;
-    const key = normalizeName(secret.name)
-    return IMAGE_MAP[key] ?? back;
+    if (!isHovered) return "/cards/secret_front.png";
+    if (secret.name === "You're the murderer") return "/cards/secret_murderer.png";
+    if (secret.name === "You're the accomplice") return "/cards/secret_accomplice.png";
+    return "/cards/secret_back.png";
   };
 
   return (

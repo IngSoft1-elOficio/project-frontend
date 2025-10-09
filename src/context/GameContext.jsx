@@ -10,10 +10,17 @@ const gameInitialState = {
   turnoActual: null,
   started: null,
   jugadores: [],
-  mazos: {},
+  mazos: {
+	deck: 0,
+	discard: {
+		top: "",
+		count: 0
+	}
+  },
   mano: [],
   secretos: [],
   gameEnded: false,
+  winners: [],
   ganaste: null,
   lastUpdate: null,
   connected: false
@@ -47,31 +54,53 @@ const gameReducer = (state, action) => {
     case 'UPDATE_GAME_STATE_PUBLIC':
       return {
         ...state,
-        roomId: action.payload.room_id || state.roomId,
-        gameId: action.payload.game_id || state.gameId,
-        started: action.payload.status,
-        turnoActual: action.payload.turno_actual,
-        jugadores: action.payload.jugadores,
-        mazos: action.payload.mazos,
-        gameEnded: action.payload.game_ended || false,
-        lastUpdate: action.payload.timestamp
+<<<<<<< HEAD
+        roomId: action.payload.room_id ?? state.roomId,
+        gameId: action.payload.game_id ?? state.gameId,
+        started: action.payload.status ?? state.started,
+        turnoActual: action.payload.turno_actual ?? state.turnoActual,
+        
+        // Only update if we received valid data
+        jugadores: Array.isArray(action.payload.jugadores) && action.payload.jugadores.length > 0
+          ? action.payload.jugadores
+          : state.jugadores,
+        
+        mazos: action.payload.mazos && Object.keys(action.payload.mazos).length > 0
+          ? action.payload.mazos
+          : state.mazos,
+        
+        gameEnded: action.payload.game_ended ?? state.gameEnded,
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString()
       };
+      
     case 'UPDATE_GAME_STATE_PRIVATE':
       return {
         ...state,
-        mano: action.payload.mano,
-        secretos: action.payload.secretos,
-        lastUpdate: action.payload.timestamp
+        // Only update if we received valid arrays
+        mano: Array.isArray(action.payload.mano)
+          ? action.payload.mano
+          : state.mano,
+        
+        secretos: Array.isArray(action.payload.secretos)
+          ? action.payload.secretos
+          : state.secretos,
+        
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString()
       };
+      
     case 'GAME_ENDED':
       return {
         ...state,
         gameEnded: true,
-        ganaste: action.payload.ganaste,
-        lastUpdate: action.payload.timestamp
+        ganaste: action.payload.ganaste ?? false,
+        
+        winners: Array.isArray(action.payload.winners)
+          ? action.payload.winners
+          : state.winners,
+        
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString()
       };
-    case 'RESET_GAME':
-      return gameInitialState;
+      
     default:
       return state;
   }
@@ -133,23 +162,17 @@ export const GameProvider = ({ children }) => {
       console.log("updated game state private");
     });
 
-    // Handle player action results
-    socket.on('player_action_result', (data) => {
-      if (data.type === 'game_ended') {
-        gameDispatch({ type: 'GAME_ENDED', payload: data });
-      }
-    });
-
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
     });
 
-    socket.on('game_finished', (data) => {
+    socket.on('game_ended', (data) => {
       console.log('🏁 Game finished:', data);
       gameDispatch({ 
         type: 'GAME_ENDED', 
         payload: { 
           ganaste: data.winners.some(w => w.player_id === userId),
+          winners: data.winners,
           reason: data.reason 
         } 
       });
