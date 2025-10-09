@@ -94,13 +94,12 @@ export default function GameJoin() {
         </Card>
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
-          <Button
+          {userState?.isHost && (<Button
             onClick={handleStart}
-            disabled={!userState.isHost}
             className="font-limelight"
           >
             Iniciar partida
-          </Button>
+          </Button>)}
         </div>
       </div> // : <LobbyError navigate={navigate} />  Descomentar para no mostrar si no esta logeado
       }
