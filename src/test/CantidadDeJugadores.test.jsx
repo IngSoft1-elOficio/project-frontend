@@ -1,28 +1,23 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import CantidadDeJugadores from '../components/CantidadDeJugadores';
 
-describe('CantidadDeJugadores', () => {
-  it('muestra el label y los botones de cantidad', () => {
-    const setJugadores = vi.fn();
-    render(<CantidadDeJugadores jugadores={null} setJugadores={setJugadores} />);
-    expect(screen.getByText(/Cantidad de jugadores/i)).toBeInTheDocument();
-    [2, 3, 4, 5, 6].forEach(num => {
-      expect(screen.getByText(num)).toBeInTheDocument();
-    });
-  });
+test('actualiza valores mínimo y máximo', () => {
+  const setMin = vi.fn();
+  const setMax = vi.fn();
 
-  it('llama a setJugadores al hacer click en un botón', () => {
-    const setJugadores = vi.fn();
-    render(<CantidadDeJugadores jugadores={null} setJugadores={setJugadores} />);
-    fireEvent.click(screen.getByText('4'));
-    expect(setJugadores).toHaveBeenCalledWith(4);
-  });
+  render(
+    <CantidadDeJugadores
+      jugadoresMin={2}
+      setJugadoresMin={setMin}
+      jugadoresMax={6}
+      setJugadoresMax={setMax}
+    />
+  );
 
-  it('el botón seleccionado tiene la clase activa', () => {
-    const setJugadores = vi.fn();
-    render(<CantidadDeJugadores jugadores={5} setJugadores={setJugadores} />);
-    const boton = screen.getByText('5');
-    expect(boton.className).toMatch(/btn-cantidad-jugador-activo/);
-  });
+  const sliders = screen.getAllByRole('slider');
+  fireEvent.change(sliders[0], { target: { value: '3' } });
+  fireEvent.change(sliders[1], { target: { value: '5' } });
+
+  expect(setMin).toHaveBeenCalledWith(3);
+  expect(setMax).toHaveBeenCalledWith(5);
 });

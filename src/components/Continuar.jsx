@@ -1,14 +1,20 @@
-export default function Continuar({ nombre, jugadores, onContinue, setError }) {
+export default function Continuar({ nombre, onContinue, setError }) {
   const validar = () => {
     if (!nombre.trim()) {
       setError("El nombre de la partida no puede estar vacío");
       return;
     }
-    if (!jugadores) {
-      setError("Selecciona la cantidad de jugadores");
+    if (nombre.length > 200) {
+      setError("El nombre de la partida no puede tener más de 200 caracteres");
       return;
     }
-    setError("");
+    
+    //Verificar caracteres especiales (solo permite letras, números, espacios y tildes)
+    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]*$/;
+    if (!regex.test(nombre)) {
+      setError("El nombre de la partida solo puede contener letras, números y espacios");
+      return;
+    }
     onContinue();
   };
 
