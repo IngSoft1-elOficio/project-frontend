@@ -17,15 +17,14 @@ export default function Secrets() {
         .replace(/\s+/g, ' ')
   
     const IMAGE_MAP = {
-      "secret murderer": murderer,
-      "secret accomplice": accomplice
+      "you are the murderer": murderer,
+      "you are the accomplice": accomplice
     };
 
   const getSecretImage = (secret, isHovered) => {
     if (!isHovered) return "/cards/secret_front.png";
-    if (secret.name === "You're the murderer") return "/cards/secret_murderer.png";
-    if (secret.name === "You're the accomplice") return "/cards/secret_accomplice.png";
-    return "/cards/secret_back.png";
+    const key = normalizeName(secret.name);
+    return IMAGE_MAP[key] ?? "/cards/secret_back.png";
   };
 
   return (
