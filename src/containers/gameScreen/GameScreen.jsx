@@ -10,6 +10,7 @@ import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
 import { useEffect } from "react";
 import ButtonGame from '../../components/ButtonGame.jsx'
+import Draft from '../../components/game/Draft.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -112,6 +113,33 @@ const handleSkip = async () => {
   }
 }
 
+const handleDraft = async (cardId) => {
+  try {
+    const response = await fetch(`http://localhost:8000/game/${roomId}/draft/pick`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'HTTP_USER_ID': userState.id.toString()
+      },
+      body: JSON.stringify({
+        card_id: cardId
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(getErrorMessage(response.status, errorData))
+    }
+
+    const data = await response.json()
+    console.log('Draft successful:', data)
+  } catch (err) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
+  }
+}
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -178,6 +206,11 @@ const handleSkip = async () => {
             selectedCards={selectedCards}
             onSelect={handleCardSelect}
           />
+        </div>
+
+        {/* Draft placeholder */}
+        <div>
+          <Draft handleDraft={handleDraft} />
         </div>
 
         {gameState.turnoActual ==
