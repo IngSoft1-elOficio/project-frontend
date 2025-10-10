@@ -37,6 +37,7 @@ function ItemListRow({ id, name, playersJoined, playersMin, playersMax }) {
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('Error del backend:', errorData) // ← AGREGAR ESTO
         throw new Error(errorData.detail || 'Error al unirse a la partida')
       }
 
@@ -87,6 +88,7 @@ function ItemListRow({ id, name, playersJoined, playersMin, playersMax }) {
       navigate(`/game_join/${data.room.id}`)
     } catch (err) {
       console.error('No se pudo verificar la sala', err)
+      alert(`Error: ${err.message}`) // ← AGREGAR ESTO para ver el error
     }
   }
 
