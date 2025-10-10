@@ -44,15 +44,11 @@ function GamesScreen() {
         id: item.id,
         name: item.name,
         playersJoined: item.players_joined,
-        playerQty: item.player_qty,
+        playersMin: item.players_min,
+        playersMax: item.players_max,
       }))
       setPartidas(partidasNormalizadas)
-      /*const mockData = {
-        items: [
-          { id: 1, name: 'Sala 1', playersJoined: 2, playerQty: 6 },
-        ],
-      }
-      setPartidas(mockData.items) */
+
     } catch (err) {
       console.error('Error obteniendo partidas', err)
     }
