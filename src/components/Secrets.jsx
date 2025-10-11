@@ -3,7 +3,7 @@ import { useGame } from "../context/GameContext";
 
 export default function Secrets() {
   const { gameState } = useGame();
-  const secretos = gameState.secretos || [];
+  const secretos = gameState.secretos
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
    const normalizeName = (name = '') =>
@@ -17,8 +17,8 @@ export default function Secrets() {
         .replace(/\s+/g, ' ')
   
     const IMAGE_MAP = {
-      "you are the murderer": murderer,
-      "you are the accomplice": accomplice
+      "you are the murderer": "/cards/secret_murderer.png",
+      "you are the accomplice": "/cards/secret_accomplice.png"
     };
 
   const getSecretImage = (secret, isHovered) => {
