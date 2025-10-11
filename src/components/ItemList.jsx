@@ -5,11 +5,11 @@ import { useUser } from '../context/UserContext'
 import { useGame } from '../context/GameContext'
 
 //Function for a single lobby row with necessary data
-function ItemListRow({ id, name, playersJoined, playerQty }) {
-  const navigate = useNavigate(); 
+function ItemListRow({ id, name, playersJoined, playersMin, playersMax }) {
+  const navigate = useNavigate()
 
-  const { userState, userDispatch } = useUser();
-  const { gameState, gameDispatch, connectToGame  } = useGame();
+  const { userState, userDispatch } = useUser()
+  const { gameState, gameDispatch, connectToGame } = useGame()
 
   const RowStyle = 'items-center py-2 '
   const RowTextStyle = 'text-center'
@@ -21,63 +21,71 @@ function ItemListRow({ id, name, playersJoined, playerQty }) {
 
   const handleJoin = async () => {
     try {
-        const requestData = {
-          name: userState.name,
-          avatar: userState.avatarPath,
-          birthdate: userState.birthdate // debe estar en formato "YYYY-MM-DD"
-        };
-
-        console.log("join request", requestData);
-
-        const response = await fetch(`http://localhost:8000/game/${id}/join`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestData),
-        });
-
-        if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al unirse a la partida");
-        }
-
-      const data = await response.json();
-      console.log("Response data:", data);
-
-      const playerJoining = data.players.find(player => player.name == userState.name);
-      if (!playerJoining) {
-        throw new Error("Jugador no encontrado en la respuesta");
+      const requestData = {
+        name: userState.name,
+        avatar: userState.avatarPath,
+        birthdate: userState.birthdate, // debe estar en formato "YYYY-MM-DD"
       }
-    
-      userDispatch({ 
-        type: 'SET_USER', 
+
+      console.log('join request', requestData)
+
+      const response = await fetch(`http://localhost:8000/game/${id}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Error del backend:', errorData)
+        throw new Error(errorData.detail || 'Error al unirse a la partida')
+      }
+
+      const data = await response.json()
+      console.log('Response data:', data)
+
+      const playerJoining = data.players.find(
+        player => player.name == userState.name
+      )
+      if (!playerJoining) {
+        throw new Error('Jugador no encontrado en la respuesta')
+      }
+
+      userDispatch({
+        type: 'SET_USER',
         payload: {
           id: playerJoining.id,
           name: playerJoining.name,
           avatarPath: playerJoining.avatar, // Map avatar to avatarPath
           birthdate: playerJoining.birthdate,
-          isHost: playerJoining.is_host
-        }
-      });
-      
-      gameDispatch({ 
-        type: 'INITIALIZE_GAME', 
+          isHost: playerJoining.is_host,
+        },
+      })
+
+      gameDispatch({
+        type: 'INITIALIZE_GAME',
         payload: {
           room: {
             id: data.room.id,
             name: data.room.name,
-            playerQty: data.room.player_qty,
+            playersMax: data.room.players_max,
+            playersMin: data.room.players_min,
             status: data.room.status,
-            hostId: data.room.host_id
+            hostId: data.room.host_id,
           },
-          players: data.players
-        }
-      });
-      
-      console.log('Connecting with gameId:', data.room.id, 'userId:', playerJoining.id);
-      connectToGame(data.room.id, playerJoining.id);
+          players: data.players,
+        },
+      })
+
+      console.log(
+        'Connecting with gameId:',
+        data.room.id,
+        'userId:',
+        playerJoining.id
+      )
+      connectToGame(data.room.id, playerJoining.id)
 
       navigate(`/game_join/${data.room.id}`)
-      
     } catch (err) {
       console.error('No se pudo verificar la sala', err)
     }
@@ -93,9 +101,18 @@ function ItemListRow({ id, name, playersJoined, playerQty }) {
 
   return (
     <div className={`${RowColumns} ${RowStyle} ${RowTextStyle} ${RowColors}`}>
-      <div>{name}</div>
       <div>
-        {playersJoined}/{playerQty}
+        <span className="text-lg font-bold">{name}</span>
+      </div>
+      <div>
+        <span
+          className={`px-4 py-2 rounded ${
+            playersJoined >= playersMin ? 'bg-orange-600' : 'bg-green-600'
+          }`}
+        >
+          {playersJoined}/{playersMax}
+        </span>
+        <span className="text-xs text-gray-400"> min: {playersMin}</span>
       </div>
       <div className={`${buttonJoinStyle}`}>
         <ButtonJoin onClick={handleJoin}>
@@ -148,7 +165,8 @@ export default function ItemList({ partidas }) {
             id={partida.id}
             name={partida.name}
             playersJoined={partida.playersJoined}
-            playerQty={partida.playerQty}
+            playersMin={partida.playersMin}
+            playersMax={partida.playersMax}
           />
         ))}
       </div>

@@ -1,6 +1,6 @@
 .pantalla-creacion {
   @apply fixed inset-0 
-         bg-black bg-[url('./assets/background_crear_partida.jpeg')] 
+         bg-black bg-[url('/bg-login.png')] 
          bg-no-repeat bg-cover bg-center
          flex items-center justify-end;
 }

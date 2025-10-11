@@ -54,7 +54,6 @@ const gameReducer = (state, action) => {
     case 'UPDATE_GAME_STATE_PUBLIC':
       return {
         ...state,
-<<<<<<< HEAD
         roomId: action.payload.room_id ?? state.roomId,
         gameId: action.payload.game_id ?? state.gameId,
         started: action.payload.status ?? state.started,
