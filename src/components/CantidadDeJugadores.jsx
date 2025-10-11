@@ -1,34 +1,36 @@
-import { useState } from "react";
+import { useState } from 'react'
 
-export default function CantidadDeJugadores({ jugadoresMin, setJugadoresMin, jugadoresMax, setJugadoresMax }) {
-  const min = 2;
-  const max = 6;
-  const step = 1;
+export default function CantidadDeJugadores({
+  jugadoresMin,
+  setJugadoresMin,
+  jugadoresMax,
+  setJugadoresMax,
+}) {
+  const min = 2
+  const max = 6
+  const step = 1
 
-  const [minValue, setMinValue] = useState(jugadoresMin);
-  const [maxValue, setMaxValue] = useState(jugadoresMax);
-  const [lastChanged, setLastChanged] = useState("min");
+  const [minValue, setMinValue] = useState(jugadoresMin)
+  const [maxValue, setMaxValue] = useState(jugadoresMax)
+  const [lastChanged, setLastChanged] = useState('min')
 
+  const handleMinChange = e => {
+    const value = Math.min(Number(e.target.value), maxValue)
+    setMinValue(value)
+    setJugadoresMin(value)
+    setLastChanged('min')
+  }
 
-  const handleMinChange = (e) => {
-    const value = Math.min(Number(e.target.value), maxValue);
-    setMinValue(value);
-    setJugadoresMin(value);
-    setLastChanged("min");
-  };
-
-  const handleMaxChange = (e) => {
-    const value = Math.max(Number(e.target.value), minValue);
-    setMaxValue(value);
-    setJugadoresMax(value);
-    setLastChanged("max");
-  };
+  const handleMaxChange = e => {
+    const value = Math.max(Number(e.target.value), minValue)
+    setMaxValue(value)
+    setJugadoresMax(value)
+    setLastChanged('max')
+  }
 
   return (
     <div className="text-[#FFD700] font-[Limelight] w-full max-w-md">
-      <label className="block mb-4">
-        Seleccionar cantidad de jugadores:
-      </label>
+      <label className="block mb-4">Seleccionar cantidad de jugadores:</label>
       <div className="relative h-10 flex items-center">
         <div className="absolute w-full h-2 bg-gray-700 rounded-full" />
         <div
@@ -46,7 +48,7 @@ export default function CantidadDeJugadores({ jugadoresMin, setJugadoresMin, jug
           value={minValue}
           onChange={handleMinChange}
           className="absolute w-full appearance-none bg-transparent slider-thumb"
-          style={{ zIndex: lastChanged === "min" ? 5 : 3 }}
+          style={{ zIndex: lastChanged === 'min' ? 5 : 3 }}
         />
         <input
           type="range"
@@ -56,14 +58,14 @@ export default function CantidadDeJugadores({ jugadoresMin, setJugadoresMin, jug
           value={maxValue}
           onChange={handleMaxChange}
           className="absolute w-full appearance-none bg-transparent slider-thumb"
-          style={{ zIndex: lastChanged === "max" ? 5 : 3 }}
+          style={{ zIndex: lastChanged === 'max' ? 5 : 3 }}
         />
       </div>
       <div className="flex justify-between text-sm mt-4">
         <span>Mínimo: {minValue}</span>
         <span>Máximo: {maxValue}</span>
       </div>
-      <style jsx>{`
+      <style>{`
         input[type="range"]::-webkit-slider-thumb {
           appearance: none;
           width: 20px;
@@ -97,5 +99,5 @@ export default function CantidadDeJugadores({ jugadoresMin, setJugadoresMin, jug
         }
       `}</style>
     </div>
-  );
+  )
 }
