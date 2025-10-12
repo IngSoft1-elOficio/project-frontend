@@ -19,7 +19,7 @@ export default function GameJoin() {
       console.log("User state at waiting: ", userState);
 
       // Navigate only if user is not the host and roomId is set
-      if (!userState.isHost && gameState.roomId && gameState.started == 'INGAME') {
+      if (!userState.isHost && gameState.roomId && gameState.status == 'INGAME') {
         navigate(`/game/${gameState.roomId}`);
       }
   }, [gameState, userState])

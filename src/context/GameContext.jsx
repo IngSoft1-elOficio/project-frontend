@@ -515,19 +515,22 @@ export const GameProvider = ({ children }) => {
     // | CONNECTION ACTION LISTENERS |
     // -------------------------------
 
-    socket.on('connect', () => {
-      console.log('✅ Socket connected to game:', roomId);
-      gameDispatch({ type: 'SOCKET_CONNECTED' });
-    });
-
     socket.on('connected', (data) => {
-      console.log('✅ Backend confirmed connection and auto-joined room:', roomId);
+      console.log('✅ Backend confirmed connection room:', roomId);
       gameDispatch({ type: 'SOCKET_CONNECTED' });
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnected', () => {
       console.log('❌ Socket disconnected');
       gameDispatch({ type: 'SOCKET_DISCONNECTED' });
+    });
+
+    socket.on('player_connected', () => {
+      console.log('✅ Player joined room:', roomId);
+    });
+
+    socket.on('player_disconnected', () => {
+      console.log('✅ Player leaved room:', roomId);
     });
 
     // ------------------------
