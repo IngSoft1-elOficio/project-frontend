@@ -56,16 +56,14 @@ export default function GameJoin() {
       const data = await response.json();
       console.log("Partida iniciada: la respuesta del post es:", data);
 
-  gameDispatch({
-    type: 'UPDATE_GAME_STATE_PUBLIC',
-    payload: {
-    turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-    status: data.game?.status || 'INGAME',
-    jugadores: data.players || gameState.jugadores,
-    timestamp: new Date().toISOString()
-  }});
-
-
+    gameDispatch({
+      type: 'UPDATE_GAME_STATE_PUBLIC',
+      payload: {
+      turno_actual: data.turn?.current_player_id || gameState.turnoActual,
+      status: data.game?.status || 'INGAME',
+      jugadores: data.players || gameState.jugadores,
+      timestamp: new Date().toISOString()
+    }});
 
       navigate(`/game/${gameState.roomId}`)
 

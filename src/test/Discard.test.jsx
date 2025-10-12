@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import Discard from '../components/Discard.jsx';
 
 vi.mock('../assets/01-card_back.png', () => ({
-  default: 'mocked-card-back.png'
+  default: '/cards/01-card_back.png'
 }));
 
 describe('Discard', () => {
@@ -29,7 +29,7 @@ describe('Discard', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
     
     expect(screen.getByText('0')).toBeInTheDocument();
   });
@@ -39,7 +39,7 @@ describe('Discard', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
     
     expect(screen.getByText('0')).toBeInTheDocument();
   });
@@ -74,7 +74,7 @@ describe('Discard', () => {
     
     rerender(<Discard topDiscardedCard={null} counterDiscarded={0} />);
 
-    expect(screen.getByAltText('Top Discarded Card')).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(screen.getByAltText('Top Discarded Card')).toHaveAttribute('src', '/cards/01-card_back.png');
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('3')).not.toBeInTheDocument();
   });
@@ -92,7 +92,7 @@ describe('Discard', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
   });
 });
 
@@ -112,7 +112,7 @@ describe('Discard - Integration with GameContext', () => {
     const { rerender } = render(<Discard {...initialProps} />);
     
     expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByAltText('Top Discarded Card')).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(screen.getByAltText('Top Discarded Card')).toHaveAttribute('src', '/cards/01-card_back.png');
     
     rerender(<Discard {...updatedProps} />);
     

@@ -48,7 +48,7 @@ describe('LoginBox', () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
 
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
 
     const futureDate = new Date();
     futureDate.setFullYear(futureDate.getFullYear() + 1);
@@ -63,7 +63,7 @@ describe('LoginBox', () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
 
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
@@ -78,13 +78,13 @@ describe('LoginBox', () => {
 
     // Primer ingreso
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
 
     // Segundo ingreso con los mismos datos
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Lucas' } });
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
   });
@@ -92,7 +92,7 @@ describe('LoginBox', () => {
   it('muestra error si el nombre tiene más de 20 caracteres', async () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'abcdefghijklmnopqrstu' } });
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
@@ -102,7 +102,7 @@ describe('LoginBox', () => {
   it('muestra error si el nombre tiene caracteres especiales', async () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'Juan$%' } });
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
@@ -112,7 +112,7 @@ describe('LoginBox', () => {
   it('muestra error si el nombre tiene solo espacios', async () => {
     renderWithProvider();
     fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: '   ' } });
-    fireEvent.click(screen.getByAltText('./public/avatar1.jpg'));
+    fireEvent.click(screen.getByAltText('./avatar1.jpg'));
     fireEvent.change(screen.getByLabelText(/fecha de nacimiento/i), { target: { value: '2000-01-01' } });
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));

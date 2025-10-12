@@ -4,7 +4,7 @@ import Deck from '../components/Deck.jsx';
 
 // Mock de la imagen card_back
 vi.mock('../assets/01-card_back.png', () => ({
-  default: 'mocked-card-back.png'
+  default: '/cards/01-card_back.png'
 }));
 
 describe('Deck', () => {
@@ -17,7 +17,7 @@ describe('Deck', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
     expect(cardImage).toHaveClass('w-16', 'h-24', 'rounded-lg', 'border-2', 'border-gray-400');
     
     expect(screen.getByText('25')).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('Deck', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
     
     expect(screen.getByText('0')).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe('Deck', () => {
     
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', 'mocked-card-back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
   });
 
 });
