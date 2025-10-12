@@ -9,7 +9,7 @@ const gameInitialState = {
   gameId: null,
   roomId: null,
   turnoActual: null,
-  started: null,
+  status: null,
   jugadores: [],
   mazos: {
 	  deck: {
@@ -21,6 +21,7 @@ const gameInitialState = {
 		  count: 0
 	}
   },
+  sets: [],
   mano: [],
   secretos: [],
   gameEnded: false,
@@ -136,7 +137,7 @@ const gameReducer = (state, action) => {
         ...state,
         roomId: action.payload.room_id ?? state.roomId,
         gameId: action.payload.game_id ?? state.gameId,
-        started: action.payload.status ?? state.started,
+        status: action.payload.status ?? state.status,
         turnoActual: action.payload.turno_actual ?? state.turnoActual,
         
         jugadores: Array.isArray(action.payload.jugadores) && action.payload.jugadores.length > 0
@@ -146,6 +147,10 @@ const gameReducer = (state, action) => {
         mazos: action.payload.mazos && Object.keys(action.payload.mazos).length > 0
           ? action.payload.mazos
           : state.mazos,
+
+        sets: Array.isArray(action.payload.sets) && action.payload.sets.length > 0
+          ? action.payload.sets
+          : state.sets,
         
         gameEnded: action.payload.game_ended ?? state.gameEnded,
         lastUpdate: action.payload.timestamp ?? new Date().toISOString()
