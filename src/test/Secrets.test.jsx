@@ -1,67 +1,37 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
-import Secrets from '../components/Secrets';
-import * as GameContext from '../context/GameContext';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import Secrets from "../components/Secrets";
+import * as GameContext from "../context/GameContext";
 
-// Mockeamos el hook como función para poder cambiar su retorno en cada test
-vi.mock('../context/GameContext', () => ({
-  useGame: vi.fn(),
-}));
+const mockSecretos = [
+  { id: 1, name: "You are the Murderer" },  // Imagen en IMAGE_MAP
+  { id: 2, name: "You are the Accomplice" },// Imagen en IMAGE_MAP
+  { id: 3, name: "Unknown Secret" },        // fallback back
+];
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+vi.spyOn(GameContext, "useGame").mockReturnValue({ gameState: { secretos: mockSecretos } });
 
-afterEach(() => {
-  cleanup();
-});
-
-describe('Secrets', () => {
-  it('renderiza todos los secretos cuando hay secretos disponibles', () => {
-    // configurar mock para este caso
-    GameContext.useGame.mockReturnValue({
-      gameState: {
-        secretos: [
-          { id: 1, player_id: 1, name: "You're the murderer" },
-          { id: 2, player_id: 1, name: "You're the accomplice" },
-          { id: 3, player_id: 1, name: "Other secret" },
-        ],
-      },
-    });
-
+describe("Secrets component", () => {
+  it("renderiza secretos y cambia imagen en hover", () => {
     render(<Secrets />);
-    expect(screen.getAllByRole('button')).toHaveLength(3);
-  });
+    const buttons = screen.getAllByRole("button");
+    const images = () => screen.getAllByRole("img");
 
-  it('no renderiza nada cuando no hay secretos', () => {
-    // reconfigurar mock para este test: retorno sin secretos
-    GameContext.useGame.mockReturnValue({ gameState: { secretos: [] } });
+    expect(buttons.length).toBe(3);
+    images().forEach(img => expect(img.src).toContain("/cards/secret_front.png"));
 
-    render(<Secrets />);
-    const secretButtons = screen.queryAllByRole('button');
-    expect(secretButtons).toHaveLength(0);
-  });
+    fireEvent.mouseEnter(buttons[0]);
+    expect(images()[0].src).toContain("/cards/secret_murderer.png");
 
-  it('hover cambia imagen (murderer -> back/front)', () => {
-    GameContext.useGame.mockReturnValue({
-      gameState: {
-        secretos: [
-          { id: 1, player_id: 1, name: "You're the murderer" },
-        ],
-      },
-    });
+    fireEvent.mouseLeave(buttons[0]);
+    fireEvent.mouseEnter(buttons[1]);
+    expect(images()[1].src).toContain("/cards/secret_accomplice.png");
 
-    render(<Secrets />);
-    const btn = screen.getByRole('button');
-    const img = screen.getByRole('img');
+    fireEvent.mouseLeave(buttons[1]);
+    fireEvent.mouseEnter(buttons[2]);
+    expect(images()[2].src).toContain("/cards/secret_back.png");
 
-    // front inicial
-    expect(img.src).toContain('secret_front.png');
-
-    fireEvent.mouseEnter(btn);
-    expect(img.src).toContain('secret_murderer.png');
-
-    fireEvent.mouseLeave(btn);
-    expect(img.src).toContain('secret_front.png');
+    fireEvent.mouseLeave(buttons[2]);
+    expect(images()[2].src).toContain("/cards/secret_front.png");
   });
 });

@@ -2,7 +2,7 @@ import { useGame } from "../context/GameContext";
 
 export default function HandCards({ selectedCards, onSelect }) {
   const { gameState } = useGame()
-  const hand = gameState.mano || []
+  const hand = gameState.mano
 
   const normalizeName = (name = '') =>
     name
@@ -15,29 +15,28 @@ export default function HandCards({ selectedCards, onSelect }) {
       .replace(/\s+/g, ' ')
 
   const IMAGE_MAP = {
-    "card back": "/cards/01-card_back.png",
-    "murder escapes": "/cards/02-murder_escapes.png",
-    "detective poirot": "/cards/detective_poirot.png",
-    "detective marple": "/cards/detective_marple.png",
-    "detective satterthwaite": "/cards/detective_satterthwaite.png",
-    "detective pyne": "/cards/detective_pyne.png",
-    "detective brent": "/cards/detective_brent.png",
-    "detective tommy beresford": "/cards/detective_tommyberesford.png",
-    "detective tuppence beresford": "/cards/detective_tuppenceberesford.png",
-    "detective quin": "/cards/detective_quin.png",
-    "detective oliver": "/cards/detective_oliver.png",
-    "instant not so fast": "/cards/instant_notsofast.png",
-    "event cards on the table": "/cards/event_cardsonthetable.png",
-    "event another victim": "/cards/event_anothervictim.png",
-    "event dead card folly": "/cards/event_deadcardfolly.png",
-    "event look ashes": "/cards/event_lookashes.png",
-    "event card trade": "/cards/event_cardtrade.png",
-    "event one more": "/cards/event_onemore.png",
-    "event delay escape": "/cards/event_delayescape.png",
-    "event early train": "/cards/event_earlytrain.png",
-    "event point suspicions": "/cards/event_pointsuspicions.png",
-    "devious blackmailed": "/cards/devious_blackmailed.png",
-    "devious faux pas": "/cards/devious_fauxpas.png"
+    "murderer escapes": "/cards/02-murder_escapes.png",
+    "hercule poirot": "/cards/detective_poirot.png",
+    "miss marple": "/cards/detective_marple.png",
+    "mr satterthwaite": "/cards/detective_satterthwaite.png",
+    "parker pyne": "/cards/detective_pyne.png",
+    "lady eileen bundle brent": "/cards/detective_brent.png",
+    "tommy beresford": "/cards/detective_tommyberesford.png",
+    "tuppence beresford": "/cards/detective_tuppenceberesford.png",
+    "harley quin wildcard": "/cards/detective_quin.png",
+    "adriane oliver": "/cards/detective_oliver.png",
+    "not so fast": "/cards/instant_notsofast.png",
+    "cards off the table": "/cards/event_cardsonthetable.png",
+    "another victim": "/cards/event_anothervictim.png",
+    "dead card folly": "/cards/event_deadcardfolly.png",
+    "look into the ashes": "/cards/event_lookashes.png",
+    "card trade": "/cards/event_cardtrade.png",
+    "and then there was one more": "/cards/event_onemore.png",
+    "delay the murderers escape": "/cards/event_delayescape.png",
+    "early train to paddington": "/cards/event_earlytrain.png",
+    "point your suspicions": "/cards/event_pointsuspicions.png",
+    "blackmailed": "/cards/devious_blackmailed.png",
+    "social faux pas": "/cards/devious_fauxpas.png"
   };
 
   const getCardsImage = card => {
@@ -65,13 +64,11 @@ export default function HandCards({ selectedCards, onSelect }) {
             type="button"
             onClick={() => onSelect(card.id)}
             style={{
-              border: "none",
+              border: isSelected ? "3px solid #FFD700" : "none",
               background: "transparent",
               borderRadius: "8px",
               cursor: "pointer",
-              padding: 0,
-              outline: isSelected ? "box-shadow: 0 0 0 3px gold" : "none",
-              transition: "all 0.2s ease"
+              padding: 0
             }}
           >
             {src ? (
