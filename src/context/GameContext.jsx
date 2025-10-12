@@ -6,6 +6,7 @@ const GameContext = createContext();
 
 const gameInitialState = {
 
+  userId: null,
   gameId: null,
   roomId: null,
   turnoActual: null,
@@ -94,7 +95,8 @@ const gameInitialState = {
   // Simple discard & draw tracking
   drawAction: {
     cardsToDrawRemaining: 0,  // How many more cards player needs to draw
-    otherPlayerDrawing: null  // { playerId, cardsRemaining, message }
+    otherPlayerDrawing: null,  // { playerId, cardsRemaining, message }
+    hasDiscardedAndPicked: false,
   }
 };
 
@@ -159,6 +161,7 @@ const gameReducer = (state, action) => {
     case 'UPDATE_GAME_STATE_PRIVATE':
       return {
         ...state,
+        userId: action.payload.user_id ?? state.userId,
         mano: Array.isArray(action.payload.mano)
           ? action.payload.mano
           : state.mano,
@@ -222,7 +225,18 @@ const gameReducer = (state, action) => {
         ...state,
         drawAction: {
           cardsToDrawRemaining: 0,
-          otherPlayerDrawing: null
+          otherPlayerDrawing: null,
+          hasDiscardedAndPicked: true,
+        }
+      };
+
+    case 'FINISH_TURN':
+      return {
+        ...state,
+        drawAction: {
+          cardsToDrawRemaining: 0,
+          otherPlayerDrawing: null,
+          hasDiscardedAndPicked: false,
         }
       };
 
@@ -630,25 +644,25 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('player_must_draw', (data) => {
-    console.log('🎴 Player must draw cards:', data);
-    gameDispatch({
-      type: 'PLAYER_MUST_DRAW',
-      payload: data
+      console.log('🎴 Player must draw cards:', data);
+      gameDispatch({
+        type: 'PLAYER_MUST_DRAW',
+        payload: data
+      });
     });
-  });
   
-  socket.on('card_drawn_simple', (data) => {
-    console.log('📥 Card drawn:', data);
-    gameDispatch({
-      type: 'CARD_DRAWN_SIMPLE',
-      payload: data
-    });
+    socket.on('card_drawn_simple', (data) => {
+      console.log('📥 Card drawn:', data);
+      gameDispatch({
+        type: 'CARD_DRAWN_SIMPLE',
+        payload: data
+      });
     
-    // If no more cards to draw, complete action
-    if (data.cards_remaining === 0) {
-      gameDispatch({ type: 'DRAW_ACTION_COMPLETE' });
-    }
-  });
+      // If no more cards to draw, complete action
+      if (data.cards_remaining === 0) {
+        gameDispatch({ type: 'DRAW_ACTION_COMPLETE' });
+      }
+    });
 
   }, []);
 

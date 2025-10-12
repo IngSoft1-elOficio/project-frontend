@@ -9,11 +9,10 @@ import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
 import { useEffect } from "react";
 import ButtonGame from '../../components/ButtonGame.jsx'
-import ConnectionBeacon from '../../components/ConnectionBeacon.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState } = useGame()
+  const { gameState, gameDispatch } = useGame()
 
   useEffect(() => {
       console.log("Game state at play game: ", gameState);
@@ -106,6 +105,9 @@ export default function GameScreen() {
 
       const data = await response.json()
       console.log('finish turn successful:', data)
+
+      gameDispatch({ type: 'FINISH_TURN' });
+
     } catch (err) {
       setError(err.message)
     } finally {
@@ -175,10 +177,9 @@ export default function GameScreen() {
         backgroundPosition: 'center',
       }}
     >
-      <ConnectionBeacon />
       {/* Error display */}
       {error && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-100">
           {error}
         </div>
       )}
@@ -239,12 +240,14 @@ export default function GameScreen() {
               </ButtonGame>
 
               {/* Botón para saltar turno */}
+              { gameState.drawAction.hasDiscardedAndPicked && 
               <ButtonGame
                 onClick={handleFinishTurn}
                 disabled={loading || selectedCards.length > 0}
               >
                 Finalizar Turno
               </ButtonGame>
+              }
             </div>
           </div>
         ) : (
