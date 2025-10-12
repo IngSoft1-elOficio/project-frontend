@@ -1,6 +1,5 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
-import ProfileCard from '../../components/ProfileCard'
 import { useGame } from '../../context/GameContext.jsx'
 import { useState } from 'react'
 import Deck from '../../components/Deck.jsx'
@@ -10,6 +9,7 @@ import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
 import { useEffect } from "react";
 import ButtonGame from '../../components/ButtonGame.jsx'
+import ConnectionBeacon from '../../components/ConnectionBeacon.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -31,86 +31,125 @@ export default function GameScreen() {
       if (prev.includes(cardId)) {
         return prev.filter(id => id !== cardId)
       } else {
-        console.log('Cards selected:', prev, cardId)
         return [...prev, cardId]
       }
     })
   }
-const handleDiscard = async () => {
-  if (selectedCards.length === 0) {
-    setError('Debes seleccionar al menos una carta para descartar')
-    return
-  }
 
-  setLoading(true)
-  setError(null)
-
-  try {
-    const cardsWithOrder = selectedCards.map((cardId, index) => ({
-      order: index + 1,
-      card_id: cardId
-    }))
-    console.log('Orden de descarte:', cardsWithOrder)
-
-    const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/discard`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'HTTP_USER_ID': userState.id.toString()  // Add user_id header
-      },
-      body: JSON.stringify({
-        card_ids: cardsWithOrder,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(getErrorMessage(response.status, errorData))
+  const handleDiscard = async () => {
+    if (selectedCards.length === 0) {
+      setError('Debes seleccionar al menos una carta para descartar')
+      return
     }
 
-    const data = await response.json()
-    console.log('Discard successful:', data)
-    setSelectedCards([])
-  } catch (err) {
-    setError(err.message)
-  } finally {
-    setLoading(false)
-  }
-}
-const handleSkip = async () => {
-  setLoading(true)
-  setError(null)
+    setLoading(true)
+    setError(null)
 
-  console.log('Attempting skip:', {
-    turnoActual: gameState.turnoActual,
-    userId: userState.id,
-    isMyTurn: gameState.turnoActual === userState.id
-  });
+    try {
+      const cardsWithOrder = selectedCards.map((cardId, index) => ({
+        order: index + 1,
+        card_id: cardId
+      }))
+      console.log('Orden de descarte:', cardsWithOrder)
 
-  try {
-    const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/skip`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id: userState.id
+      const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/discard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString()  // Add user_id header
+        },
+        body: JSON.stringify({
+          card_ids: cardsWithOrder,
+        }),
       })
-    })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(getErrorMessage(response.status, errorData))
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Discard successful:', data)
+      setSelectedCards([])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-
-    const data = await response.json()
-    console.log('Skip successful:', data)
-  } catch (err) {
-    setError(err.message)
-  } finally {
-    setLoading(false)
   }
-}
+
+  const handleFinishTurn = async () => {
+    setLoading(true)
+    setError(null)
+
+    console.log('Attempting finish turn:', {
+      turnoActual: gameState.turnoActual,
+      userId: userState.id,
+      isMyTurn: gameState.turnoActual === userState.id
+    });
+
+    try {
+      const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/finish-turn`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userState.id
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('finish turn successful:', data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePickFromDeck = async () => {
+    setLoading(true)
+    setError(null)
+
+    console.log('Attempting to pick from deck:', {
+      turnoActual: gameState.turnoActual,
+      userId: userState.id,
+      isMyTurn: gameState.turnoActual === userState.id
+    });
+
+    try {
+      const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/take-deck`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString()
+        },
+        body: JSON.stringify({
+          user_id: userState.id
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Pick from deck successful:', data)
+      
+      setSelectedCards([])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getErrorMessage = (status, errorData) => {
     switch (status) {
@@ -136,6 +175,7 @@ const handleSkip = async () => {
         backgroundPosition: 'center',
       }}
     >
+      <ConnectionBeacon />
       {/* Error display */}
       {error && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
@@ -160,7 +200,11 @@ const handleSkip = async () => {
           <div className="flex flex-col items-center space-y-3">
             {/* Top row - 2 cards */}
             <div className="flex space-x-3">
-              <Deck cardsLeft={gameState.mazos?.deck ?? 0} />
+              <Deck 
+                cardsLeft={gameState.mazos?.deck?.count ?? 0} 
+                onClick={handlePickFromDeck}
+                disabled={gameState.turnoActual !== userState.id}
+              />              
               <Discard
                 topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
                 counterDiscarded={gameState.mazos?.discard?.count ?? 0}
@@ -196,10 +240,10 @@ const handleSkip = async () => {
 
               {/* Botón para saltar turno */}
               <ButtonGame
-                onClick={handleSkip}
+                onClick={handleFinishTurn}
                 disabled={loading || selectedCards.length > 0}
               >
-                Saltar Turno
+                Finalizar Turno
               </ButtonGame>
             </div>
           </div>

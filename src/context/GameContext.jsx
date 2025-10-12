@@ -5,16 +5,20 @@ import io from 'socket.io-client';
 const GameContext = createContext();
 
 const gameInitialState = {
+
   gameId: null,
   roomId: null,
   turnoActual: null,
   started: null,
   jugadores: [],
   mazos: {
-	deck: 0,
-	discard: {
-		top: "",
-		count: 0
+	  deck: {
+      count: 0,
+      draft: []
+    },
+	  discard: {
+		  top: "",
+		  count: 0
 	}
   },
   mano: [],
@@ -23,26 +27,101 @@ const gameInitialState = {
   winners: [],
   ganaste: null,
   lastUpdate: null,
-  connected: false
+  connected: false,
+
+  // Detective Actions
+  detectiveAction: {
+    // Active action
+    current: null,  // { actionId, setType, stage, cards, hasWildcard }
+    allowedPlayers: [],
+    secretsPool: 'hidden',  // 'hidden' | 'revealed'
+    targetPlayerId: null,
+    
+    // Modals
+    showCreateSet: false,
+    showSelectPlayer: false,
+    showSelectSecret: false,
+    showWaiting: false,
+    
+    incomingRequest: null,  // { actionId, requesterId, setType }
+    showChooseOwnSecret: false,
+    
+    // Transparency
+    actionInProgress: null  // { playerId, setType, step, message }
+  },
+  
+  // Event Cards
+  eventCards: {
+    // Cards Off The Table
+    cardsOffTable: {
+      showSelectPlayer: false
+    },
+    
+    // Another Victim
+    anotherVictim: {
+      showSelectPlayer: false
+    },
+    
+    // Look Into Ashes
+    lookAshes: {
+      actionId: null,
+      availableCards: [],
+      showSelectCard: false
+    },
+    
+    // And Then There Was One More
+    oneMore: {
+      actionId: null,
+      availableSecrets: [],
+      allowedPlayers: [],
+      selectedSecretId: null,
+      showSelectSecret: false,
+      showSelectPlayer: false
+    },
+    
+    // Delay The Murderer Escape
+    delayEscape: {
+      actionId: null,
+      availableCards: [],
+      showOrderCards: false
+    },
+    
+    // Transparency for all events
+    actionInProgress: null  // { playerId, eventType, step, message }
+  },
+  
+  // Simple discard & draw tracking
+  drawAction: {
+    cardsToDrawRemaining: 0,  // How many more cards player needs to draw
+    otherPlayerDrawing: null  // { playerId, cardsRemaining, message }
+  }
 };
 
 const gameReducer = (state, action) => {
   switch (action.type) {
+
+    // -------------------
+    // | GAME-CONNECTION |
+    // -------------------
+
     case 'SOCKET_CONNECTED':
       return {
         ...state,
         connected: true
       };
+    
     case 'SOCKET_DISCONNECTED':
       return {
         ...state,
         connected: false
       };
+    
     case 'SET_GAME_ID':
       return {
         ...state,
         gameId: action.payload
       };
+    
     case 'INITIALIZE_GAME':
       return {
         ...state,
@@ -51,6 +130,7 @@ const gameReducer = (state, action) => {
         roomInfo: action.payload.room,
         jugadores: action.payload.players
       };
+    
     case 'UPDATE_GAME_STATE_PUBLIC':
       return {
         ...state,
@@ -59,7 +139,6 @@ const gameReducer = (state, action) => {
         started: action.payload.status ?? state.started,
         turnoActual: action.payload.turno_actual ?? state.turnoActual,
         
-        // Only update if we received valid data
         jugadores: Array.isArray(action.payload.jugadores) && action.payload.jugadores.length > 0
           ? action.payload.jugadores
           : state.jugadores,
@@ -75,7 +154,6 @@ const gameReducer = (state, action) => {
     case 'UPDATE_GAME_STATE_PRIVATE':
       return {
         ...state,
-        // Only update if we received valid arrays
         mano: Array.isArray(action.payload.mano)
           ? action.payload.mano
           : state.mano,
@@ -99,6 +177,304 @@ const gameReducer = (state, action) => {
         
         lastUpdate: action.payload.timestamp ?? new Date().toISOString()
       };
+
+    // ----------------------
+    // | CARDS DRAW-DISCARD |
+    // ----------------------
+
+    case 'PLAYER_MUST_DRAW':
+      const isMe = action.payload.player_id === state.userId;
+      
+      return {
+        ...state,
+        drawAction: {
+          cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
+          otherPlayerDrawing: !isMe ? {
+            playerId: action.payload.player_id,
+            cardsRemaining: action.payload.cards_to_draw,
+            message: action.payload.message
+          } : null
+        }
+      };
+    
+    case 'CARD_DRAWN_SIMPLE':
+      const isMeDrawing = action.payload.player_id === state.userId;
+      
+      return {
+        ...state,
+        drawAction: {
+          cardsToDrawRemaining: isMeDrawing ? action.payload.cards_remaining : state.drawAction.cardsToDrawRemaining,
+          otherPlayerDrawing: !isMeDrawing && action.payload.cards_remaining > 0 ? {
+            playerId: action.payload.player_id,
+            cardsRemaining: action.payload.cards_remaining,
+            message: action.payload.message
+          } : null
+        }
+      };
+    
+    case 'DRAW_ACTION_COMPLETE':
+      return {
+        ...state,
+        drawAction: {
+          cardsToDrawRemaining: 0,
+          otherPlayerDrawing: null
+        }
+      };
+
+    // ---------------------
+    // | DETECTIVE ACTIONS |
+    // ---------------------
+    
+    case 'DETECTIVE_ACTION_STARTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            playerId: action.payload.player_id,
+            setType: action.payload.set_type,
+            step: 'started',
+            message: action.payload.message
+          }
+        }
+      };
+    
+    case 'DETECTIVE_TARGET_SELECTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            targetPlayerId: action.payload.target_player_id,
+            step: 'waiting_for_secret',
+            message: action.payload.message
+          }
+        }
+      };
+    
+    case 'DETECTIVE_START_CREATE_SET':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          showCreateSet: true
+        }
+      };
+    
+    case 'DETECTIVE_SET_SUBMITTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          current: {
+            actionId: action.payload.actionId,
+            setType: action.payload.setType,
+            stage: action.payload.stage,
+            cards: action.payload.cards,
+            hasWildcard: action.payload.hasWildcard
+          },
+          allowedPlayers: action.payload.allowedPlayers,
+          secretsPool: action.payload.secretsPool,
+          showCreateSet: false,
+          showSelectPlayer: true
+        }
+      };
+    
+    case 'DETECTIVE_PLAYER_SELECTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          targetPlayerId: action.payload.playerId,
+          showSelectPlayer: false,
+          showSelectSecret: action.payload.needsSecret,
+          showWaiting: !action.payload.needsSecret
+        }
+      };
+    
+    case 'DETECTIVE_INCOMING_REQUEST':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          incomingRequest: {
+            actionId: action.payload.action_id,
+            requesterId: action.payload.requester_id,
+            setType: action.payload.set_type
+          },
+          showChooseOwnSecret: true
+        }
+      };
+    
+    case 'DETECTIVE_ACTION_COMPLETE':
+      return {
+        ...state,
+        detectiveAction: {
+          current: null,
+          allowedPlayers: [],
+          secretsPool: 'hidden',
+          targetPlayerId: null,
+          showCreateSet: false,
+          showSelectPlayer: false,
+          showSelectSecret: false,
+          showWaiting: false,
+          incomingRequest: null,
+          showChooseOwnSecret: false,
+          actionInProgress: null
+        }
+      };
+    
+    // ---------------
+    // | EVENT CARDS |
+    // ---------------
+    
+    case 'EVENT_ACTION_STARTED':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          actionInProgress: {
+            playerId: action.payload.player_id,
+            eventType: action.payload.event_type,
+            cardName: action.payload.card_name,
+            step: action.payload.step,
+            message: action.payload.message || `Playing ${action.payload.card_name}...`
+          }
+        }
+      };
+    
+    case 'EVENT_STEP_UPDATE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          actionInProgress: {
+            ...state.eventCards.actionInProgress,
+            step: action.payload.step,
+            message: action.payload.message
+          }
+        }
+      };
+    
+    case 'EVENT_CARDS_OFF_TABLE_START':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          cardsOffTable: { showSelectPlayer: true }
+        }
+      };
+    
+    case 'EVENT_CARDS_OFF_TABLE_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          cardsOffTable: { showSelectPlayer: false },
+          actionInProgress: null
+        }
+      };
+    
+    case 'EVENT_LOOK_ASHES_PLAYED':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          lookAshes: {
+            actionId: action.payload.action_id,
+            availableCards: action.payload.available_cards,
+            showSelectCard: true
+          }
+        }
+      };
+    
+    case 'EVENT_LOOK_ASHES_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          lookAshes: {
+            actionId: null,
+            availableCards: [],
+            showSelectCard: false
+          },
+          actionInProgress: null
+        }
+      };
+    
+    case 'EVENT_ONE_MORE_PLAYED':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          oneMore: {
+            ...state.eventCards.oneMore,
+            actionId: action.payload.action_id,
+            availableSecrets: action.payload.available_secrets,
+            showSelectSecret: true
+          }
+        }
+      };
+    
+    case 'EVENT_ONE_MORE_SECRET_SELECTED':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          oneMore: {
+            ...state.eventCards.oneMore,
+            selectedSecretId: action.payload.secret_id,
+            allowedPlayers: action.payload.allowed_players,
+            showSelectSecret: false,
+            showSelectPlayer: true
+          }
+        }
+      };
+    
+    case 'EVENT_ONE_MORE_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          oneMore: {
+            actionId: null,
+            availableSecrets: [],
+            allowedPlayers: [],
+            selectedSecretId: null,
+            showSelectSecret: false,
+            showSelectPlayer: false
+          },
+          actionInProgress: null
+        }
+      };
+    
+    case 'EVENT_DELAY_ESCAPE_PLAYED':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          delayEscape: {
+            actionId: action.payload.action_id,
+            availableCards: action.payload.available_cards,
+            showOrderCards: true
+          }
+        }
+      };
+    
+    case 'EVENT_DELAY_ESCAPE_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          delayEscape: {
+            actionId: null,
+            availableCards: [],
+            showOrderCards: false
+          },
+          actionInProgress: null
+        }
+      };
       
     default:
       return state;
@@ -117,7 +493,7 @@ export const GameProvider = ({ children }) => {
       socketRef.current = null;
     }
 
-    console.log('Connecting to game:', roomId);
+    console.log('🔌 Connecting web-socket to roomId:', roomId);
 
     const socket = io('http://localhost:8000', {
       query: {
@@ -130,9 +506,12 @@ export const GameProvider = ({ children }) => {
 
     socketRef.current = socket;
 
-    // Connection events
+    // -------------------------------
+    // | CONNECTION ACTION LISTENERS |
+    // -------------------------------
+
     socket.on('connect', () => {
-      console.log('Socket connected to game:', roomId);
+      console.log('✅ Socket connected to game:', roomId);
       gameDispatch({ type: 'SOCKET_CONNECTED' });
     });
 
@@ -142,13 +521,16 @@ export const GameProvider = ({ children }) => {
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      console.log('❌ Socket disconnected');
       gameDispatch({ type: 'SOCKET_DISCONNECTED' });
     });
 
-    // Game events
+    // ------------------------
+    // | GAME STATE LISTENERS |
+    // ------------------------
+
     socket.on('game_state_public', (data) => {
-      console.log('🔵 Received game_state_public:', data);
+      console.log('📡 Received game_state_public:', data);
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
         payload: data
@@ -156,13 +538,13 @@ export const GameProvider = ({ children }) => {
     });
 
     socket.on('game_state_private', (data) => {
-      console.log('🟢 Received game_state_private:', data);
+      console.log('📡 Received game_state_private:', data);
       gameDispatch({ type: 'UPDATE_GAME_STATE_PRIVATE', payload: data });
       console.log("updated game state private");
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('❌ Socket connection error:', error);
     });
 
     socket.on('game_ended', (data) => {
@@ -176,12 +558,96 @@ export const GameProvider = ({ children }) => {
         } 
       });
     });
+
+    // ------------------------------
+    // | DETECTIVE ACTION LISTENERS |
+    // ------------------------------
+    
+    socket.on('detective_action_started', (data) => {
+      console.log('🔍 Detective action started:', data);
+      gameDispatch({
+        type: 'DETECTIVE_ACTION_STARTED',
+        payload: data
+      });
+    });
+  
+    socket.on('detective_target_selected', (data) => {
+      console.log('🎯 Detective target selected:', data);
+      gameDispatch({
+        type: 'DETECTIVE_TARGET_SELECTED',
+        payload: data
+      });
+    });
+  
+    socket.on('select_own_secret', (data) => {
+      console.log('🔐 Must select own secret:', data);
+      gameDispatch({
+        type: 'DETECTIVE_INCOMING_REQUEST',
+        payload: data
+      });
+    });
+  
+    socket.on('detective_action_complete', (data) => {
+      console.log('✅ Detective action complete:', data);
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' });
+    });
+    
+    // ------------------------
+    // | EVENT CARD LISTENERS |
+    // ------------------------
+    
+    socket.on('event_action_started', (data) => {
+      console.log('🎴 Event action started:', data);
+      gameDispatch({
+        type: 'EVENT_ACTION_STARTED',
+        payload: data
+      });
+    });
+    
+    socket.on('event_step_update', (data) => {
+      console.log('📊 Event step update:', data);
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: data
+      });
+    });
+  
+    socket.on('event_action_complete', (data) => {
+      console.log('✅ Event action complete:', data);
+      // Specific event completion handled by game_state_public
+    });
+
+    // ------------------------
+    // | EVENT CARD LISTENERS |
+    // ------------------------
+
+    socket.on('player_must_draw', (data) => {
+    console.log('🎴 Player must draw cards:', data);
+    gameDispatch({
+      type: 'PLAYER_MUST_DRAW',
+      payload: data
+    });
+  });
+  
+  socket.on('card_drawn_simple', (data) => {
+    console.log('📥 Card drawn:', data);
+    gameDispatch({
+      type: 'CARD_DRAWN_SIMPLE',
+      payload: data
+    });
+    
+    // If no more cards to draw, complete action
+    if (data.cards_remaining === 0) {
+      gameDispatch({ type: 'DRAW_ACTION_COMPLETE' });
+    }
+  });
+
   }, []);
 
   // Function to disconnect from socket
   const disconnectFromGame = useCallback(() => {
     if (socketRef.current) {
-      console.log('Disconnecting from game: room_id = ', gameState.roomId);
+      console.log('🔌 Disconnecting from RoomId = ', gameState.roomId);
       socketRef.current.disconnect();
       socketRef.current = null;
       gameDispatch({ type: 'SOCKET_DISCONNECTED' });
