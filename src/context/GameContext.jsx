@@ -11,11 +11,14 @@ const gameInitialState = {
   started: null,
   jugadores: [],
   mazos: {
-	deck: 0,
-	discard: {
-		top: "",
-		count: 0
-	}
+    deck: {
+      count: 0,
+      draft: []
+    },
+    discard: {
+      top: "",
+      count: 0
+    }
   },
   mano: [],
   secretos: [],

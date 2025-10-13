@@ -180,20 +180,26 @@ const handleDraft = async (cardId) => {
             <Secrets />
           </div>
 
-        {/* Mazos Placeholder */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">
-            Mazos
-          </h2>
-          <div className="flex flex-col items-center space-y-3">
-            {/* Top row - 2 cards */}
-            <div className="flex space-x-3">
-              <Deck cardsLeft={gameState.mazos?.deck ?? 0} />
-              <Discard
-                topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
-                counterDiscarded={gameState.mazos?.discard?.count ?? 0}
-              />
-            </div>
+        <div className="absolute top-1/2 left-0 w-full flex items-center justify-center gap-12 px-4" style={{transform: 'translateY(-50%)'}}>
+          {/* Mazos */}
+          <div className="flex flex-col items-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Mazos</h2>
+            <Deck cardsLeft={gameState.mazos?.deck.count ?? 0} />
+          </div>
+
+          {/* Draft */}
+          <div className="flex flex-col items-center justify-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Draft</h2>
+            <Draft handleDraft={handleDraft} />
+          </div>
+
+          {/* Descartar */}
+          <div className="flex flex-col items-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Descartar</h2>
+            <Discard
+              topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
+              counterDiscarded={gameState.mazos?.discard?.count ?? 0}
+            />
           </div>
         </div>
 
@@ -206,11 +212,6 @@ const handleDraft = async (cardId) => {
             selectedCards={selectedCards}
             onSelect={handleCardSelect}
           />
-        </div>
-
-        {/* Draft placeholder */}
-        <div>
-          <Draft handleDraft={handleDraft} />
         </div>
 
         {gameState.turnoActual ==
