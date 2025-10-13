@@ -13,14 +13,14 @@ const gameInitialState = {
   status: null,
   jugadores: [],
   mazos: {
-	  deck: {
+    deck: {
       count: 0,
       draft: []
     },
-	  discard: {
-		  top: "",
-		  count: 0
-	}
+    discard: {
+      top: "",
+      count: 0
+    }
   },
   sets: [],
   mano: [],

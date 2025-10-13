@@ -9,6 +9,7 @@ import HandCards from "../../components/HandCards.jsx";
 import Secrets from "../../components/Secrets.jsx"
 import { useEffect } from "react";
 import ButtonGame from '../../components/ButtonGame.jsx'
+import Draft from '../../components/game/Draft.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -150,6 +151,33 @@ export default function GameScreen() {
     }
   }
 
+const handleDraft = async (cardId) => {
+  try {
+    const response = await fetch(`http://localhost:8000/game/${roomId}/draft/pick`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'HTTP_USER_ID': userState.id.toString()
+      },
+      body: JSON.stringify({
+        card_id: cardId
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(getErrorMessage(response.status, errorData))
+    }
+
+    const data = await response.json()
+    console.log('Draft successful:', data)
+  } catch (err) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
+  }
+}
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -190,15 +218,11 @@ export default function GameScreen() {
             <Secrets />
           </div>
 
-        {/* Mazos Placeholder */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <h2 className="text-white text-xl font-bold mb-4 text-center">
-            Mazos
-          </h2>
-          <div className="flex flex-col items-center space-y-3">
-            {/* Top row - 2 cards */}
-            <div className="flex space-x-3">
-              <Deck 
+        <div className="absolute top-1/2 left-0 w-full flex items-center justify-center gap-12 px-4" style={{transform: 'translateY(-50%)'}}>
+          {/* Mazos */}
+          <div className="flex flex-col items-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Mazos</h2>
+            <Deck 
                 cardsLeft={gameState.mazos?.deck?.count ?? 0} 
                 onClick={handlePickFromDeck}
                 disabled={
@@ -206,12 +230,22 @@ export default function GameScreen() {
                   gameState.drawAction.cardsToDrawRemaining === 0 || 
                   !gameState.drawAction.hasDiscarded 
                 }
-              />            
-              <Discard
+              />  
+          </div>
+
+          {/* Draft */}
+          <div className="flex flex-col items-center justify-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Draft</h2>
+            <Draft handleDraft={handleDraft} />
+          </div>
+
+          {/* Descartar */}
+          <div className="flex flex-col items-center">
+            <h2 className="text-white text-xl font-bold mb-4 text-center">Descartar</h2>
+            <Discard
                 topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
                 counterDiscarded={gameState.mazos?.discard?.count ?? 0}
               />
-            </div>
           </div>
         </div>
 
