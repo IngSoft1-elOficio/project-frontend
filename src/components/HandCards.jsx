@@ -60,7 +60,7 @@ export default function HandCards({ selectedCards, onSelect }) {
         
         return (
           <button
-            key={card.id}
+            key={card.id + " " + card.name }
             type="button"
             onClick={() => onSelect(card.id)}
             style={{

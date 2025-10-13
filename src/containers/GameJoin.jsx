@@ -19,7 +19,7 @@ export default function GameJoin() {
       console.log("User state at waiting: ", userState);
 
       // Navigate only if user is not the host and roomId is set
-      if (!userState.isHost && gameState.roomId && gameState.started == 'INGAME') {
+      if (!userState.isHost && gameState.roomId && gameState.status == 'INGAME') {
         navigate(`/game/${gameState.roomId}`);
       }
   }, [gameState, userState])
@@ -56,16 +56,14 @@ export default function GameJoin() {
       const data = await response.json();
       console.log("Partida iniciada: la respuesta del post es:", data);
 
-  gameDispatch({
-    type: 'UPDATE_GAME_STATE_PUBLIC',
-    payload: {
-    turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-    status: data.game?.status || 'INGAME',
-    jugadores: data.players || gameState.jugadores,
-    timestamp: new Date().toISOString()
-  }});
-
-
+    gameDispatch({
+      type: 'UPDATE_GAME_STATE_PUBLIC',
+      payload: {
+      turno_actual: data.turn?.current_player_id || gameState.turnoActual,
+      status: data.game?.status || 'INGAME',
+      jugadores: data.players || gameState.jugadores,
+      timestamp: new Date().toISOString()
+    }});
 
       navigate(`/game/${gameState.roomId}`)
 
@@ -82,7 +80,6 @@ export default function GameJoin() {
         aria-hidden
       />
 
-      { // userState.name && gameState.gameId ? 
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
         <h1 className="mb-6 text-3xl font-bold text-[#F4CC6F] font-limelight">
           Partida:{" "}
@@ -101,9 +98,7 @@ export default function GameJoin() {
             Iniciar partida
           </Button>)}
         </div>
-      </div> // : <LobbyError navigate={navigate} />  Descomentar para no mostrar si no esta logeado
-      }
-
+      </div>
     </main>
   );
 }
