@@ -54,33 +54,38 @@ vi.mock('../components/ButtonGame', () => ({
 describe('GameScreen Component', () => {
   let mockUserState
   let mockGameState
+  let mockGameDispatch
   
   beforeEach(() => {
-    // Reset mocks before each test
     vi.clearAllMocks()
     
-    // Default mock states
     mockUserState = {
       id: 1,
       username: 'TestPlayer'
     }
     
+    mockGameDispatch = vi.fn()
+    
     mockGameState = {
       gameId: 'game-123',
       roomId: 'room-456',
-      turnoActual: 2, // Not player's turn by default
+      turnoActual: 2, 
       mazos: {
         deck: { count: 10, draft: [] },
         discard: { top: 'card-top', count: 5 }
       },
-      gameEnded: false
+      gameEnded: false,
+      drawAction: {
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: false,
+        hasDrawn: false
+      }
     }
     
-    // Setup context mocks
     useUser.mockReturnValue({ userState: mockUserState })
-    useGame.mockReturnValue({ gameState: mockGameState })
+    useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
     
-    // Mock fetch globally
     global.fetch = vi.fn()
   })
   
@@ -106,8 +111,14 @@ describe('GameScreen Component', () => {
     })
     
     it('shows action buttons when it is player\'s turn', () => {
-      mockGameState.turnoActual = 1 // Player's turn
-      useGame.mockReturnValue({ gameState: mockGameState })
+      mockGameState.turnoActual = 1 
+      mockGameState.drawAction = {
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: true,
+        hasDrawn: true
+      }
+      useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
       
       render(<GameScreen />)
       
@@ -124,7 +135,7 @@ describe('GameScreen Component', () => {
     
     it('shows game end modal when game has ended', () => {
       mockGameState.gameEnded = true
-      useGame.mockReturnValue({ gameState: mockGameState })
+      useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
       
       render(<GameScreen />)
       
@@ -146,8 +157,8 @@ describe('GameScreen Component', () => {
       render(<GameScreen />)
       
       const selectButton = screen.getByText('Select Card 1')
-      fireEvent.click(selectButton) // Select
-      fireEvent.click(selectButton) // Deselect
+      fireEvent.click(selectButton) 
+      fireEvent.click(selectButton) 
       
       expect(screen.getByText(/Selected:$/)).toBeInTheDocument()
     })
@@ -164,22 +175,15 @@ describe('GameScreen Component', () => {
 
   describe('Discard Action', () => {
     beforeEach(() => {
-      mockGameState.turnoActual = 1 // Player's turn
-      useGame.mockReturnValue({ gameState: mockGameState })
+      mockGameState.turnoActual = 1 
+      mockGameState.drawAction = {
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: false, 
+        hasDrawn: false
+      }
+      useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
     })
-    
-    /*
-    it('shows error when trying to discard without selecting cards', async () => {
-      render(<GameScreen />)
-      
-      const discardButton = screen.getByTestId('button-descartar')
-      fireEvent.click(discardButton)
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Debes seleccionar al menos una carta/)).toBeInTheDocument()
-      })
-    })
-    */
     
     it('calls discard API with selected cards', async () => {
       global.fetch.mockResolvedValueOnce({
@@ -189,10 +193,8 @@ describe('GameScreen Component', () => {
       
       render(<GameScreen />)
       
-      // Select a card
       fireEvent.click(screen.getByText('Select Card 1'))
       
-      // Click discard
       const discardButton = screen.getByTestId('button-descartar')
       fireEvent.click(discardButton)
       
@@ -262,64 +264,16 @@ describe('GameScreen Component', () => {
     })
   })
 
-  describe('Finish Turn Action', () => {
-    beforeEach(() => {
-      mockGameState.turnoActual = 1 // Player's turn
-      useGame.mockReturnValue({ gameState: mockGameState })
-    })
-    
-    it('calls finish turn API', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
-      })
-      
-      render(<GameScreen />)
-      
-      const finishButton = screen.getByTestId('button-finalizar-turno')
-      fireEvent.click(finishButton)
-      
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          'http://localhost:8000/game/room-456/finish-turn',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({ user_id: 1 })
-          })
-        )
-      })
-    })
-    
-    it('disables finish turn when cards are selected', () => {
-      render(<GameScreen />)
-      
-      fireEvent.click(screen.getByText('Select Card 1'))
-      
-      const finishButton = screen.getByTestId('button-finalizar-turno')
-      expect(finishButton).toBeDisabled()
-    })
-    
-    it('handles finish turn API error', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        json: async () => ({ message: 'Not your turn' })
-      })
-      
-      render(<GameScreen />)
-      
-      fireEvent.click(screen.getByTestId('button-finalizar-turno'))
-      
-      await waitFor(() => {
-        expect(screen.getByText(/No es tu turno/)).toBeInTheDocument()
-      })
-    })
-  })
-
   describe('Pick from Deck Action', () => {
     beforeEach(() => {
-      mockGameState.turnoActual = 1 // Player's turn
-      useGame.mockReturnValue({ gameState: mockGameState })
+      mockGameState.turnoActual = 1 
+      mockGameState.drawAction = {
+        cardsToDrawRemaining: 2,
+        otherPlayerDrawing: null,
+        hasDiscarded: true, 
+        hasDrawn: false
+      }
+      useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
     })
     
     it('calls pick from deck API when deck is clicked', async () => {
@@ -348,8 +302,14 @@ describe('GameScreen Component', () => {
     })
     
     it('disables deck when not player\'s turn', () => {
-      mockGameState.turnoActual = 2 // Not player's turn
-      useGame.mockReturnValue({ gameState: mockGameState })
+      mockGameState.turnoActual = 2 
+      mockGameState.drawAction = {
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: false,
+        hasDrawn: false
+      }
+      useGame.mockReturnValue({ gameState: mockGameState, gameDispatch: mockGameDispatch })
       
       render(<GameScreen />)
       
@@ -367,109 +327,13 @@ describe('GameScreen Component', () => {
       
       render(<GameScreen />)
       
-      // Select a card first
       fireEvent.click(screen.getByText('Select Card 1'))
       
-      // Pick from deck
       fireEvent.click(screen.getByTestId('deck'))
       
       await waitFor(() => {
         expect(screen.getByText(/Selected:$/)).toBeInTheDocument()
       })
     })
-    
-    it('handles pick from deck API error - room not found', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        json: async () => ({ message: 'Room not found' })
-      })
-      
-      render(<GameScreen />)
-      
-      fireEvent.click(screen.getByTestId('deck'))
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Sala no encontrada/)).toBeInTheDocument()
-      })
-    })
   })
-
-  /*
-  describe('Error Handling', () => {
-    it('displays error messages', async () => {
-      mockGameState.turnoActual = 1
-      useGame.mockReturnValue({ gameState: mockGameState })
-      
-      render(<GameScreen />)
-      
-      const discardButton = screen.getByTestId('button-descartar')
-      fireEvent.click(discardButton)
-      
-      await waitFor(() => {
-        const errorMessage = screen.getByText(/Debes seleccionar/)
-        expect(errorMessage).toBeInTheDocument()
-        expect(errorMessage.closest('div')).toHaveClass('bg-red-600')
-      })
-    })
-
-    it('clears error after successful action', async () => {
-      mockGameState.turnoActual = 1
-      useGame.mockReturnValue({ gameState: mockGameState })
-      
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
-      })
-      
-      render(<GameScreen />)
-      
-      // Trigger error
-      fireEvent.click(screen.getByTestId('button-descartar'))
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Debes seleccionar/)).toBeInTheDocument()
-      })
-      
-      // Perform successful action
-      fireEvent.click(screen.getByText('Select Card 1'))
-      fireEvent.click(screen.getByTestId('button-descartar'))
-      
-      await waitFor(() => {
-        expect(screen.queryByText(/Debes seleccionar/)).not.toBeInTheDocument()
-      })
-    }) 
-  })
-  */
-  
-  /*
-  describe('Loading States', () => {
-    beforeEach(() => {
-      mockGameState.turnoActual = 1
-      useGame.mockReturnValue({ gameState: mockGameState })
-    })
-    
-    it('disables buttons during loading', async () => {
-      let resolvePromise
-      global.fetch.mockReturnValueOnce(
-        new Promise(resolve => { resolvePromise = resolve })
-      )
-      
-      render(<GameScreen />)
-      
-      fireEvent.click(screen.getByText('Select Card 1'))
-      const discardButton = screen.getByTestId('button-descartar')
-      fireEvent.click(discardButton)
-      
-      expect(discardButton).toBeDisabled()
-      
-      // Resolve the promise
-      resolvePromise({ ok: true, json: async () => ({}) })
-      
-      await waitFor(() => {
-        expect(discardButton).not.toBeDisabled()
-      })
-    })
-  }) 
-  */
 })

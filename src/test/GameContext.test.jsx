@@ -10,7 +10,6 @@ describe('GameContext', () => {
   let mockSocket
   
   beforeEach(() => {
-    // Create a mock socket with event listeners
     mockSocket = {
       on: vi.fn(),
       emit: vi.fn(),
@@ -18,7 +17,6 @@ describe('GameContext', () => {
       connected: false
     }
     
-    // Mock io to return our mock socket
     io.mockReturnValue(mockSocket)
     
     vi.clearAllMocks()
@@ -139,14 +137,12 @@ describe('GameContext', () => {
         wrapper: GameProvider
       })
       
-      // First connection
       act(() => {
         result.current.connectToGame('room-1', 'user-1')
       })
       
       const firstSocket = mockSocket
       
-      // Create new mock for second connection
       const secondMockSocket = {
         on: vi.fn(),
         emit: vi.fn(),
@@ -154,7 +150,6 @@ describe('GameContext', () => {
       }
       io.mockReturnValue(secondMockSocket)
       
-      // Second connection
       act(() => {
         result.current.connectToGame('room-2', 'user-2')
       })
@@ -171,7 +166,6 @@ describe('GameContext', () => {
         result.current.connectToGame('room-123', 'user-456')
       })
       
-      // Find and trigger the 'connected' event handler
       const connectedHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'connected'
       )[1]
@@ -192,13 +186,11 @@ describe('GameContext', () => {
         result.current.connectToGame('room-123', 'user-456')
       })
       
-      // Connect first
       const connectedHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'connected'
       )[1]
       act(() => connectedHandler({}))
       
-      // Then disconnect
       const disconnectedHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'disconnected'
       )[1]
@@ -304,7 +296,6 @@ describe('GameContext', () => {
         call => call[0] === 'game_state_public'
       )[1]
       
-      // First update with full data
       act(() => {
         gameStateHandler({
           room_id: 'room-123',
@@ -314,7 +305,6 @@ describe('GameContext', () => {
         })
       })
       
-      // Second update with partial data
       act(() => {
         gameStateHandler({
           turno_actual: 2
@@ -417,7 +407,6 @@ describe('GameContext', () => {
         result.current.connectToGame('room-123', 'user-456')
       })
       
-      // First start action
       const startHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'detective_action_started'
       )[1]
@@ -429,7 +418,6 @@ describe('GameContext', () => {
         })
       })
       
-      // Then select target
       const targetHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'detective_target_selected'
       )[1]
@@ -488,7 +476,6 @@ describe('GameContext', () => {
         result.current.connectToGame('room-123', 'user-456')
       })
       
-      // Set up some detective action state
       act(() => {
         result.current.gameDispatch({
           type: 'DETECTIVE_ACTION_STARTED',
@@ -562,7 +549,6 @@ describe('GameContext', () => {
         result.current.connectToGame('room-123', 'user-456')
       })
       
-      // Start event first
       const startHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'event_action_started'
       )[1]
@@ -576,7 +562,6 @@ describe('GameContext', () => {
         })
       })
       
-      // Update step
       const updateHandler = mockSocket.on.mock.calls.find(
         call => call[0] === 'event_step_update'
       )[1]
@@ -598,7 +583,7 @@ describe('GameContext', () => {
   })
 
   describe('Draw Actions', () => {
-    /*
+    /*  Descomentar cuando este implementado
     it('handles player must draw for current player', () => {
       const { result } = renderHook(() => useGame(), {
         wrapper: GameProvider
@@ -813,8 +798,7 @@ describe('GameContext', () => {
       const { result } = renderHook(() => useGame(), {
         wrapper: GameProvider
       })
-      
-      // Should not throw error
+
       expect(() => {
         act(() => {
           result.current.disconnectFromGame()
@@ -825,7 +809,6 @@ describe('GameContext', () => {
 
   describe('Error Handling', () => {
     it('throws error when useGame is used outside provider', () => {
-      // Suppress console.error for this test
       const originalError = console.error
       console.error = vi.fn()
       
@@ -834,6 +817,617 @@ describe('GameContext', () => {
       }).toThrow('useGame must be used within a GameProvider')
       
       console.error = originalError
+    })
+  })
+
+  describe('Event Cards - Complete Coverage', () => {
+    it('handles EVENT_CARDS_OFF_TABLE_START', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_CARDS_OFF_TABLE_START'
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.cardsOffTable.showSelectPlayer).toBe(true)
+    })
+    
+    it('handles EVENT_CARDS_OFF_TABLE_COMPLETE', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_CARDS_OFF_TABLE_START'
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_CARDS_OFF_TABLE_COMPLETE'
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.cardsOffTable.showSelectPlayer).toBe(false)
+      expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
+    })
+    
+    it('handles EVENT_LOOK_ASHES_PLAYED', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_LOOK_ASHES_PLAYED',
+          payload: {
+            action_id: 'action-123',
+            available_cards: [
+              { id: 'card-1', name: 'Card 1' },
+              { id: 'card-2', name: 'Card 2' }
+            ]
+          }
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.lookAshes).toEqual({
+        actionId: 'action-123',
+        availableCards: [
+          { id: 'card-1', name: 'Card 1' },
+          { id: 'card-2', name: 'Card 2' }
+        ],
+        showSelectCard: true
+      })
+    })
+    
+    it('handles EVENT_LOOK_ASHES_COMPLETE', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_LOOK_ASHES_PLAYED',
+          payload: {
+            action_id: 'action-123',
+            available_cards: []
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_LOOK_ASHES_COMPLETE'
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.lookAshes).toEqual({
+        actionId: null,
+        availableCards: [],
+        showSelectCard: false
+      })
+      expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
+    })
+    
+    it('handles EVENT_ONE_MORE_PLAYED', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_ONE_MORE_PLAYED',
+          payload: {
+            action_id: 'action-456',
+            available_secrets: [
+              { id: 'secret-1', name: 'Secret 1' },
+              { id: 'secret-2', name: 'Secret 2' }
+            ]
+          }
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.oneMore).toEqual(
+        expect.objectContaining({
+          actionId: 'action-456',
+          availableSecrets: [
+            { id: 'secret-1', name: 'Secret 1' },
+            { id: 'secret-2', name: 'Secret 2' }
+          ],
+          showSelectSecret: true
+        })
+      )
+    })
+    
+    it('handles EVENT_ONE_MORE_SECRET_SELECTED', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_ONE_MORE_PLAYED',
+          payload: {
+            action_id: 'action-456',
+            available_secrets: []
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_ONE_MORE_SECRET_SELECTED',
+          payload: {
+            secret_id: 'secret-1',
+            allowed_players: ['user-1', 'user-2']
+          }
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.oneMore).toEqual(
+        expect.objectContaining({
+          selectedSecretId: 'secret-1',
+          allowedPlayers: ['user-1', 'user-2'],
+          showSelectSecret: false,
+          showSelectPlayer: true
+        })
+      )
+    })
+    
+    it('handles EVENT_ONE_MORE_COMPLETE', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_ONE_MORE_PLAYED',
+          payload: {
+            action_id: 'action-456',
+            available_secrets: []
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_ONE_MORE_COMPLETE'
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.oneMore).toEqual({
+        actionId: null,
+        availableSecrets: [],
+        allowedPlayers: [],
+        selectedSecretId: null,
+        showSelectSecret: false,
+        showSelectPlayer: false
+      })
+      expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
+    })
+    
+    it('handles EVENT_DELAY_ESCAPE_PLAYED', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_DELAY_ESCAPE_PLAYED',
+          payload: {
+            action_id: 'action-789',
+            available_cards: [
+              { id: 'card-1', name: 'Card 1' },
+              { id: 'card-2', name: 'Card 2' }
+            ]
+          }
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.delayEscape).toEqual({
+        actionId: 'action-789',
+        availableCards: [
+          { id: 'card-1', name: 'Card 1' },
+          { id: 'card-2', name: 'Card 2' }
+        ],
+        showOrderCards: true
+      })
+    })
+    
+    it('handles EVENT_DELAY_ESCAPE_COMPLETE', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_DELAY_ESCAPE_PLAYED',
+          payload: {
+            action_id: 'action-789',
+            available_cards: []
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'EVENT_DELAY_ESCAPE_COMPLETE'
+        })
+      })
+      
+      expect(result.current.gameState.eventCards.delayEscape).toEqual({
+        actionId: null,
+        availableCards: [],
+        showOrderCards: false
+      })
+      expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
+    })
+    
+    it('handles event_action_complete socket event', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'event_action_complete'
+      )[1]
+      
+      expect(() => {
+        act(() => {
+          handler({ message: 'Event complete' })
+        })
+      }).not.toThrow()
+    })
+  })
+
+  describe('Draw Actions - Complete Coverage', () => {
+    it('handles player must draw for current player', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PRIVATE',
+          payload: {
+            user_id: 'user-456',
+            mano: [],
+            secretos: []
+          }
+        })
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'player_must_draw'
+      )[1]
+      
+      act(() => {
+        handler({
+          player_id: 'user-456',
+          cards_to_draw: 3,
+          message: 'You must draw 3 cards'
+        })
+      })
+      
+      expect(result.current.gameState.drawAction.cardsToDrawRemaining).toBe(3)
+      expect(result.current.gameState.drawAction.otherPlayerDrawing).toBeNull()
+    })
+    
+    it('handles card drawn and updates remaining count for current player', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PRIVATE',
+          payload: {
+            user_id: 'user-456',
+            mano: [],
+            secretos: []
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'PLAYER_MUST_DRAW',
+          payload: {
+            player_id: 'user-456',
+            cards_to_draw: 3
+          }
+        })
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'card_drawn_simple'
+      )[1]
+      
+      act(() => {
+        handler({
+          player_id: 'user-456',
+          cards_remaining: 2,
+          message: '2 cards left to draw'
+        })
+      })
+      
+      expect(result.current.gameState.drawAction.cardsToDrawRemaining).toBe(2)
+    })
+    
+    it('handles DRAW_ACTION_COMPLETE', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'PLAYER_MUST_DRAW',
+          payload: {
+            player_id: 'user-456',
+            cards_to_draw: 3
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'DRAW_ACTION_COMPLETE'
+        })
+      })
+      
+      expect(result.current.gameState.drawAction).toEqual({
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: true,
+        hasDrawn: true
+      })
+    })
+    
+    it('handles FINISH_TURN', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'DRAW_ACTION_COMPLETE'
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'FINISH_TURN'
+        })
+      })
+      
+      expect(result.current.gameState.drawAction).toEqual({
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: false,
+        hasDrawn: false
+      })
+    })
+    
+    it('handles turn_finished socket event', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'turn_finished'
+      )[1]
+      
+      act(() => {
+        handler({ message: 'Turn finished' })
+      })
+      
+      expect(result.current.gameState.drawAction).toEqual({
+        cardsToDrawRemaining: 0,
+        otherPlayerDrawing: null,
+        hasDiscarded: false,
+        hasDrawn: false
+      })
+    })
+  })
+
+  describe('Detective Actions - Complete Coverage', () => {
+    it('handles DETECTIVE_PLAYER_SELECTED with needs secret', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'DETECTIVE_PLAYER_SELECTED',
+          payload: {
+            playerId: 'user-789',
+            needsSecret: true
+          }
+        })
+      })
+      
+      expect(result.current.gameState.detectiveAction).toEqual(
+        expect.objectContaining({
+          targetPlayerId: 'user-789',
+          showSelectPlayer: false,
+          showSelectSecret: true,
+          showWaiting: false
+        })
+      )
+    })
+    
+    it('handles DETECTIVE_PLAYER_SELECTED without needs secret', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'DETECTIVE_PLAYER_SELECTED',
+          payload: {
+            playerId: 'user-789',
+            needsSecret: false
+          }
+        })
+      })
+      
+      expect(result.current.gameState.detectiveAction).toEqual(
+        expect.objectContaining({
+          targetPlayerId: 'user-789',
+          showSelectPlayer: false,
+          showSelectSecret: false,
+          showWaiting: true
+        })
+      )
+    })
+  })
+
+  describe('Socket Event Listeners - Additional Coverage', () => {
+    it('handles player_connected socket event', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'player_connected'
+      )[1]
+      
+      act(() => {
+        handler({ player_id: 'user-789' })
+      })
+    })
+    
+    it('handles player_disconnected socket event', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.connectToGame('room-123', 'user-456')
+      })
+      
+      const handler = mockSocket.on.mock.calls.find(
+        call => call[0] === 'player_disconnected'
+      )[1]
+      
+      act(() => {
+        handler({ player_id: 'user-789' })
+      })
+    })
+  })
+
+  describe('Edge Cases and State Preservation', () => {
+    it('preserves userId when updating private state', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PRIVATE',
+          payload: {
+            user_id: 'user-123',
+            mano: [{ id: 'card-1' }]
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PRIVATE',
+          payload: {
+            mano: [{ id: 'card-1' }, { id: 'card-2' }]
+          }
+        })
+      })
+      
+      expect(result.current.gameState.userId).toBe('user-123')
+      expect(result.current.gameState.mano).toHaveLength(2)
+    })
+    
+    it('handles empty arrays in UPDATE_GAME_STATE_PUBLIC', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            jugadores: [{ id: 1, name: 'Player1' }],
+            sets: [{ id: 1, cards: [] }]
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            jugadores: [],
+            sets: []
+          }
+        })
+      })
+      
+      expect(result.current.gameState.jugadores).toEqual([{ id: 1, name: 'Player1' }])
+      expect(result.current.gameState.sets).toEqual([{ id: 1, cards: [] }])
+    })
+    
+    it('handles empty mazos object in UPDATE_GAME_STATE_PUBLIC', () => {
+      const { result } = renderHook(() => useGame(), {
+        wrapper: GameProvider
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            mazos: {
+              deck: { count: 20, draft: [] },
+              discard: { top: 'card-1', count: 5 }
+            }
+          }
+        })
+      })
+      
+      act(() => {
+        result.current.gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            mazos: {}
+          }
+        })
+      })
+      
+      expect(result.current.gameState.mazos).toEqual({
+        deck: { count: 20, draft: [] },
+        discard: { top: 'card-1', count: 5 }
+      })
     })
   })
 })

@@ -153,7 +153,7 @@ export default function GameScreen() {
 
 const handleDraft = async (cardId) => {
   try {
-    const response = await fetch(`http://localhost:8000/game/${roomId}/draft/pick`, {
+    const response = await fetch(`http://localhost:8000/game/${gameState.roomId}/draft/pick`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -236,7 +236,13 @@ const handleDraft = async (cardId) => {
           {/* Draft */}
           <div className="flex flex-col items-center justify-center">
             <h2 className="text-white text-xl font-bold mb-4 text-center">Draft</h2>
-            <Draft handleDraft={handleDraft} />
+            <Draft 
+              handleDraft={handleDraft}
+              disabled={
+                  gameState.turnoActual !== userState.id || 
+                  gameState.drawAction.cardsToDrawRemaining === 0 || 
+                  !gameState.drawAction.hasDiscarded 
+                } />
           </div>
 
           {/* Descartar */}

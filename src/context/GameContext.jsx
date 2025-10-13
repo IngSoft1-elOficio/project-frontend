@@ -596,7 +596,7 @@ export const GameProvider = ({ children }) => {
     // ------------------------------
     
     socket.on('detective_action_started', (data) => {
-      console.log('🔍 Detective action started:', data);
+      console.log('Detective action started:', data);
       gameDispatch({
         type: 'DETECTIVE_ACTION_STARTED',
         payload: data
@@ -604,7 +604,7 @@ export const GameProvider = ({ children }) => {
     });
   
     socket.on('detective_target_selected', (data) => {
-      console.log('🎯 Detective target selected:', data);
+      console.log('Detective target selected:', data);
       gameDispatch({
         type: 'DETECTIVE_TARGET_SELECTED',
         payload: data
@@ -612,7 +612,7 @@ export const GameProvider = ({ children }) => {
     });
   
     socket.on('select_own_secret', (data) => {
-      console.log('🔐 Must select own secret:', data);
+      console.log('Must select own secret:', data);
       gameDispatch({
         type: 'DETECTIVE_INCOMING_REQUEST',
         payload: data
@@ -629,7 +629,7 @@ export const GameProvider = ({ children }) => {
     // ------------------------
     
     socket.on('event_action_started', (data) => {
-      console.log('🎴 Event action started:', data);
+      console.log('Event action started:', data);
       gameDispatch({
         type: 'EVENT_ACTION_STARTED',
         payload: data
@@ -637,7 +637,7 @@ export const GameProvider = ({ children }) => {
     });
     
     socket.on('event_step_update', (data) => {
-      console.log('📊 Event step update:', data);
+      console.log('Event step update:', data);
       gameDispatch({
         type: 'EVENT_STEP_UPDATE',
         payload: data
@@ -654,7 +654,7 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('player_must_draw', (data) => {
-      console.log('🎴 Player must draw cards:', data);
+      console.log('Player must draw cards:', data);
       gameDispatch({
         type: 'PLAYER_MUST_DRAW',
         payload: data
@@ -662,7 +662,7 @@ export const GameProvider = ({ children }) => {
     });
   
     socket.on('card_drawn_simple', (data) => {
-      console.log('📥 Card drawn:', data);
+      console.log('Card drawn:', data);
       gameDispatch({
         type: 'CARD_DRAWN_SIMPLE',
         payload: data
