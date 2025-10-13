@@ -105,9 +105,6 @@ export default function GameScreen() {
 
       const data = await response.json()
       console.log('finish turn successful:', data)
-
-      gameDispatch({ type: 'FINISH_TURN' });
-
     } catch (err) {
       setError(err.message)
     } finally {
@@ -204,8 +201,12 @@ export default function GameScreen() {
               <Deck 
                 cardsLeft={gameState.mazos?.deck?.count ?? 0} 
                 onClick={handlePickFromDeck}
-                disabled={gameState.turnoActual !== userState.id}
-              />              
+                disabled={
+                  gameState.turnoActual !== userState.id || 
+                  gameState.drawAction.cardsToDrawRemaining === 0 || 
+                  !gameState.drawAction.hasDiscarded 
+                }
+              />            
               <Discard
                 topDiscardedCard={gameState.mazos?.discard?.top ?? ""}
                 counterDiscarded={gameState.mazos?.discard?.count ?? 0}
@@ -225,25 +226,39 @@ export default function GameScreen() {
           />
         </div>
 
-        {gameState.turnoActual ==
-        userState.id /* Interfaz de acciones de turno placeholder */ ? (
+        {gameState.turnoActual == userState.id ? (
           <div className="absolute bottom-4 right-4">
             <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
             <div className="flex flex-col space-y-3">
+              {/* Mensaje de estado */}
+              <div className="text-white text-sm mb-3 bg-black/50 px-3 py-2 rounded">
+                {!gameState.drawAction.hasDiscarded && "Descarta cartas primero"}
+                {gameState.drawAction.hasDiscarded && !gameState.drawAction.hasDrawn && 
+                  `Roba ${gameState.drawAction.cardsToDrawRemaining} carta(s)`}
+                {gameState.drawAction.hasDiscarded && gameState.drawAction.hasDrawn && 
+                  "Puedes finalizar turno"}
+              </div>
+
               {/* Botones */}
               {/* Botón para descartar cartas */}
-              <ButtonGame
+             <ButtonGame
                 onClick={handleDiscard}
-                disabled={selectedCards.length === 0 || loading}
+                disabled={
+                  selectedCards.length === 0 || 
+                  loading || 
+                  gameState.drawAction.hasDiscarded 
+                }
               >
                 Descartar
               </ButtonGame>
 
               {/* Botón para saltar turno */}
-              { gameState.drawAction.hasDiscardedAndPicked && 
+              { (gameState.drawAction.hasDiscarded && 
+                  gameState.drawAction.hasDrawn && 
+                  selectedCards.length === 0) && 
               <ButtonGame
                 onClick={handleFinishTurn}
-                disabled={loading || selectedCards.length > 0}
+                disabled={loading}
               >
                 Finalizar Turno
               </ButtonGame>
@@ -251,7 +266,7 @@ export default function GameScreen() {
             </div>
           </div>
         ) : (
-          <></>
+          null
         )}
 
         {gameState?.gameEnded && (

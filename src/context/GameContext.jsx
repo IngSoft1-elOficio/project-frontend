@@ -96,7 +96,8 @@ const gameInitialState = {
   drawAction: {
     cardsToDrawRemaining: 0,  // How many more cards player needs to draw
     otherPlayerDrawing: null,  // { playerId, cardsRemaining, message }
-    hasDiscardedAndPicked: false,
+    hasDiscarded: false,
+    hasDrawn: false
   }
 };
 
@@ -189,8 +190,8 @@ const gameReducer = (state, action) => {
     // ----------------------
     // | CARDS DRAW-DISCARD |
     // ----------------------
-
     case 'PLAYER_MUST_DRAW':
+      console.log("PLAYER_MUST_DRAW, cardsToDrawRemaining = ", action.payload.cards_to_draw)
       const isMe = action.payload.player_id === state.userId;
       
       return {
@@ -201,42 +202,51 @@ const gameReducer = (state, action) => {
             playerId: action.payload.player_id,
             cardsRemaining: action.payload.cards_to_draw,
             message: action.payload.message
-          } : null
+          } : null,
+          hasDiscarded: true,
+          hasDrawn: false
         }
       };
     
     case 'CARD_DRAWN_SIMPLE':
       const isMeDrawing = action.payload.player_id === state.userId;
-      
+      const cardsRemaining = action.payload.cards_remaining;
+
       return {
         ...state,
         drawAction: {
-          cardsToDrawRemaining: isMeDrawing ? action.payload.cards_remaining : state.drawAction.cardsToDrawRemaining,
-          otherPlayerDrawing: !isMeDrawing && action.payload.cards_remaining > 0 ? {
+          cardsToDrawRemaining: isMeDrawing ? cardsRemaining : state.drawAction.cardsToDrawRemaining,
+          otherPlayerDrawing: !isMeDrawing && cardsRemaining > 0 ? {
             playerId: action.payload.player_id,
-            cardsRemaining: action.payload.cards_remaining,
+            cardsRemaining: cardsRemaining,
             message: action.payload.message
-          } : null
+          } : null,
+          hasDiscarded: state.drawAction.hasDiscarded,
+          hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn
         }
       };
     
     case 'DRAW_ACTION_COMPLETE':
+      console.log("DRAW_ACTION_COMPLETE")
       return {
         ...state,
         drawAction: {
           cardsToDrawRemaining: 0,
           otherPlayerDrawing: null,
-          hasDiscardedAndPicked: true,
+          hasDiscarded: true,
+          hasDrawn: true
         }
       };
 
     case 'FINISH_TURN':
+      console.log("FINISH_TURN")
       return {
         ...state,
         drawAction: {
           cardsToDrawRemaining: 0,
           otherPlayerDrawing: null,
-          hasDiscardedAndPicked: false,
+          hasDiscarded: false,
+          hasDrawn: false
         }
       };
 
@@ -640,7 +650,7 @@ export const GameProvider = ({ children }) => {
     });
 
     // ------------------------
-    // | EVENT CARD LISTENERS |
+    // | DRAW-DISCARD CARD LISTENERS |
     // ------------------------
 
     socket.on('player_must_draw', (data) => {
@@ -657,11 +667,11 @@ export const GameProvider = ({ children }) => {
         type: 'CARD_DRAWN_SIMPLE',
         payload: data
       });
-    
-      // If no more cards to draw, complete action
-      if (data.cards_remaining === 0) {
-        gameDispatch({ type: 'DRAW_ACTION_COMPLETE' });
-      }
+    });
+
+    socket.on('turn_finished', (data) => {
+      console.log('✅ Turn finished:', data);
+      gameDispatch({ type: 'FINISH_TURN' });
     });
 
   }, []);
