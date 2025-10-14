@@ -10,6 +10,7 @@ import Secrets from '../../components/Secrets.jsx'
 import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -23,8 +24,69 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showPlayerSets, setShowPlayerSets] = useState(false)
 
   const roomId = gameState?.gameId || gameState?.roomId
+
+  // Mock de sets para testing - agregar en GameScreen.jsx temporalmente
+  const mockSets = [
+    {
+      id: 'set_1',
+      owner: 'player_123',
+      setType: 'poirot',
+      cards: [
+        { id: 'card_1', name: 'Poirot', cardType: 'detective' },
+        { id: 'card_2', name: 'Poirot', cardType: 'detective' },
+        { id: 'card_3', name: 'Poirot', cardType: 'detective' },
+      ],
+    },
+    {
+      id: 'set_2',
+      owner: 'player_123',
+      setType: 'marple',
+      cards: [
+        { id: 'card_4', name: 'Miss Marple', cardType: 'detective' },
+        { id: 'card_5', name: 'Miss Marple', cardType: 'detective' },
+        { id: 'card_6', name: 'Harley Quin', cardType: 'wildcard' },
+      ],
+    },
+    {
+      id: 'set_3',
+      owner: 'player_123',
+      setType: 'beresford',
+      cards: [
+        { id: 'card_7', name: 'Tommy Beresford', cardType: 'detective' },
+        { id: 'card_8', name: 'Tuppence Beresford', cardType: 'detective' },
+      ],
+    },
+    {
+      id: 'set_4',
+      owner: 'player_123',
+      setType: 'satterthwaite',
+      cards: [
+        { id: 'card_9', name: 'Satterthwaite', cardType: 'detective' },
+        { id: 'card_10', name: 'Harley Quin', cardType: 'wildcard' },
+      ],
+    },
+    {
+      id: 'set_5',
+      owner: 'player_123',
+      setType: 'pyne',
+      cards: [
+        { id: 'card_11', name: 'Parker Pyne', cardType: 'detective' },
+        { id: 'card_12', name: 'Parker Pyne', cardType: 'detective' },
+      ],
+    },
+    {
+      id: 'set_6',
+      owner: 'player_123',
+      setType: 'eileenbrent',
+      cards: [
+        { id: 'card_13', name: 'Eileen Brent', cardType: 'detective' },
+        { id: 'card_14', name: 'Eileen Brent', cardType: 'detective' },
+      ],
+    },
+  ]
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -316,6 +378,13 @@ export default function GameScreen() {
                 Descartar
               </ButtonGame>
 
+              <ButtonGame
+                onClick={() => setShowPlayerSets(true)}
+                disabled={loading}
+              >
+                Ver Sets
+              </ButtonGame>
+
               {/* Botón para saltar turno */}
               {gameState.drawAction.hasDiscarded &&
                 gameState.drawAction.hasDrawn &&
@@ -336,6 +405,15 @@ export default function GameScreen() {
           />
         )}
       </div>
+      {/* Modal de sets */}
+      <PlayerSetsModal
+        isOpen={showPlayerSets}
+        onClose={() => setShowPlayerSets(false)}
+        sets={mockSets} // Ajusta según la estructura de tu contexto
+        selectedCards={selectedCards}
+        onCardSelect={handleCardSelect}
+        onCreateSet={() => console.log('Crear set - pendiente implementar')}
+      />
     </main>
   )
 }
