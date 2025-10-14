@@ -1,10 +1,8 @@
 import { useGame } from "../../context/GameContext"
 
-export default function Draft({ handleDraft, disabled }) {
+export default function Draft({ handleDraft }) {
     const { gameState } = useGame()
     const draft = gameState.mazos.deck.draft
-
-    disabled = true // Eliminar cuando se desarrolle el endpoint para handle Draft.
 
     const normalizeName = (name = '') =>
     name
@@ -48,7 +46,7 @@ export default function Draft({ handleDraft, disabled }) {
   }
 
   return (
-    <div className={`flex flex-row gap-6 justify-center items-center ${!disabled ? 'cursor-pointer hover:scale-105 transition-transform' : 'opacity-50 cursor-not-allowed'}`}>
+    <div className="flex flex-row gap-6 justify-center items-center">
         {draft.map((card) => {
           const src = getCardsImage(card);
           return (
