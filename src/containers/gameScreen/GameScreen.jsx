@@ -1,7 +1,7 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Deck from '../../components/Deck.jsx'
 import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
@@ -28,65 +28,24 @@ export default function GameScreen() {
 
   const roomId = gameState?.gameId || gameState?.roomId
 
-  // Mock de sets para testing - agregar en GameScreen.jsx temporalmente
-  const mockSets = [
-    {
-      id: 'set_1',
-      owner: 'player_123',
-      setType: 'poirot',
-      cards: [
-        { id: 'card_1', name: 'Poirot', cardType: 'detective' },
-        { id: 'card_2', name: 'Poirot', cardType: 'detective' },
-        { id: 'card_3', name: 'Poirot', cardType: 'detective' },
-      ],
-    },
-    {
-      id: 'set_2',
-      owner: 'player_123',
-      setType: 'marple',
-      cards: [
-        { id: 'card_4', name: 'Miss Marple', cardType: 'detective' },
-        { id: 'card_5', name: 'Miss Marple', cardType: 'detective' },
-        { id: 'card_6', name: 'Harley Quin', cardType: 'wildcard' },
-      ],
-    },
-    {
-      id: 'set_3',
-      owner: 'player_123',
-      setType: 'beresford',
-      cards: [
-        { id: 'card_7', name: 'Tommy Beresford', cardType: 'detective' },
-        { id: 'card_8', name: 'Tuppence Beresford', cardType: 'detective' },
-      ],
-    },
-    {
-      id: 'set_4',
-      owner: 'player_123',
-      setType: 'satterthwaite',
-      cards: [
-        { id: 'card_9', name: 'Satterthwaite', cardType: 'detective' },
-        { id: 'card_10', name: 'Harley Quin', cardType: 'wildcard' },
-      ],
-    },
-    {
-      id: 'set_5',
-      owner: 'player_123',
-      setType: 'pyne',
-      cards: [
-        { id: 'card_11', name: 'Parker Pyne', cardType: 'detective' },
-        { id: 'card_12', name: 'Parker Pyne', cardType: 'detective' },
-      ],
-    },
-    {
-      id: 'set_6',
-      owner: 'player_123',
-      setType: 'eileenbrent',
-      cards: [
-        { id: 'card_13', name: 'Eileen Brent', cardType: 'detective' },
-        { id: 'card_14', name: 'Eileen Brent', cardType: 'detective' },
-      ],
-    },
-  ]
+  // Obtener los sets del jugador actual
+  const playerSets = useMemo(() => {
+    // Si gameState.sets no existe, retornar array vacío
+    if (!gameState.sets) {
+      console.log('⚠️ gameState.sets no está disponible')
+      return []
+    }
+
+    // Filtrar solo los sets del jugador actual
+    const filteredSets = gameState.sets.filter(
+      set => set.owner === userState.id || set.player_id === userState.id
+    )
+
+    console.log('✅ Sets del jugador:', filteredSets)
+    console.log(`   Total: ${filteredSets.length}`)
+
+    return filteredSets
+  }, [gameState.sets, userState.id])
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -252,6 +211,13 @@ export default function GameScreen() {
     }
   }
 
+  const handleCreateSet = () => {
+    console.log('Crear set - pendiente implementar')
+    console.log('Cartas seleccionadas:', selectedCards)
+    // TODO: Implementar cuando el backend esté listo
+    // POST /api/game/{room_id}/play-detective-set
+  }
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -409,10 +375,10 @@ export default function GameScreen() {
       <PlayerSetsModal
         isOpen={showPlayerSets}
         onClose={() => setShowPlayerSets(false)}
-        sets={[]} // Ajusta según la estructura de tu contexto
+        sets={playerSets} // Ajusta según la estructura de tu contexto
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
-        onCreateSet={() => console.log('Crear set - pendiente implementar')}
+        onCreateSet={handleCreateSet}
       />
     </main>
   )
