@@ -1,7 +1,7 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Deck from '../../components/Deck.jsx'
 import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
@@ -14,6 +14,7 @@ import Tabs from '../../components/game/Tabs.jsx'
 import TabPanel from '../../components/game/TabPanel.jsx'
 import Log from '../../components/game/Log.jsx'
 import { OtherPlayerSets } from '../../components/game/OtherPlayerSets.jsx'
+import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -27,6 +28,28 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showPlayerSets, setShowPlayerSets] = useState(false)
+
+  const roomId = gameState?.gameId || gameState?.roomId
+
+  // Obtener los sets del jugador actual
+  const playerSets = useMemo(() => {
+    // Si gameState.sets no existe, retornar array vacío
+    if (!gameState.sets) {
+      console.log('⚠️ gameState.sets no está disponible')
+      return []
+    }
+
+    // Filtrar solo los sets del jugador actual
+    const filteredSets = gameState.sets.filter(
+      set => set.owner === userState.id || set.player_id === userState.id
+    )
+
+    console.log('✅ Sets del jugador:', filteredSets)
+    console.log(`   Total: ${filteredSets.length}`)
+
+    return filteredSets
+  }, [gameState.sets, userState.id])
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -188,6 +211,13 @@ export default function GameScreen() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCreateSet = () => {
+    console.log('Crear set - pendiente implementar')
+    console.log('Cartas seleccionadas:', selectedCards)
+    // TODO: Implementar cuando el backend esté listo
+    // POST /api/game/{room_id}/play-detective-set
   }
 
   const getErrorMessage = (status, errorData) => {
@@ -427,14 +457,24 @@ export default function GameScreen() {
       )}
     </aside>
 
-    {/* GAME END MODAL */}
-    {gameState?.gameEnded && (
-      <GameEndModal
-        ganaste={gameState.ganaste}
-        winners={gameState.winners}
-        finish_reason={gameState.finish_reason || 'La partida ha terminado'}
+      {/* GAME END MODAL */}
+      {gameState?.gameEnded && (
+        <GameEndModal
+          ganaste={gameState.ganaste}
+          winners={gameState.winners}
+          finish_reason={gameState.finish_reason || 'La partida ha terminado'}
+        />
+      )}
+      
+      {/* Modal de sets */}
+      <PlayerSetsModal
+        isOpen={showPlayerSets}
+        onClose={() => setShowPlayerSets(false)}
+        sets={playerSets} // Ajusta según la estructura de tu contexto
+        selectedCards={selectedCards}
+        onCardSelect={handleCardSelect}
+        onCreateSet={handleCreateSet}
       />
-    )}
-  </main>
+    </main>
   )
 }
