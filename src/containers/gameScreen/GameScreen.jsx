@@ -409,7 +409,7 @@ export default function GameScreen() {
       <PlayerSetsModal
         isOpen={showPlayerSets}
         onClose={() => setShowPlayerSets(false)}
-        sets={mockSets} // Ajusta según la estructura de tu contexto
+        sets={[]} // Ajusta según la estructura de tu contexto
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
         onCreateSet={() => console.log('Crear set - pendiente implementar')}
