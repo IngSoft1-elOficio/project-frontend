@@ -441,6 +441,42 @@ const gameReducer = (state, action) => {
         },
       }
 
+    case 'EVENT_ANOTHER_VICTIM_START':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            showSelectPlayer: true,
+            cardId: action.payload?.cardId || null,
+            selectedPlayer: null, // inicializa en null
+          },
+          actionInProgress: {
+            playerId: action.payload?.playerId,
+            eventType: 'another_victim',
+            step: 'select_player',
+            message: 'Selecciona un jugador objetivo',
+          },
+        },
+      }
+
+
+    case 'EVENT_ANOTHER_VICTIM_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            showSelectPlayer: false,
+            selectedPlayer: null,
+            cardId: null,
+          },
+          actionInProgress: null,
+        },
+      }
+
     case 'EVENT_LOOK_ASHES_COMPLETE':
       return {
         ...state,
