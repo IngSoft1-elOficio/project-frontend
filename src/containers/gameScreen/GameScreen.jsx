@@ -10,6 +10,7 @@ import Secrets from '../../components/Secrets.jsx'
 import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -336,6 +337,8 @@ export default function GameScreen() {
           />
         )}
       </div>
+
+      <SelectPlayerModal />
     </main>
   )
 }
