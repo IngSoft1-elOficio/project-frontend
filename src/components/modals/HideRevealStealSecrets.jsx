@@ -1,0 +1,155 @@
+import React, { useState } from "react";
+import ButtonGame from "../ButtonGame.jsx";
+
+const HideRevealStealSecretsModal = ({
+  isOpen,
+  onClose,
+  detective,
+  secretos = [],
+}) => {
+  if (!isOpen) return null;
+
+  const setType = detective?.current?.setType || "Detective";
+  const wildcard = detective?.current?.hasWildcard || false;
+
+  const isDetective = detective.showSelectSecret;
+  const isTarget = detective.showChooseOwnSecret;
+
+  const [selectedSecret, setSelectedSecret] = useState(null);
+
+  // ====== INFO DEL DETECTIVE ======
+  const detectiveInfo = {
+    poirot: {
+      name: "Hercule Poirot",
+      effect: "Elige un secreto del jugador objetivo para revelar",
+    },
+    marple: {
+      name: "Miss Marple",
+      effect: "Elige un secreto del jugador objetivo para revelar",
+    },
+    satterthwaite: {
+      name: "Mr. Satterthwaite",
+      effect:
+        "Elige un secreto propio para revelar",
+    },
+    pyne: {
+      name: "Parker Pyne",
+      effect:
+        "Elige un secreto para ocultar",
+    },
+    eileenbrent: {
+      name: "Lady Eileen 'Bundle' Brent",
+      effect:
+        "Elige un secreto propio para revelar",
+    },
+    tommyberesford: {
+      name: "Tommy Beresford",
+      effect:
+        "Elige un secreto propio para revelar",
+    },
+    tuppenceberesford: {
+      name: "Tuppence Beresford",
+      effect:
+        "Elige un secreto propio para revelar",
+    },
+  };
+
+  const { name, effect } =
+    detectiveInfo[setType?.toLowerCase()] || {
+      name: "Detective desconocido",
+      effect: "Selecciona un secreto para revelar u ocultar.",
+    };
+
+  // ====== ACCIÓN PRINCIPAL ======
+  const handleAction = () => {
+    if (!selectedSecret) return;
+
+    if (isDetective) {
+      console.log("Detective seleccionó secreto del target:", selectedSecret);
+    }
+
+    if (isTarget) {
+      console.log("Target seleccionó su propio secreto:", selectedSecret);
+    }
+
+    onClose();
+  };
+
+  // ====== ESTILOS ======
+  const overlay =
+    "fixed inset-0 flex items-center justify-center z-50 bg-black/60";
+  const container =
+    "bg-[#1D0000] border-4 border-[#825012] rounded-2xl w-[720px] flex flex-col p-8"; 
+  const headerStyle =
+    "bg-[#640B01] text-[#B49150] border-b-4 border-[#825012] px-6 py-4 rounded-t-xl text-center";
+  const headerTitle = "text-3xl font-bold"; 
+  const description =
+    "text-base text-[#B49150]/80 mt-4 mb-8 px-6 text-center leading-relaxed";
+  const secretsContainer = "flex justify-center gap-6 my-6";
+  const cardBox =
+    "w-32 h-48 border-2 border-[#825012] bg-[#3D0800]/40 rounded-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105";
+  const selectedCard = "border-[#B49150] scale-105";
+  const buttonsContainer = "flex justify-center gap-6 mt-6";
+
+  return (
+    <div className={overlay}>
+      <div className={container}>
+        {/* HEADER */}
+        <div className={headerStyle}>
+          <h2 className={headerTitle}>{name}</h2>
+        </div>
+
+        {/* EFECTO */}
+        <p className={description}>
+          <strong>Efecto:</strong> {effect}{" "}
+        </p>
+
+        {/* SECRETOS */}
+        <div className={secretsContainer}>
+          {secretos.map((secret) => (
+            <div
+              key={secret.position}
+              onClick={() => setSelectedSecret(secret)}
+              className={`${cardBox} ${
+                selectedSecret?.position === secret.position
+                  ? selectedCard
+                  : ""
+              }`}
+            >
+              {secret?.revealed === true && secret?.img_src ? (
+                <img
+                  src={secret.img_src}
+                  alt={secret.name || `Secreto ${secret.position}`}
+                  className="w-full h-full object-cover rounded-md"
+                />
+              ) : (
+                <img
+                  src="/cards/secret_back.png"
+                  alt={`Secreto ${secret.position}`}
+                  className="w-full h-full object-cover rounded-md opacity-90"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* BOTONES */}
+        <div className={buttonsContainer}>
+          <ButtonGame disabled={!selectedSecret} onClick={handleAction}>
+            {setType?.toLowerCase() === "pyne" ? "Ocultar" : "Revelar"}
+          </ButtonGame>
+          <ButtonGame onClick={onClose}>Cancelar</ButtonGame>
+        </div>
+
+        {/* COMODÍN */}
+        {wildcard && (
+          <p className="text-xs mt-4 text-[#B49150]/60 text-center italic">
+            * Este set contiene un comodín.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HideRevealStealSecretsModal;
