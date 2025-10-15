@@ -279,7 +279,7 @@ export default function GameScreen() {
                   {/* Mazos */}
                   <div className="flex flex-col items-center">
                     <h2 className="text-white text-xl font-bold mb-4 text-center">
-                      Mazos
+                      Deck
                     </h2>
                     <Deck
                       cardsLeft={gameState.mazos?.deck?.count ?? 0}
@@ -310,7 +310,7 @@ export default function GameScreen() {
                   {/* Descartar */}
                   <div className="flex flex-col items-center">
                     <h2 className="text-white text-xl font-bold mb-4 text-center">
-                      Descartar
+                      Discard
                     </h2>
                     <Discard
                       topDiscardedCard={gameState.mazos?.discard?.top ?? ''}
