@@ -10,6 +10,7 @@ import Secrets from '../../components/Secrets.jsx'
 import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import LookIntoTheAshes from '../../components/modals/LookIntoTheAshes.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -23,6 +24,8 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showLookIntoTheAshes, setShowLookIntoTheAshes] = useState(false)
+  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
   const roomId = gameState?.gameId || gameState?.roomId
 
@@ -190,6 +193,37 @@ export default function GameScreen() {
     }
   }
 
+  const handleLookIntoTheAshes = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/select`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: gameState.eventCards.lookAshes.actionId,
+            selected_card_id: selectedCardId,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Look Into The Ashes successful:', data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -335,6 +369,18 @@ export default function GameScreen() {
             finish_reason={gameState.finish_reason || 'La partida ha terminado'}
           />
         )}
+      </div>
+
+      {/* Modal de Look Into The Ashes */}
+      <div>
+        <LookIntoTheAshes 
+          isOpen={showLookIntoTheAshes}
+          onClose={() => setShowLookIntoTheAshes(false)}
+          discardedCards={gameState.eventCards.lookAshes.availableCards || []}
+          selectedCard={selectedCardLookAshes}
+          setSelectedCard={setSelectedCardLookAshes}
+          handleCardSelect={handleLookIntoTheAshes}
+        />
       </div>
     </main>
   )
