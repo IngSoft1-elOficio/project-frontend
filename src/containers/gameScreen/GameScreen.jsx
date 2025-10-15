@@ -213,11 +213,47 @@ export default function GameScreen() {
     }
   }
 
-  const handleCreateSet = () => {
+  const handleCreateSet = async () => {
     console.log('Crear set - pendiente implementar')
     console.log('Cartas seleccionadas:', selectedCards)
+
     // TODO: Implementar cuando el backend esté listo
     // POST /api/game/{room_id}/play-detective-set
+
+    /*
+      owner: int = Field(..., description="ID del jugador que baja el set")
+      setType: SetType = Field(..., description="Tipo de set de detective")
+      cards: List[int] = Field(..., min_length=1, description="IDs de las cartas del set")
+      hasWildcard: bool = Field(default=False, description="Si el set incluye a Harley Quin como comodín") 
+    */
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/game/${gameState.roomId}//play-detective-set`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString()
+        },
+        body: JSON.stringify({
+          owner: "",
+          setType:"",
+          cards: [],
+          hasWildcard: Boolean, 
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Draft successful:', data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getErrorMessage = (status, errorData) => {
@@ -408,9 +444,12 @@ export default function GameScreen() {
         <Log />
       </div>
 
-      <div>
-        <ButtonGame onClick={() => { return true}} disabled={loading}>Ves Sets Propios</ButtonGame>
-      </div>
+      <ButtonGame
+                onClick={() => setShowPlayerSets(true)}
+                disabled={loading}
+              >
+                Ver Sets
+              </ButtonGame>
 
       {/* Action buttons */}
       {gameState.turnoActual == userState.id && (
@@ -442,9 +481,7 @@ export default function GameScreen() {
                   Descartar
                 </ButtonGame>
               )}
-
-            
-
+         
             {gameState.drawAction.hasDiscarded &&
               gameState.drawAction.hasDrawn &&
               selectedCards.length === 0 && (
@@ -465,7 +502,7 @@ export default function GameScreen() {
           finish_reason={gameState.finish_reason || 'La partida ha terminado'}
         />
       )}
-      
+
       {/* Modal de sets */}
       <PlayerSetsModal
         isOpen={showPlayerSets}
