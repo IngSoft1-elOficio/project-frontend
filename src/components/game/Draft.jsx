@@ -15,7 +15,6 @@ export default function Draft({ handleDraft }) {
       .replace(/\s+/g, ' ')
 
   const IMAGE_MAP = {
-    "murderer escapes": "/cards/02-murder_escapes.png",
     "hercule poirot": "/cards/detective_poirot.png",
     "miss marple": "/cards/detective_marple.png",
     "mr satterthwaite": "/cards/detective_satterthwaite.png",
