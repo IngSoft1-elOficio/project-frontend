@@ -19,7 +19,7 @@ export default function GameJoin() {
       console.log("User state at waiting: ", userState);
 
       // Navigate only if user is not the host and roomId is set
-      if (!userState.isHost && gameState.roomId && gameState.status == 'INGAME') {
+      if (gameState.roomId && gameState.status == 'INGAME') {
         navigate(`/game/${gameState.roomId}`);
       }
   }, [gameState, userState])
@@ -55,18 +55,7 @@ export default function GameJoin() {
       
       const data = await response.json();
       console.log("Partida iniciada: la respuesta del post es:", data);
-
-    gameDispatch({
-      type: 'UPDATE_GAME_STATE_PUBLIC',
-      payload: {
-      turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-      status: data.game?.status || 'INGAME',
-      jugadores: data.players || gameState.jugadores,
-      timestamp: new Date().toISOString()
-    }});
-
-      navigate(`/game/${gameState.roomId}`)
-
+      
     } catch (error) {
       console.error("Fallo en handleStart:", error);
     }

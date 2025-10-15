@@ -36,6 +36,7 @@ const gameInitialState = {
   finish_reason: null,
   lastUpdate: null,
   connected: false,
+  logs: [], // { id, message, type, timestamp, playerId }
 
   // Detective Actions
   detectiveAction: {
@@ -208,6 +209,14 @@ const gameReducer = (state, action) => {
       )
       const isMe = action.payload.player_id === state.userId
 
+      const discardLog = {
+        id: `discard-${Date.now()}`,
+        message: action.payload.message,
+        type: 'discard',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload.player_id,
+      };
+
       return {
         ...state,
         drawAction: {
@@ -222,11 +231,20 @@ const gameReducer = (state, action) => {
           hasDiscarded: true,
           hasDrawn: false,
         },
+        logs: [...state.logs, discardLog].slice(-50)
       }
 
     case 'CARD_DRAWN_SIMPLE':
       const isMeDrawing = action.payload.player_id === state.userId
       const cardsRemaining = action.payload.cards_remaining
+
+      const drawLog = {
+        id: `draw-${Date.now()}`,
+        message: action.payload.message,
+        type: 'draw',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload.player_id,
+      };
 
       return {
         ...state,
@@ -245,6 +263,7 @@ const gameReducer = (state, action) => {
           hasDiscarded: state.drawAction.hasDiscarded,
           hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
         },
+        logs: [...state.logs, drawLog].slice(-50)
       }
 
     case 'DRAW_ACTION_COMPLETE':
@@ -261,6 +280,15 @@ const gameReducer = (state, action) => {
 
     case 'FINISH_TURN':
       console.log('FINISH_TURN')
+
+      const finishTurnLog = {
+        id: `turn-${Date.now()}`,
+        message: action.payload.message,
+        type: 'turn',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload.player_id,
+      };
+
       return {
         ...state,
         drawAction: {
@@ -269,6 +297,7 @@ const gameReducer = (state, action) => {
           hasDiscarded: false,
           hasDrawn: false,
         },
+        logs: [...state.logs, finishTurnLog].slice(-50)
       }
 
     // ---------------------
@@ -694,7 +723,10 @@ export const GameProvider = ({ children }) => {
 
     socket.on('turn_finished', data => {
       console.log('✅ Turn finished:', data)
-      gameDispatch({ type: 'FINISH_TURN' })
+      gameDispatch({ 
+        type: 'FINISH_TURN',
+        payload: data,
+      })
     })
   }, [])
 
