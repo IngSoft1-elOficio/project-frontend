@@ -10,6 +10,7 @@ import Secrets from '../../components/Secrets.jsx'
 import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import HideRevealStealSecretsModal from "../../components/modals/HideRevealStealSecrets.jsx";
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -23,6 +24,7 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showSecretModal, setShowSecretModal] = useState(true);
 
   const roomId = gameState?.gameId || gameState?.roomId
 
@@ -80,6 +82,19 @@ export default function GameScreen() {
       setLoading(false)
     }
   }
+
+  const dummyDetective = {
+  current: { setType: "poirot", hasWildcard: false },
+  showSelectSecret: true,
+  showChooseOwnSecret: false,
+};
+
+const dummySecretos = [
+  { position: 1, revealed: false },
+  { position: 2, revealed: true, name: "Carta del asesino", img_src: "/cards/secret_murderer.png" },
+  { position: 3, revealed: false },
+];
+
 
   const handleFinishTurn = async () => {
     setLoading(true)
@@ -327,6 +342,14 @@ export default function GameScreen() {
             </div>
           </div>
         ) : null}
+
+        <HideRevealStealSecretsModal
+          isOpen={showSecretModal}
+           onClose={() => setShowSecretModal(false)}
+          detective={dummyDetective}
+          secretos={dummySecretos}
+        />
+
 
         {gameState?.gameEnded && (
           <GameEndModal
