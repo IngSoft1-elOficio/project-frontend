@@ -13,7 +13,7 @@ import Draft from '../../components/game/Draft.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState, gameDispatch } = useGame()
+  const { gameState } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -23,8 +23,6 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-
-  const roomId = gameState?.gameId || gameState?.roomId
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -160,21 +158,19 @@ export default function GameScreen() {
     }
   }
 
-  const handleDraft = async cardId => {
+  const handleDraft = async (cardId) => {
     try {
-      const response = await fetch(
-        `http://localhost:8000/game/${gameState.roomId}/draft/pick`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            card_id: cardId,
-          }),
-        }
-      )
+      const response = await fetch(`http://localhost:8000/game/${gameState.gameId}/draft/pick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString()
+        },
+        body: JSON.stringify({
+          card_id: cardId,
+          user_id: userState.id
+        })
+      })
 
       if (!response.ok) {
         const errorData = await response.json()
