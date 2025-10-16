@@ -5,7 +5,7 @@ import * as GameContext from "../context/GameContext";
 
 const mockGameState = {
   mano: [
-    { id: 1, name: "Murderer Escapes" }, // tiene imagen
+    { id: 1, name: "Hercule Poirot" }, // tiene imagen
     { id: 2, name: "Unknown Card" },     // fallback
     { id: 3, name: "" },                  // fallback
     { id: 4, name: undefined },           // fallback
@@ -19,7 +19,7 @@ describe("HandCards component", () => {
     const mockOnSelect = vi.fn();
     render(<HandCards selectedCards={[1]} onSelect={mockOnSelect} />);
 
-    expect(screen.getByAltText("Murderer Escapes")).toBeInTheDocument();
+    expect(screen.getByAltText("Hercule Poirot")).toBeInTheDocument();
 
     expect(screen.getByText("Unknown Card")).toBeInTheDocument();
     
