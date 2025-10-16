@@ -3,7 +3,7 @@ import getCardsImage from "../HelperImageCards";
 export default function LookIntoTheAshes({ 
     isOpen,
     onClose,
-    discardedCards = [],
+    discardedCards,
     selectedCardLookAshes,
     setSelectedCardLookAshes,
     handleCardSelect

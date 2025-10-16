@@ -24,7 +24,6 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showLookIntoTheAshes, setShowLookIntoTheAshes] = useState(false)
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
   const handleCardSelect = cardId => {
@@ -201,7 +200,7 @@ export default function GameScreen() {
           },
           body: JSON.stringify({
             action_id: gameState.eventCards.lookAshes.actionId,
-            selected_card_id: selectedCardId,
+            selected_card_id: selectedCardLookAshes.card_id,
           }),
         }
       )
@@ -213,8 +212,10 @@ export default function GameScreen() {
 
       const data = await response.json()
       console.log('Look Into The Ashes successful:', data)
+      gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: data })
     } catch (err) {
       setError(err.message)
+      gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: {} })
     } finally {
       setLoading(false)
     }
@@ -234,15 +235,6 @@ export default function GameScreen() {
         return errorData?.message || 'Error desconocido'
     }
   }
-
-  // Mock de cartas descartadas para el modal
-  const mockDiscardedCards = [
-    { id_card: 'C1', name: 'Look Into The Ashes' },
-    { id_card: 'C2', name: 'Another Victim' },
-    { id_card: 'C3', name: 'Card Trade' },
-    { id_card: 'C4', name: 'Dead Card Folly' },
-    { id_card: 'C5', name: 'Delay The Murderers Escape' },
-  ];
 
   return (
     <main
@@ -326,13 +318,6 @@ export default function GameScreen() {
           />
         </div>
 
-        {/* Boton para mockear evento y abrir modal */}
-        <div className="absolute bottom-24 left-4">
-          <ButtonGame onClick={() => setShowLookIntoTheAshes(true)}>
-            Jugar evento
-          </ButtonGame>
-        </div>
-
         {gameState.turnoActual == userState.id ? (
           <div className="absolute bottom-4 right-4">
             <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
@@ -386,15 +371,12 @@ export default function GameScreen() {
       {/* Modal de Look Into The Ashes */}
       <div>
         <LookIntoTheAshes 
-          isOpen={showLookIntoTheAshes}
-          onClose={() => setShowLookIntoTheAshes(false)}
-          discardedCards={mockDiscardedCards}
-          selectedCardLookAshes={selectedCardLookAshes}
-          setSelectedCardLookAshes={setSelectedCardLookAshes}
-          handleCardSelect={cardId => {
-            alert(`Seleccionaste la carta: ${cardId}`);
-            setShowLookIntoTheAshes(false);
-          }}
+          isOpen={gameState.eventCards.lookAshes.showSelectCard}
+          onClose={() => gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: {} })}
+          discardedCards={gameState.eventCards.lookAshes.availableCards}
+          selectedCard={selectedCardLookAshes}
+          setSelectedCard={setSelectedCardLookAshes}
+          handleCardSelect={handleLookIntoTheAshes}
         />
       </div>
     </main>
