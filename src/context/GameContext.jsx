@@ -289,6 +289,67 @@ const gameReducer = (state, action) => {
         },
       }
 
+    case 'DETECTIVE_ACTION_STARTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            initiatorPlayerId: action.payload.player_id, // Quien jugó el set
+            setType: action.payload.set_type,
+            step: 'select_target',
+            message: action.payload.message,
+          },
+          showSelectPlayer: true, // Abrir modal para el iniciador
+        },
+      };
+
+    case 'DETECTIVE_TARGET_CONFIRMED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            targetPlayerId: action.payload.targetPlayerId,
+            step: 'waiting_target_confirmation',
+            message: `Esperando confirmación de ${action.payload.targetPlayerData.name}`,
+          },
+          showSelectPlayer: false,
+          // Aquí el backend debe notificar al jugador objetivo vía socket
+        },
+      };
+
+    case 'DETECTIVE_TARGET_NOTIFIED':
+      // Este caso se dispara cuando el backend notifica al jugador seleccionado
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            step: 'target_must_confirm',
+          },
+          showSelectPlayer: true, // Abrir modal para el jugador seleccionado
+        },
+      };
+
+    case 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            step: 'target_selecting_secret',
+          },
+          showSelectPlayer: false,
+          showSelectSecret: true, // Abrir modal de AccionSobreSecretos
+          // El jugador objetivo ahora elige un secreto del iniciador
+          targetForSecrets: action.payload.initiatorPlayerId,
+        },
+      };
+
     case 'DETECTIVE_TARGET_SELECTED':
       return {
         ...state,
