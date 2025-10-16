@@ -235,6 +235,15 @@ export default function GameScreen() {
     }
   }
 
+  // Mock de cartas descartadas para el modal
+  const mockDiscardedCards = [
+    { id_card: 'C1', name: 'Look Into The Ashes' },
+    { id_card: 'C2', name: 'Another Victim' },
+    { id_card: 'C3', name: 'Card Trade' },
+    { id_card: 'C4', name: 'Dead Card Folly' },
+    { id_card: 'C5', name: 'Delay The Murderers Escape' },
+  ];
+
   return (
     <main
       className="relative min-h-screen overflow-x-hidden"
@@ -317,6 +326,13 @@ export default function GameScreen() {
           />
         </div>
 
+        {/* Boton para mockear evento y abrir modal */}
+        <div className="absolute bottom-24 left-4">
+          <ButtonGame onClick={() => setShowLookIntoTheAshes(true)}>
+            Jugar evento
+          </ButtonGame>
+        </div>
+
         {gameState.turnoActual == userState.id ? (
           <div className="absolute bottom-4 right-4">
             <h2 className="text-white text-lg font-bold mb-4">Acciones</h2>
@@ -372,10 +388,13 @@ export default function GameScreen() {
         <LookIntoTheAshes 
           isOpen={showLookIntoTheAshes}
           onClose={() => setShowLookIntoTheAshes(false)}
-          discardedCards={gameState.eventCards.lookAshes.availableCards || []}
-          selectedCard={selectedCardLookAshes}
-          setSelectedCard={setSelectedCardLookAshes}
-          handleCardSelect={handleLookIntoTheAshes}
+          discardedCards={mockDiscardedCards}
+          selectedCardLookAshes={selectedCardLookAshes}
+          setSelectedCardLookAshes={setSelectedCardLookAshes}
+          handleCardSelect={cardId => {
+            alert(`Seleccionaste la carta: ${cardId}`);
+            setShowLookIntoTheAshes(false);
+          }}
         />
       </div>
     </main>
