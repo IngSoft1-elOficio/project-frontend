@@ -10,6 +10,11 @@ const SelectPlayerModal = () => {
 
   if (!anotherVictim?.showSelectPlayer) return null;
 
+  const modalLayout = '';
+  const playersContainer = '';
+  const actionMessage = '';
+  const buttonContainer = '';
+
   const handlePlayerSelect = (jugador) => {
     gameDispatch({ type: "EVENT_ANOTHER_VICTIM_SELECT_PLAYER", payload: jugador });
   };
