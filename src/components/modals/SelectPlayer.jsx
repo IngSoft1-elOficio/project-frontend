@@ -6,7 +6,8 @@ import Button from "../Button";
 const SelectPlayerModal = ({ isOpen, onClose }) => {
   const { gameState, gameDispatch } = useGame();
   const { jugadores = [], roomId, userId } = gameState;
-  const { anotherVictim } = gameState.eventCards;
+  const { anotherVictim, actionInProgress } = gameState.eventCards;
+  const { detectiveAction } = gameState;
 
   if (!isOpen) return null;
 
@@ -17,76 +18,225 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
   const actionMessage = "text-[#FFE0B2] text-xl font-semibold text-center";
   const buttonContainer = "flex gap-4 justify-center w-full";
 
+  const currentEventType = actionInProgress?.eventType;
+  const detectiveType = detectiveAction?.actionInProgress?.setType;
+  
+  // Para Tipo B: El jugador que JUGÓ el set es el "initiator"
+  // El jugador SELECCIONADO es el "target" que luego se vuelve activo
+  const initiatorPlayerId = detectiveAction?.actionInProgress?.initiatorPlayerId;
+  const isInitiator = initiatorPlayerId === userId; // Quien jugó el set
+  const isTarget = detectiveAction?.actionInProgress?.targetPlayerId === userId; // Quien fue seleccionado
+
+  // ==========================================
+  // HANDLERS DE SELECCIÓN
+  // ==========================================
+
   const handlePlayerSelect = (jugador) => {
-    gameDispatch({ type: "EVENT_ANOTHER_VICTIM_SELECT_PLAYER", payload: jugador });
-  };
-
-  const handleConfirm = async () => {
-    const selectedPlayer = anotherVictim?.selectedPlayer;
-    if (!selectedPlayer) return;
-
-    try {
-      const response = await fetch(`/api/game/${roomId}/event/another-victim`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          card_id: anotherVictim.cardId,
-          target_player_id: selectedPlayer.id,
-        }),
+    // Caso 1: Another Victim - Solo guardar selección
+    if (currentEventType === "another_victim") {
+      gameDispatch({ 
+        type: "EVENT_ANOTHER_VICTIM_SELECT_PLAYER", 
+        payload: jugador 
       });
+      return;
+    }
 
-      if (!response.ok) throw new Error("Error al seleccionar jugador");
-      const data = await response.json();
+    // Caso 2: Detectives Tipo A (marple, pyne, poirot) - Solo guardar selección
+    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+      gameDispatch({
+        type: "DETECTIVE_PLAYER_SELECTED",
+        payload: { playerId: jugador.id, playerData: jugador }
+      });
+      return;
+    }
 
-      gameDispatch({ type: "EVENT_STEP_UPDATED", payload: data });
-      onClose();
-    } catch (error) {
-      console.error("Error en Another Victim:", error);
-      gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
-      onClose();
+    // Caso 3: Detectives Tipo B (beresford, satterthwaite) - Solo guardar selección si es el iniciador
+    if (["beresford", "satterthwaite"].includes(detectiveType) && isInitiator) {
+      gameDispatch({
+        type: "DETECTIVE_PLAYER_SELECTED",
+        payload: { playerId: jugador.id, playerData: jugador }
+      });
     }
   };
 
+  // ==========================================
+  // HANDLERS DE CONFIRMACIÓN
+  // ==========================================
+
+  const handleConfirm = async () => {
+    // CASO 1: Another Victim - Hacer POST al backend
+    if (currentEventType === "another_victim") {
+      const selectedPlayer = anotherVictim?.selectedPlayer;
+      if (!selectedPlayer) return;
+
+      try {
+        const response = await fetch(`/api/game/${roomId}/event/another-victim`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            card_id: anotherVictim.cardId,
+            target_player_id: selectedPlayer.id,
+          }),
+        });
+
+        if (!response.ok) throw new Error("Error al seleccionar jugador");
+        const data = await response.json();
+
+        gameDispatch({ type: "EVENT_STEP_UPDATE", payload: data });
+        onClose();
+      } catch (error) {
+        console.error("Error en Another Victim:", error);
+        gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
+        onClose();
+      }
+      return;
+    }
+
+    // CASO 2: Detectives Tipo A (marple, pyne, poirot) - Abrir modal de secretos
+    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+      const selectedPlayer = detectiveAction?.selectedPlayer;
+      if (!selectedPlayer) return;
+
+      // Cerrar este modal y abrir el modal de AccionSobreSecretos
+      gameDispatch({
+        type: "DETECTIVE_OPEN_SECRET_SELECTION",
+        payload: { 
+          targetPlayer: selectedPlayer,
+          detectiveType: detectiveType
+        }
+      });
+      onClose();
+      return;
+    }
+
+    // CASO 3: Detectives Tipo B (beresford, satterthwaite) - Dos fases
+    if (["beresford", "satterthwaite"].includes(detectiveType)) {
+      if (isInitiator) {
+        // Fase 1: Jugador que jugó el set confirma su selección
+        const selectedPlayer = detectiveAction?.selectedPlayer;
+        if (!selectedPlayer) return;
+
+        gameDispatch({
+          type: "DETECTIVE_TARGET_CONFIRMED",
+          payload: { 
+            targetPlayerId: selectedPlayer.id,
+            targetPlayerData: selectedPlayer
+          }
+        });
+        onClose();
+      } else if (isTarget) {
+        // Fase 2: Jugador seleccionado confirma y se abre su modal de secretos
+        gameDispatch({
+          type: "DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS",
+          payload: { 
+            playerId: userId,
+            initiatorPlayerId: initiatorPlayerId
+          }
+        });
+        onClose();
+      }
+    }
+  };
+
+  // ==========================================
+  // HANDLER DE CANCELACIÓN
+  // ==========================================
+
   const handleCancel = () => {
-    gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
+    if (currentEventType === "another_victim") {
+      gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
+    } else if (detectiveType) {
+      gameDispatch({ type: "DETECTIVE_ACTION_COMPLETE" });
+    }
     onClose();
   };
 
-  const getActionMessage = () => {
-    const { actionInProgress } = gameState.eventCards;
-    const { detectiveAction } = gameState;
+  // ==========================================
+  // MENSAJES Y LÓGICA DE UI
+  // ==========================================
 
-    if (actionInProgress?.eventType === "another_victim") {
+  const getActionMessage = () => {
+    // Caso 1: Another Victim
+    if (currentEventType === "another_victim") {
       const selectedPlayer = anotherVictim?.selectedPlayer;
       return selectedPlayer
         ? `Robar set de detective de ${selectedPlayer.name}`
         : "Selecciona un jugador para robar su set de detective";
     }
 
-    if (detectiveAction?.actionInProgress?.step === "started") {
-      const targetPlayer = gameState.jugadores.find(
-        (j) => j.id === detectiveAction.actionInProgress.targetPlayerId
-      );
-      return targetPlayer
-        ? `Robar secreto de ${targetPlayer.name}`
+    // Caso 2: Detectives Tipo A
+    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+      const selected = detectiveAction?.selectedPlayer;
+      return selected
+        ? `Robar secreto de ${selected.name}`
         : "Selecciona un jugador para robar su secreto";
+    }
+
+    // Caso 3: Detectives Tipo B
+    if (["beresford", "satterthwaite"].includes(detectiveType)) {
+      if (isInitiator) {
+        const selected = detectiveAction?.selectedPlayer;
+        return selected
+          ? `Jugador seleccionado: ${selected.name}`
+          : "Selecciona un jugador objetivo";
+      } else if (isTarget) {
+        const initiatorPlayer = jugadores.find(
+          (j) => j.id === initiatorPlayerId
+        );
+        return `Has sido seleccionado por ${initiatorPlayer?.name || "un jugador"}. Confirma para elegir un secreto.`;
+      }
     }
 
     return "";
   };
 
+  // Jugadores disponibles para seleccionar (todos excepto el usuario actual)
+  const playersToShow = jugadores.filter((j) => j.id !== userId);
+
+  // Mostrar lista de jugadores solo en casos específicos
+  const showPlayerList = 
+    currentEventType === "another_victim" ||
+    ["marple", "pyne", "poirot"].includes(detectiveType) ||
+    (["beresford", "satterthwaite"].includes(detectiveType) && isInitiator);
+
+  // Determinar si el botón de confirmar está habilitado
+  const isConfirmEnabled = () => {
+    if (currentEventType === "another_victim") {
+      return !!anotherVictim?.selectedPlayer;
+    }
+    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+      return !!detectiveAction?.selectedPlayer;
+    }
+    if (["beresford", "satterthwaite"].includes(detectiveType)) {
+      if (isInitiator) {
+        return !!detectiveAction?.selectedPlayer;
+      }
+      if (isTarget) {
+        return true; // Jugador objetivo solo confirma
+      }
+    }
+    return false;
+  };
+
+  // ID del jugador seleccionado (para resaltar)
+  const selectedPlayerId = 
+    anotherVictim?.selectedPlayer?.id || 
+    detectiveAction?.selectedPlayer?.id;
+
   return (
     <div className={modalLayout}>
       <div className={modalContainer}>
-        <div className={playersContainer}>
-          {jugadores
-            .filter((j) => j.id !== userId)
-            .map((jugador) => (
+        {/* Lista de jugadores (solo si corresponde) */}
+        {showPlayerList && (
+          <div className={playersContainer}>
+            {playersToShow.map((jugador) => (
               <div
                 key={jugador.id}
                 onClick={() => handlePlayerSelect(jugador)}
                 className={`cursor-pointer hover:scale-105 transition-all ${
-                  anotherVictim?.selectedPlayer?.id === jugador.id ? "ring-4 ring-[#FFD700]" : ""
+                  selectedPlayerId === jugador.id
+                    ? "ring-4 ring-[#FFD700]"
+                    : ""
                 }`}
               >
                 <ProfileCard
@@ -96,22 +246,24 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
                 />
               </div>
             ))}
-        </div>
+          </div>
+        )}
 
+        {/* Mensaje de acción */}
         <div className={actionMessage}>
           <h2>{getActionMessage()}</h2>
         </div>
 
+        {/* Botones de confirmación/cancelación */}
         <div className={buttonContainer}>
-          <Button
-            onClick={handleConfirm}
-            title="Confirmar acción"
-            disabled={!anotherVictim?.selectedPlayer}
+          <Button 
+            onClick={handleConfirm} 
+            title="Confirmar"
+            disabled={!isConfirmEnabled()}
           >
             Confirmar
           </Button>
-
-          <Button onClick={handleCancel} title="Cancelar acción">
+          <Button onClick={handleCancel} title="Cancelar">
             Cancelar
           </Button>
         </div>
