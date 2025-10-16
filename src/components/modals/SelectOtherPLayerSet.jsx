@@ -2,12 +2,9 @@ import ButtonGame from '../ButtonGame.jsx'
 import { FiArchive } from 'react-icons/fi'
 
 const SelectOtherPLayerSet = ({
-  isOpen, //bool → indica si el modal está visible
-  onClose, //función → cierra el modal
   sets = [], //array → lista de sets jugados
   onSelectSet, //función → callback para crear un nuevo set
 }) => {
-  if (!isOpen) return null //no renderizar nada si el modal esta cerrado
 
   // ========== ESTILOS ==========
   // Container principal -> Todo
@@ -83,65 +80,67 @@ const SelectOtherPLayerSet = ({
 
             {/* Contenedor de sets */}
             <div className={setsContainer}>
-              {sets.length === 0 ? (
+            {sets.length === 0 ? (
                 // Caso vacio
                 <div className={emptyContainer}>
-                  <div className="text-center max-w-md">
-                    <FiArchive className={emptyIcon} />
-                    <p className={emptyTitle}>No tenes sets</p>
-                    <p className={emptyText}>
-                      Selecciona cartas de detective de tu mano y presiona
-                      "Crear Set" para jugar tu primer set
-                    </p>
-                  </div>
+                    <div className="text-center max-w-md">
+                        <FiArchive className={emptyIcon} />
+                        <p className={emptyTitle}>No hay sets disponibles</p>
+                        <p className={emptyText}>
+                        Ningún jugador tiene sets de detective para seleccionar
+                        </p>
+                    </div>
                 </div>
-              ) : (
+            ) : (
                 // Caso hay sets
                 <div className={setsGrid}>
-                  {sets.map((set, index) => (
-                    <div key={set.id || index} className={setCard}>
-                      <div className={setHeader}>
+                {sets.map((set, index) => (
+                    <div key={index} className={setCard}>
+                    <div className={setHeader}>
                         <div>
-                          <h3 className={setTitle}>Set {index + 1}</h3>
-                          {set.setType && (
-                            <p className={setType}>
-                              {getSetTypeName(set.setType)}
-                            </p>
-                          )}
+                            <h3 className={setTitle}>Set {index + 1}</h3>
+                            {set.set_type && (
+                                <p className={setType}>
+                                Detective #{set.set_type}
+                                </p>
+                            )}
                         </div>
-                        <span className={setBadge}>Jugado</span>
-                      </div>
-                      {/* Cambiar cuando se traigan las cartas reales */}
-                      <div className={setCards}>
-                        {set.cards &&
-                          set.cards.map((card, cardIndex) => (
-                            <div
-                              key={card.id || cardIndex}
-                              className={miniCard}
-                            >
-                              <span className={miniCardText}>
-                                {card.name ||
-                                  card.cardType ||
-                                  `C${cardIndex + 1}`}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
+                        <span className={setBadge}>
+                        {set.count} {set.count === 1 ? 'carta' : 'cartas'}
+                        </span>
                     </div>
-                  ))}
+                    
+                    {/* Visual representation of card count */}
+                    <div className={setCards}>
+                        {Array.from({ length: set.count }).map((_, cardIndex) => (
+                        <div
+                            key={cardIndex}
+                            className={miniCard}
+                        >
+                            <span className={miniCardText}>
+                            Detective #{set.set_type}
+                            </span>
+                        </div>
+                        ))}
+                    </div>
+                    
+                    <div className="mt-2 text-sm text-gray-500">
+                        Dueño: Jugador #{set.owner_id}
+                    </div>
+                    </div>
+                ))}
                 </div>
-              )}
+            )}
             </div>
           </div>
 
           {/* Right Sidebar - Actions */}
           <div className={sidebar}>
-            <ButtonGame onClick={onClose}>Volver</ButtonGame>
             <ButtonGame
-              onClick={onCreateSet}
-              disabled={selectedCards.length === 0}
+              onClick={onSelectSet}
+              disabled={true}
             >
-              Crear Set
+              Selecionar Set
             </ButtonGame>
           </div>
         </div>

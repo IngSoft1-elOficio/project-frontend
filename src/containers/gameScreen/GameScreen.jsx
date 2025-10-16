@@ -10,6 +10,7 @@ import Secrets from '../../components/Secrets.jsx'
 import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -212,7 +213,7 @@ export default function GameScreen() {
     >
       {/* Error display */}
       {error && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-100">
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-1000">
           {error}
         </div>
       )}
@@ -331,6 +332,14 @@ export default function GameScreen() {
             finish_reason={gameState.finish_reason || 'La partida ha terminado'}
           />
         )}
+
+        {gameState.anotherVictim.showSelectSets && (
+          <SelectOtherPLayerSet
+            sets ={gameState.sets}
+            onSelectSet={() => {}} 
+          />
+        )}
+
       </div>
     </main>
   )
