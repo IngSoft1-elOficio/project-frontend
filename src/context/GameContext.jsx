@@ -281,26 +281,12 @@ const gameReducer = (state, action) => {
         detectiveAction: {
           ...state.detectiveAction,
           actionInProgress: {
-            playerId: action.payload.player_id,
-            setType: action.payload.set_type,
-            step: 'started',
-            message: action.payload.message,
-          },
-        },
-      }
-
-    case 'DETECTIVE_ACTION_STARTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          actionInProgress: {
-            initiatorPlayerId: action.payload.player_id, // Quien jugó el set
+            initiatorPlayerId: action.payload.player_id,
             setType: action.payload.set_type,
             step: 'select_target',
             message: action.payload.message,
           },
-          showSelectPlayer: true, // Abrir modal para el iniciador
+          showSelectPlayer: true,
         },
       };
 
@@ -316,12 +302,10 @@ const gameReducer = (state, action) => {
             message: `Esperando confirmación de ${action.payload.targetPlayerData.name}`,
           },
           showSelectPlayer: false,
-          // Aquí el backend debe notificar al jugador objetivo vía socket
         },
       };
 
     case 'DETECTIVE_TARGET_NOTIFIED':
-      // Este caso se dispara cuando el backend notifica al jugador seleccionado
       return {
         ...state,
         detectiveAction: {
@@ -330,7 +314,7 @@ const gameReducer = (state, action) => {
             ...state.detectiveAction.actionInProgress,
             step: 'target_must_confirm',
           },
-          showSelectPlayer: true, // Abrir modal para el jugador seleccionado
+          showSelectPlayer: true,
         },
       };
 
@@ -344,8 +328,7 @@ const gameReducer = (state, action) => {
             step: 'target_selecting_secret',
           },
           showSelectPlayer: false,
-          showSelectSecret: true, // Abrir modal de AccionSobreSecretos
-          // El jugador objetivo ahora elige un secreto del iniciador
+          showSelectSecret: true,
           targetForSecrets: action.payload.initiatorPlayerId,
         },
       };
@@ -511,7 +494,7 @@ const gameReducer = (state, action) => {
             ...state.eventCards.anotherVictim,
             showSelectPlayer: true,
             cardId: action.payload?.cardId || null,
-            selectedPlayer: null, // inicializa en null
+            selectedPlayer: null,
           },
           actionInProgress: {
             playerId: action.payload?.playerId,
