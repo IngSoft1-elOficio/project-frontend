@@ -56,8 +56,8 @@ const PlayerSetsModal = ({
 
   // Mano
   const handSection =
-    'border-t-4 border-[#825012] bg-[#3D0800]/30 px-6 py-4 pl-40 pb-6'
-  const handTitle = 'text-base font-bold text-[#B49150] mb-3 pr-40 text-center'
+    'border-t-4 border-[#825012] bg-[#3D0800]/30 px-6 py-4 pb-6'
+  const handTitle = 'text-base font-bold text-[#B49150] mb-3 text-center'
 
   // ========== FUNCIONES ==========
   const getSetTypeName = setType => {
@@ -164,7 +164,9 @@ const PlayerSetsModal = ({
           <h3 className={handTitle}>
             Cartas en tu mano - Selecciona cartas de detective para crear un set
           </h3>
-          <HandCards selectedCards={selectedCards} onSelect={onCardSelect} />
+          <div className="flex justify-center w-full">
+            <HandCards selectedCards={selectedCards} onSelect={onCardSelect} />
+          </div>
         </div>
       </div>
     </div>

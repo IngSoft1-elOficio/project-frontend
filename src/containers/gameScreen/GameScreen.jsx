@@ -212,10 +212,129 @@ export default function GameScreen() {
   }
 
   const handleCreateSet = () => {
+    // Validación: al menos una carta
+    if (selectedCards.length === 0) {
+      console.log('❌ Error: No hay cartas seleccionadas')
+      setError('Debes seleccionar al menos una carta de detective')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Validación: detectar tipo de set
+    const setType = detectSetType(selectedCards)
+    if (!setType) {
+      console.log('❌ Error: No se pudo detectar tipo de set')
+      setError('Las cartas seleccionadas no forman un set válido')
+      setTimeout(() => setError(null), 3000) // Desaparece después de 5 segundos
+      return
+    }
+
+    // Validación: cantidad mínima según tipo
+    const minCards = {
+      poirot: 3,
+      marple: 3,
+      satterthwaite: 2,
+      pyne: 2,
+      eileenbrent: 2,
+      beresford: 2,
+    }
+
+    console.log(`📊 Cartas necesarias para ${setType}: ${minCards[setType]}`)
+
+    if (selectedCards.length < minCards[setType]) {
+      console.log('❌ Error: No hay suficientes cartas')
+      setError(
+        `Set de ${setType} requiere al menos ${minCards[setType]} cartas`
+      )
+      setTimeout(() => setError(null), 3000) // Desaparece después de 5 segundos
+      return
+    }
+
     console.log('Crear set - pendiente implementar')
     console.log('Cartas seleccionadas:', selectedCards)
-    // TODO: Implementar cuando el backend esté listo
+    console.log('Tipo de set detectado:', setType)
+    console.log('Tiene comodín:', checkForWildcard(selectedCards))
+    // TO DO: Implementar cuando el backend esté listo
     // POST /api/game/{room_id}/play-detective-set
+  }
+
+  // ========== HELPER FUNCTIONS ==========
+
+  // Helper: Detectar el tipo de set basado en las cartas seleccionadas
+  const detectSetType = cardIds => {
+    const selectedCardData = gameState.mano.filter(card =>
+      cardIds.includes(card.id)
+    )
+
+    if (selectedCardData.length === 0) return null
+
+    // Verificar que todas sean cartas de detective
+    const nonDetectiveCards = selectedCardData.filter(
+      card => card.type !== 'DETECTIVE'
+    )
+    if (nonDetectiveCards.length > 0) {
+      console.log('⚠️ Hay cartas que no son de detective:', nonDetectiveCards)
+      return null
+    }
+
+    // Mapeo de nombres a tipos de set
+    const nameToSetType = {
+      'Hercule Poirot': 'poirot',
+      'Miss Marple': 'marple',
+      'Mr Satterthwaite': 'satterthwaite',
+      'Parker Pyne': 'pyne',
+      'Lady Eileen "Bundle" Brent': 'eileenbrent',
+      'Tommy Beresford': 'beresford',
+      'Tuppence Beresford': 'beresford',
+      'Harley Quin Wildcard': 'wildcard',
+    }
+
+    // Separar comodines de cartas normales
+    const wildcards = selectedCardData.filter(
+      card => nameToSetType[card.name] === 'wildcard'
+    )
+    const normalCards = selectedCardData.filter(
+      card => nameToSetType[card.name] !== 'wildcard'
+    )
+
+    // Debe haber al menos 1 carta normal (no solo comodines)
+    if (normalCards.length === 0) {
+      console.log('⚠️ Solo hay comodines, no es válido')
+      return null
+    }
+
+    // Obtener los tipos únicos (sin comodines)
+    const uniqueTypes = [
+      ...new Set(normalCards.map(card => nameToSetType[card.name])),
+    ]
+
+    // Caso especial: Beresford acepta Tommy + Tuppence
+    if (uniqueTypes.includes('beresford')) {
+      // Verificar que TODAS las cartas normales sean Beresford
+      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'beresford') {
+        return 'beresford'
+      } else if (uniqueTypes.length > 1) {
+        console.log('⚠️ Mezclando Beresford con otros tipos')
+        return null
+      }
+    }
+
+    // Para el resto: todas las cartas normales deben ser del mismo tipo
+    if (uniqueTypes.length !== 1) {
+      console.log('⚠️ Cartas de diferentes tipos:', uniqueTypes)
+      return null
+    }
+
+    return uniqueTypes[0]
+  }
+
+  // Helper: Verificar si hay un comodín (Harley Quin) en las cartas seleccionadas
+  const checkForWildcard = cardIds => {
+    const selectedCardData = gameState.mano.filter(card =>
+      cardIds.includes(card.id)
+    )
+
+    return selectedCardData.some(card => card.name === 'Harley Quin Wildcard')
   }
 
   const getErrorMessage = (status, errorData) => {
@@ -244,7 +363,10 @@ export default function GameScreen() {
     >
       {/* Error display */}
       {error && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-100">
+        <div
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl"
+          style={{ zIndex: 9999, minWidth: '300px' }}
+        >
           {error}
         </div>
       )}
@@ -346,7 +468,7 @@ export default function GameScreen() {
 
               <ButtonGame
                 onClick={() => setShowPlayerSets(true)}
-                disabled={loading}
+                disabled={loading || gameState.drawAction.hasDiscarded}
               >
                 Ver Sets
               </ButtonGame>
