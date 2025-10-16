@@ -10,12 +10,9 @@ const HideRevealStealSecretsModal = ({
 }) => {
   if (!isOpen) return null;
 
-  const { gameDispatch } = useGame();
+  const { gameDispatch, userState } = useGame();
   const setType = detective?.current?.setType || "Detective"; // me traigo al detective
-  const wildcard = detective?.current?.hasWildcard || false; //tiene comodin?
   const secretos = detective?.metadata?.secretsPool || [] ;
-  const isDetective = detective.showSelectSecret; // elijo secreto de jugador objetivo
-  const isTarget = detective.showChooseOwnSecret; //jugador objetivo elije secreto a eleccion
 
   const filteredSecrets = secretos.filter((s) => s.playerId === detective.targetPlayerId); // secretos del objetivo
 
@@ -67,15 +64,13 @@ const HideRevealStealSecretsModal = ({
       const roomId = detective?.current?.roomId || detective?.roomId;
       const actionId = detective?.current?.actionId;
       const secretId = selectedSecret.cardId || selectedSecret.secretId;
+      const targetPlayerId = detective?.targetPlayerId;
 
       const body = {
-        actionId,
+        actionId ,
+        targetPlayerId,
         secretId,
       };
-
-      if (isDetective) { //si es quien tiró el set tambien manda al jugador objtivo
-        body.targetPlayerId = detective.targetPlayerId;
-      }
 
       // llamamos al endpoint
       const response = await fetch(
@@ -169,16 +164,34 @@ const HideRevealStealSecretsModal = ({
           </ButtonGame>
           <ButtonGame onClick={onClose}>Cancelar</ButtonGame>
         </div>
-
-        {/* COMODÍN */}
-        {wildcard && (
-          <p className="text-xs mt-4 text-[#B49150]/60 text-center italic">
-            * Este set contiene un comodín.
-          </p>
-        )}
       </div>
     </div>
   );
 };
 
 export default HideRevealStealSecretsModal;
+
+/*
+seleccionar jugador -> POST detective-action 
+{
+    "actionId": "action_abc123",
+    "targetPlayerId": "player_id",  // requerido para selección de jugador
+                            
+}
+
+response
+{
+    "success": true,
+    "completed": true,
+    "nextAction": {
+        "type": "selectPlayer",
+        "allowedPlayers": ["player_id2"]
+    }
+}
+
+
+
+DETECTIVE_INCOMING_REQUEST -> showChooseOwnSecret: true
+                              incomingRequest {payload...}
+
+*/
