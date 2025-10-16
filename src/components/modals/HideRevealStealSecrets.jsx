@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import ButtonGame from "../ButtonGame.jsx";
+import { useGame } from "../../context/GameContext.jsx";
+
 
 const HideRevealStealSecretsModal = ({
   isOpen,
@@ -8,6 +10,7 @@ const HideRevealStealSecretsModal = ({
 }) => {
   if (!isOpen) return null;
 
+  const { gameDispatch } = useGame();
   const setType = detective?.current?.setType || "Detective"; // me traigo al detective
   const wildcard = detective?.current?.hasWildcard || false; //tiene comodin?
   const secretos = detective?.metadata?.secretsPool || [] ;
@@ -57,19 +60,53 @@ const HideRevealStealSecretsModal = ({
     };
 
   // ====== ACCIÓN PRINCIPAL ======
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!selectedSecret) return;
 
-    if (isDetective) {
-      console.log("Detective seleccionó secreto del target:", selectedSecret);
-    }
+    try {
+      const roomId = detective?.current?.roomId || detective?.roomId;
+      const actionId = detective?.current?.actionId;
+      const secretId = selectedSecret.cardId || selectedSecret.secretId;
 
-    if (isTarget) {
-      console.log("Target seleccionó su propio secreto:", selectedSecret);
-    }
+      const body = {
+        actionId,
+        secretId,
+      };
 
-    onClose();
+      if (isDetective) { //si es quien tiró el set tambien manda al jugador objtivo
+        body.targetPlayerId = detective.targetPlayerId;
+      }
+
+      // llamamos al endpoint
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/detective-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Error al ejecutar acción");
+      }
+
+      const data = await response.json();
+      console.log("Acción detective completada:", data);
+
+      // Notificar que se completó la acción
+      gameDispatch({ type: "DETECTIVE_ACTION_COMPLETE" });
+
+      onClose();
+    } catch (error) {
+      console.error(" Error al ejecutar acción de detective:", error);
+    }
   };
+
 
     const overlay =
     "fixed inset-0 flex items-center justify-center z-50 bg-black/60";
