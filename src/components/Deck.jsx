@@ -6,8 +6,8 @@ export default function Deck({ cardsLeft, onClick, disabled }) {
         onClick={!disabled ? onClick : undefined}
       >
         <img 
-          src={"/cards/01-card_back.png"} 
-          alt="Top Discarded Card" 
+          src={cardsLeft === 0 ? "/cards/02-murder_escapes.png" : "/cards/01-card_back.png"} 
+          alt={cardsLeft === 0 ? "Deck Empty" : "Top Discarded Card"} 
           className="w-16 h-24 rounded-lg border-2 border-gray-400" 
         />
       </div>

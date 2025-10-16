@@ -14,7 +14,7 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState, gameDispatch } = useGame()
+  const { gameState } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -184,7 +184,7 @@ export default function GameScreen() {
   const handleDraft = async cardId => {
     try {
       const response = await fetch(
-        `http://localhost:8000/game/${gameState.roomId}/draft/pick`,
+        `http://localhost:8000/game/${gameState.gameId}/draft/pick`,
         {
           method: 'POST',
           headers: {
@@ -193,6 +193,7 @@ export default function GameScreen() {
           },
           body: JSON.stringify({
             card_id: cardId,
+            user_id: userState.id,
           }),
         }
       )
