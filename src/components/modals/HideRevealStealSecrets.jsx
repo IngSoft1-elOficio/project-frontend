@@ -5,15 +5,16 @@ const HideRevealStealSecretsModal = ({
   isOpen,
   onClose,
   detective,
-  secretos = [],
 }) => {
   if (!isOpen) return null;
 
-  const setType = detective?.current?.setType || "Detective";
-  const wildcard = detective?.current?.hasWildcard || false;
+  const setType = detective?.current?.setType || "Detective"; // me traigo al detective
+  const wildcard = detective?.current?.hasWildcard || false; //tiene comodin?
+  const secretos = detective?.metadata?.secretsPool || [] ;
+  const isDetective = detective.showSelectSecret; // elijo secreto de jugador objetivo
+  const isTarget = detective.showChooseOwnSecret; //jugador objetivo elije secreto a eleccion
 
-  const isDetective = detective.showSelectSecret;
-  const isTarget = detective.showChooseOwnSecret;
+  const filteredSecrets = secretos.filter((s) => s.playerId === detective.targetPlayerId); // secretos del objetivo
 
   const [selectedSecret, setSelectedSecret] = useState(null);
 
@@ -29,35 +30,30 @@ const HideRevealStealSecretsModal = ({
     },
     satterthwaite: {
       name: "Mr. Satterthwaite",
-      effect:
-        "Elige un secreto propio para revelar",
+      effect: "Elige un secreto propio para revelar",
     },
     pyne: {
       name: "Parker Pyne",
-      effect:
-        "Elige un secreto para ocultar",
+      effect: "Elige un secreto para ocultar",
     },
     eileenbrent: {
       name: "Lady Eileen 'Bundle' Brent",
-      effect:
-        "Elige un secreto propio para revelar",
+      effect: "Elige un secreto propio para revelar",
     },
     tommyberesford: {
       name: "Tommy Beresford",
-      effect:
-        "Elige un secreto propio para revelar",
+      effect: "Elige un secreto propio para revelar",
     },
     tuppenceberesford: {
       name: "Tuppence Beresford",
-      effect:
-        "Elige un secreto propio para revelar",
+      effect: "Elige un secreto propio para revelar",
     },
   };
 
   const { name, effect } =
     detectiveInfo[setType?.toLowerCase()] || {
       name: "Detective desconocido",
-      effect: "Selecciona un secreto para revelar u ocultar.",
+      effect: "Sin efecto",
     };
 
   // ====== ACCIÓN PRINCIPAL ======
@@ -75,17 +71,15 @@ const HideRevealStealSecretsModal = ({
     onClose();
   };
 
-  // ====== ESTILOS ======
-  const overlay =
+    const overlay =
     "fixed inset-0 flex items-center justify-center z-50 bg-black/60";
   const container =
-    "bg-[#1D0000] border-4 border-[#825012] rounded-2xl w-[720px] flex flex-col p-8"; 
+    "bg-[#1D0000] border-4 border-[#825012] rounded-2xl w-[720px] flex flex-col p-8";
   const headerStyle =
     "bg-[#640B01] text-[#B49150] border-b-4 border-[#825012] px-6 py-4 rounded-t-xl text-center";
-  const headerTitle = "text-3xl font-bold"; 
+  const headerTitle = "text-3xl font-bold";
   const description =
     "text-base text-[#B49150]/80 mt-4 mb-8 px-6 text-center leading-relaxed";
-  const secretsContainer = "flex justify-center gap-6 my-6";
   const cardBox =
     "w-32 h-48 border-2 border-[#825012] bg-[#3D0800]/40 rounded-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105";
   const selectedCard = "border-[#B49150] scale-105";
@@ -101,32 +95,30 @@ const HideRevealStealSecretsModal = ({
 
         {/* EFECTO */}
         <p className={description}>
-          <strong>Efecto:</strong> {effect}{" "}
+          <strong>Efecto:</strong> {effect}
         </p>
 
         {/* SECRETOS */}
-        <div className={secretsContainer}>
-          {secretos.map((secret) => (
+        <div className="flex justify-center gap-6 my-6">
+          {filteredSecrets.map((secret) => (
             <div
               key={secret.position}
               onClick={() => setSelectedSecret(secret)}
               className={`${cardBox} ${
-                selectedSecret?.position === secret.position
-                  ? selectedCard
-                  : ""
+                selectedSecret?.position === secret.position ? selectedCard : ""
               }`}
             >
-              {secret?.revealed === true && secret?.img_src ? (
-                <img
-                  src={secret.img_src}
-                  alt={secret.name || `Secreto ${secret.position}`}
-                  className="w-full h-full object-cover rounded-md"
-                />
-              ) : (
+              {secret.hidden ? (
                 <img
                   src="/cards/secret_back.png"
                   alt={`Secreto ${secret.position}`}
                   className="w-full h-full object-cover rounded-md opacity-90"
+                />
+              ) : (
+                <img
+                  src={`/cards/secret_${secret.cardId}.png`}
+                  alt={`Secreto ${secret.position}`}
+                  className="w-full h-full object-cover rounded-md"
                 />
               )}
             </div>
