@@ -212,10 +212,14 @@ export default function GameScreen() {
     }
   }
 
-  const handleCreateSet = () => {
+  const handleCreateSet = async () => {
+    console.log('🔍 Todas las cartas en mano:', gameState.mano)
+    console.log(
+      '🔍 Cartas seleccionadas con datos:',
+      gameState.mano.filter(card => selectedCards.includes(card.id))
+    )
     // Validación: al menos una carta
     if (selectedCards.length === 0) {
-      console.log('❌ Error: No hay cartas seleccionadas')
       setError('Debes seleccionar al menos una carta de detective')
       setTimeout(() => setError(null), 3000)
       return
@@ -224,9 +228,8 @@ export default function GameScreen() {
     // Validación: detectar tipo de set
     const setType = detectSetType(selectedCards)
     if (!setType) {
-      console.log('❌ Error: No se pudo detectar tipo de set')
       setError('Las cartas seleccionadas no forman un set válido')
-      setTimeout(() => setError(null), 3000) // Desaparece después de 5 segundos
+      setTimeout(() => setError(null), 3000)
       return
     }
 
@@ -240,23 +243,66 @@ export default function GameScreen() {
       beresford: 2,
     }
 
-    console.log(`📊 Cartas necesarias para ${setType}: ${minCards[setType]}`)
-
     if (selectedCards.length < minCards[setType]) {
-      console.log('❌ Error: No hay suficientes cartas')
       setError(
         `Set de ${setType} requiere al menos ${minCards[setType]} cartas`
       )
-      setTimeout(() => setError(null), 3000) // Desaparece después de 5 segundos
+      setTimeout(() => setError(null), 3000)
       return
     }
 
-    console.log('Crear set - pendiente implementar')
-    console.log('Cartas seleccionadas:', selectedCards)
-    console.log('Tipo de set detectado:', setType)
-    console.log('Tiene comodín:', checkForWildcard(selectedCards))
-    // TO DO: Implementar cuando el backend esté listo
-    // POST /api/game/{room_id}/play-detective-set
+    // Detectar si hay comodín
+    const hasWildcard = checkForWildcard(selectedCards)
+
+    console.log('✅ Validaciones pasadas - Creando set...')
+    console.log('🃏 Tipo:', setType)
+    console.log('🎴 Cartas:', selectedCards)
+    console.log('⭐ Comodín:', hasWildcard)
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // POST al backend
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            owner: userState.id,
+            setType: setType,
+            cards: selectedCards,
+            hasWildcard: hasWildcard,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Error al crear el set')
+      }
+
+      const data = await response.json()
+      console.log('✅ Set creado exitosamente!')
+      console.log('📋 Action ID:', data.actionId)
+      console.log('➡️ Next Action:', data.nextAction)
+
+      // Limpiar selección y cerrar modal
+      setSelectedCards([])
+      setShowPlayerSets(false)
+
+      // El WebSocket actualizará automáticamente el gameState con el nuevo set
+      // y disparará 'detective_action_started' que el GameContext ya maneja
+    } catch (err) {
+      console.error('❌ Error al crear set:', err)
+      setError(err.message)
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ========== HELPER FUNCTIONS ==========
