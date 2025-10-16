@@ -27,10 +27,6 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
   const isInitiator = initiatorPlayerId === userId; // Quien jugó el set
   const isTarget = detectiveAction?.actionInProgress?.targetPlayerId === userId; // Quien fue seleccionado
 
-  // ==========================================
-  // HANDLERS DE SELECCIÓN
-  // ==========================================
-
   const handlePlayerSelect = (jugador) => {
     // Caso 1: Another Victim - Solo guardar selección
     if (currentEventType === "another_victim") {
@@ -58,10 +54,6 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
       });
     }
   };
-
-  // ==========================================
-  // HANDLERS DE CONFIRMACIÓN
-  // ==========================================
 
   const handleConfirm = async () => {
     // CASO 1: Another Victim - Hacer POST al backend
@@ -138,10 +130,6 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // ==========================================
-  // HANDLER DE CANCELACIÓN
-  // ==========================================
-
   const handleCancel = () => {
     if (currentEventType === "another_victim") {
       gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
@@ -150,10 +138,6 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
     }
     onClose();
   };
-
-  // ==========================================
-  // MENSAJES Y LÓGICA DE UI
-  // ==========================================
 
   const getActionMessage = () => {
     // Caso 1: Another Victim
@@ -226,7 +210,6 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
   return (
     <div className={modalLayout}>
       <div className={modalContainer}>
-        {/* Lista de jugadores (solo si corresponde) */}
         {showPlayerList && (
           <div className={playersContainer}>
             {playersToShow.map((jugador) => (
@@ -249,12 +232,10 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* Mensaje de acción */}
         <div className={actionMessage}>
           <h2>{getActionMessage()}</h2>
         </div>
 
-        {/* Botones de confirmación/cancelación */}
         <div className={buttonContainer}>
           <Button 
             onClick={handleConfirm} 
