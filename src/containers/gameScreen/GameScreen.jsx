@@ -61,6 +61,41 @@ export default function GameScreen() {
     })
   }
 
+  const handlePLayEventCard = async (c) => {
+    
+    // Verificar que es Another Victim, que es la unica carta de evento que vamos a implementar (puede cambiar)
+    
+    console.log(`Gonna play card: ${c}`);
+    
+    try {
+
+      const response = await fetch(
+        `http://localhost:8000/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            HTTP_USER_ID: userState.id.toString(), // Add user_id header
+          },
+          body: JSON.stringify({}),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Played card succesfull:', data)
+      setSelectedCards([])      
+    } catch {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDiscard = async () => {
     if (selectedCards.length === 0) {
       setError('Debes seleccionar al menos una carta para descartar')
@@ -213,7 +248,7 @@ export default function GameScreen() {
     }
   }
 
-  const handleCreateSet = async () => {
+  const handleCreateSet = async (set) => {
     console.log('Crear set - pendiente implementar')
     console.log('Cartas seleccionadas:', selectedCards)
 
@@ -238,7 +273,7 @@ export default function GameScreen() {
           owner: "",
           setType:"",
           cards: [],
-          hasWildcard: Boolean, 
+          hasWildcard: Boolean,
         })
       })
 
