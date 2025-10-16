@@ -49,9 +49,7 @@ const SelectOtherPLayerSet = ({
   const sidebar =
     'w-40 bg-[#3D0800]/30 border-l-4 border-[#825012] p-4 flex flex-col gap-3'
 
-  const filteredSetsPerPlayer = () => {
-    return sets.filter(set => set.owner_id == player.id)
-  }
+  const filteredSetsPerPlayer = sets.filter(set => set.owner_id === player.id)
 
   // ========== RENDER ==========
   return (
@@ -83,7 +81,7 @@ const SelectOtherPLayerSet = ({
                 // Caso hay sets
                 <div className={setsGrid}>
                 {filteredSetsPerPlayer.map((set, index) => (
-                    <div key={index} className={setCard} onClick={setSelectedSet(set)}>
+                    <div key={index} className={setCard} onClick={() => setSelectedSet(set)}>
                     <div className={setHeader}>
                         <div>
                             <h3 className={setTitle}>Set {index + 1}</h3>
@@ -125,7 +123,7 @@ const SelectOtherPLayerSet = ({
           {/* Right Sidebar - Actions */}
           <div className={sidebar}>
             <ButtonGame
-              onClick={onSelectSet(selectedSet)}
+              onClick={() => onSelectSet(selectedSet)}
               disabled={true}
             >
               Selecionar Set

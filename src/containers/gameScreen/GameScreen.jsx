@@ -333,8 +333,9 @@ export default function GameScreen() {
           />
         )}
 
-        {gameState.anotherVictim.showSelectSets && (
+        {gameState.eventCards?.anotherVictim?.showSelectSets && (
           <SelectOtherPLayerSet
+            player={gameState.eventCards.anotherVictim.selectedPlayer}
             sets ={gameState.sets}
             onSelectSet={() => {}} 
           />
