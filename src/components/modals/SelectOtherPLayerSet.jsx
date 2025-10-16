@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import ButtonGame from '../ButtonGame.jsx'
 import { FiArchive } from 'react-icons/fi'
 
 const SelectOtherPLayerSet = ({
+  player, // --> jugador que se muestran los sets 
   sets = [], //array → lista de sets jugados
   onSelectSet, //función → callback para crear un nuevo set
 }) => {
+
+  const [selectedSet, setSelectedSet] = useState(null)
 
   // ========== ESTILOS ==========
   // Container principal -> Todo
@@ -44,25 +48,9 @@ const SelectOtherPLayerSet = ({
   // Sidebar derecha
   const sidebar =
     'w-40 bg-[#3D0800]/30 border-l-4 border-[#825012] p-4 flex flex-col gap-3'
-  const infoBox =
-    'mt-2 p-2 bg-[#640B01]/40 border border-[#825012] rounded-lg text-sm text-[#B49150] text-center'
 
-  // Mano
-  const handSection =
-    'border-t-4 border-[#825012] bg-[#3D0800]/30 px-6 py-4 pb-6'
-  const handTitle = 'text-base font-bold text-[#B49150] mb-3 text-center'
-
-  // ========== FUNCIONES ==========
-  const getSetTypeName = setType => {
-    const typeNames = {
-      poirot: 'Poirot',
-      marple: 'Miss Marple',
-      satterthwaite: 'Satterthwaite',
-      eileenbrent: 'Eileen Brent',
-      beresford: 'Hermanos Beresford',
-      pyne: 'Parker Pyne',
-    }
-    return typeNames[setType] || 'Detective'
+  const filteredSetsPerPlayer = () => {
+    return sets.filter(set => set.owner_id == player.id)
   }
 
   // ========== RENDER ==========
@@ -94,8 +82,8 @@ const SelectOtherPLayerSet = ({
             ) : (
                 // Caso hay sets
                 <div className={setsGrid}>
-                {sets.map((set, index) => (
-                    <div key={index} className={setCard}>
+                {filteredSetsPerPlayer.map((set, index) => (
+                    <div key={index} className={setCard} onClick={setSelectedSet(set)}>
                     <div className={setHeader}>
                         <div>
                             <h3 className={setTitle}>Set {index + 1}</h3>
@@ -137,7 +125,7 @@ const SelectOtherPLayerSet = ({
           {/* Right Sidebar - Actions */}
           <div className={sidebar}>
             <ButtonGame
-              onClick={onSelectSet}
+              onClick={onSelectSet(selectedSet)}
               disabled={true}
             >
               Selecionar Set
