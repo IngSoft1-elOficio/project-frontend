@@ -1,14 +1,20 @@
 import React from "react";
-import { useGame } from "../../context/GameContext";
 import ProfileCard from "../ProfileCard";
 import Button from "../Button";
 
-const SelectPlayerModal = ({ isOpen, onClose }) => {
-  const { gameState, gameDispatch } = useGame();
-  const { jugadores = [], roomId, userId } = gameState;
-  const { anotherVictim, actionInProgress } = gameState.eventCards;
-  const { detectiveAction } = gameState;
-
+const SelectPlayerModal = ({ 
+  isOpen, 
+  onClose,
+  jugadores,
+  userId,
+  currentEventType,
+  detectiveType,
+  anotherVictim,
+  detectiveAction,
+  onPlayerSelect,
+  onConfirm,
+  onCancel
+}) => {
   if (!isOpen) return null;
 
   const modalLayout = "fixed inset-0 flex z-50 items-center justify-center bg-black bg-opacity-60";
@@ -18,126 +24,9 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
   const actionMessage = "text-[#FFE0B2] text-xl font-semibold text-center";
   const buttonContainer = "flex gap-4 justify-center w-full";
 
-  const currentEventType = actionInProgress?.eventType;
-  const detectiveType = detectiveAction?.actionInProgress?.setType;
-  
-  // Para Tipo B: El jugador que JUGÓ el set es el "initiator"
-  // El jugador SELECCIONADO es el "target" que luego se vuelve activo
   const initiatorPlayerId = detectiveAction?.actionInProgress?.initiatorPlayerId;
-  const isInitiator = initiatorPlayerId === userId; // Quien jugó el set
-  const isTarget = detectiveAction?.actionInProgress?.targetPlayerId === userId; // Quien fue seleccionado
-
-  const handlePlayerSelect = (jugador) => {
-    // Caso 1: Another Victim - Solo guardar selección
-    if (currentEventType === "another_victim") {
-      gameDispatch({ 
-        type: "EVENT_ANOTHER_VICTIM_SELECT_PLAYER", 
-        payload: jugador 
-      });
-      return;
-    }
-
-    // Caso 2: Detectives Tipo A (marple, pyne, poirot) - Solo guardar selección
-    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
-      gameDispatch({
-        type: "DETECTIVE_PLAYER_SELECTED",
-        payload: { playerId: jugador.id, playerData: jugador }
-      });
-      return;
-    }
-
-    // Caso 3: Detectives Tipo B (beresford, satterthwaite) - Solo guardar selección si es el iniciador
-    if (["beresford", "satterthwaite"].includes(detectiveType) && isInitiator) {
-      gameDispatch({
-        type: "DETECTIVE_PLAYER_SELECTED",
-        payload: { playerId: jugador.id, playerData: jugador }
-      });
-    }
-  };
-
-  const handleConfirm = async () => {
-    // CASO 1: Another Victim - Hacer POST al backend
-    if (currentEventType === "another_victim") {
-      const selectedPlayer = anotherVictim?.selectedPlayer;
-      if (!selectedPlayer) return;
-
-      try {
-        const response = await fetch(`/api/game/${roomId}/event/another-victim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            card_id: anotherVictim.cardId,
-            target_player_id: selectedPlayer.id,
-          }),
-        });
-
-        if (!response.ok) throw new Error("Error al seleccionar jugador");
-        const data = await response.json();
-
-        gameDispatch({ type: "EVENT_STEP_UPDATE", payload: data });
-        onClose();
-      } catch (error) {
-        console.error("Error en Another Victim:", error);
-        gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
-        onClose();
-      }
-      return;
-    }
-
-    // CASO 2: Detectives Tipo A (marple, pyne, poirot) - Abrir modal de secretos
-    if (["marple", "pyne", "poirot"].includes(detectiveType)) {
-      const selectedPlayer = detectiveAction?.selectedPlayer;
-      if (!selectedPlayer) return;
-
-      // Cerrar este modal y abrir el modal de AccionSobreSecretos
-      gameDispatch({
-        type: "DETECTIVE_OPEN_SECRET_SELECTION",
-        payload: { 
-          targetPlayer: selectedPlayer,
-          detectiveType: detectiveType
-        }
-      });
-      onClose();
-      return;
-    }
-
-    // CASO 3: Detectives Tipo B (beresford, satterthwaite) - Dos fases
-    if (["beresford", "satterthwaite"].includes(detectiveType)) {
-      if (isInitiator) {
-        // Fase 1: Jugador que jugó el set confirma su selección
-        const selectedPlayer = detectiveAction?.selectedPlayer;
-        if (!selectedPlayer) return;
-
-        gameDispatch({
-          type: "DETECTIVE_TARGET_CONFIRMED",
-          payload: { 
-            targetPlayerId: selectedPlayer.id,
-            targetPlayerData: selectedPlayer
-          }
-        });
-        onClose();
-      } else if (isTarget) {
-        // Fase 2: Jugador seleccionado confirma y se abre su modal de secretos
-        gameDispatch({
-          type: "DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS",
-          payload: { 
-            playerId: userId,
-            initiatorPlayerId: initiatorPlayerId
-          }
-        });
-        onClose();
-      }
-    }
-  };
-
-  const handleCancel = () => {
-    if (currentEventType === "another_victim") {
-      gameDispatch({ type: "EVENT_ANOTHER_VICTIM_COMPLETE" });
-    } else if (detectiveType) {
-      gameDispatch({ type: "DETECTIVE_ACTION_COMPLETE" });
-    }
-    onClose();
-  };
+  const isInitiator = initiatorPlayerId === userId;
+  const isTarget = detectiveAction?.actionInProgress?.targetPlayerId === userId;
 
   const getActionMessage = () => {
     // Caso 1: Another Victim
@@ -174,14 +63,24 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
     return "";
   };
 
-  // Jugadores disponibles para seleccionar (todos excepto el usuario actual)
-  const playersToShow = jugadores.filter((j) => j.id !== userId);
+  const playersToShow = jugadores.filter((j) => {
+    if (j.id === userId) return false;
 
-  // Mostrar lista de jugadores solo en casos específicos
+    if (["beresford", "satterthwaite"].includes(detectiveType)) {
+      if (isInitiator) return j.id !== initiatorPlayerId;
+      if (isTarget) return false;
+    }
+
+    return true;
+  });
+
+
   const showPlayerList = 
-    currentEventType === "another_victim" ||
-    ["marple", "pyne", "poirot"].includes(detectiveType) ||
-    (["beresford", "satterthwaite"].includes(detectiveType) && isInitiator);
+    playersToShow.length > 0 && (
+      currentEventType === "another_victim" ||
+      ["marple", "pyne", "poirot"].includes(detectiveType) ||
+      (["beresford", "satterthwaite"].includes(detectiveType) && isInitiator)
+    );
 
   // Determinar si el botón de confirmar está habilitado
   const isConfirmEnabled = () => {
@@ -210,12 +109,13 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
   return (
     <div className={modalLayout}>
       <div className={modalContainer}>
+        {/* Lista de jugadores (solo si corresponde) */}
         {showPlayerList && (
           <div className={playersContainer}>
             {playersToShow.map((jugador) => (
               <div
                 key={jugador.id}
-                onClick={() => handlePlayerSelect(jugador)}
+                onClick={() => onPlayerSelect(jugador)}
                 className={`cursor-pointer hover:scale-105 transition-all ${
                   selectedPlayerId === jugador.id
                     ? "ring-4 ring-[#FFD700]"
@@ -232,19 +132,21 @@ const SelectPlayerModal = ({ isOpen, onClose }) => {
           </div>
         )}
 
+        {/* Mensaje de acción */}
         <div className={actionMessage}>
           <h2>{getActionMessage()}</h2>
         </div>
 
+        {/* Botones de confirmación/cancelación */}
         <div className={buttonContainer}>
           <Button 
-            onClick={handleConfirm} 
+            onClick={onConfirm} 
             title="Confirmar"
             disabled={!isConfirmEnabled()}
           >
             Confirmar
           </Button>
-          <Button onClick={handleCancel} title="Cancelar">
+          <Button onClick={onCancel} title="Cancelar">
             Cancelar
           </Button>
         </div>

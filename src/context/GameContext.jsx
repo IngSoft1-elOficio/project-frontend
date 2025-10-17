@@ -491,7 +491,6 @@ const gameReducer = (state, action) => {
         eventCards: {
           ...state.eventCards,
           anotherVictim: {
-            ...state.eventCards.anotherVictim,
             showSelectPlayer: true,
             cardId: action.payload?.cardId || null,
             selectedPlayer: null,
@@ -518,6 +517,18 @@ const gameReducer = (state, action) => {
             cardId: null,
           },
           actionInProgress: null,
+        },
+      }
+
+    case 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            selectedPlayer: action.payload,
+          },
         },
       }
 
