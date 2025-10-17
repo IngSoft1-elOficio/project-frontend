@@ -1,109 +1,101 @@
 import React, { useState } from "react";
 import ButtonGame from "../ButtonGame.jsx";
-import { useGame } from "../../context/GameContext.jsx";
-
 
 const HideRevealStealSecretsModal = ({
   isOpen,
   onClose,
   detective,
+  onConfirm,
 }) => {
   if (!isOpen) return null;
 
-  const { gameDispatch, userState } = useGame();
-  const setType = detective?.current?.setType || "Detective"; // me traigo al detective
-  const secretos = detective?.metadata?.secretsPool || [] ;
+  const setType = detective?.current?.setType || "Detective";
+  const secretos = detective?.secretsPool || [];
 
-  const filteredSecrets = secretos.filter((s) => s.playerId === detective.targetPlayerId); // secretos del objetivo
+  const filteredSecrets = secretos.filter(
+    (s) => s.playerId === detective.targetPlayerId
+  );
 
   const [selectedSecret, setSelectedSecret] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // ====== INFO DEL DETECTIVE ======
   const detectiveInfo = {
     poirot: {
       name: "Hercule Poirot",
       effect: "Elige un secreto del jugador objetivo para revelar",
+      requiresHidden: true, // sólo puede revelar secretos ocultos
     },
     marple: {
       name: "Miss Marple",
       effect: "Elige un secreto del jugador objetivo para revelar",
+      requiresHidden: true,
     },
     satterthwaite: {
       name: "Mr. Satterthwaite",
       effect: "Elige un secreto propio para revelar",
+      requiresHidden: true,
     },
     pyne: {
       name: "Parker Pyne",
       effect: "Elige un secreto para ocultar",
+      requiresHidden: false, // sólo puede ocultar secretos revelados
     },
     eileenbrent: {
       name: "Lady Eileen 'Bundle' Brent",
       effect: "Elige un secreto propio para revelar",
+      requiresHidden: true,
     },
     tommyberesford: {
       name: "Tommy Beresford",
       effect: "Elige un secreto propio para revelar",
+      requiresHidden: true,
     },
     tuppenceberesford: {
       name: "Tuppence Beresford",
       effect: "Elige un secreto propio para revelar",
+      requiresHidden: true,
     },
   };
 
-  const { name, effect } =
+  const { name, effect, requiresHidden } =
     detectiveInfo[setType?.toLowerCase()] || {
       name: "Detective desconocido",
       effect: "Sin efecto",
+      requiresHidden: null,
     };
 
-  // ====== ACCIÓN PRINCIPAL ======
-  const handleAction = async () => {
-    if (!selectedSecret) return;
-
-    try {
-      const roomId = detective?.current?.roomId || detective?.roomId;
-      const actionId = detective?.current?.actionId;
-      const secretId = selectedSecret.cardId || selectedSecret.secretId;
-      const targetPlayerId = detective?.targetPlayerId;
-
-      const body = {
-        actionId ,
-        targetPlayerId,
-        secretId,
-      };
-
-      // llamamos al endpoint
-      const response = await fetch(
-        `http://localhost:8000/api/game/${roomId}/detective-action`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData?.detail || "Error al ejecutar acción");
-      }
-
-      const data = await response.json();
-      console.log("Acción detective completada:", data);
-
-      // Notificar que se completó la acción
-      gameDispatch({ type: "DETECTIVE_ACTION_COMPLETE" });
-
-      onClose();
-    } catch (error) {
-      console.error(" Error al ejecutar acción de detective:", error);
+  // ====== FUNCIONES ======
+  const SelectSecret = (secret) => {
+    // si se requiere un secreto oculto pero selecciona uno revelado
+    if (requiresHidden && !secret.hidden) {
+      setErrorMsg("Solo podés seleccionar secretos ocultos.");
+      setSelectedSecret(null);
+      return;
     }
+
+    // si se requiere un secreto revelado pero selecciona uno oculto
+    if (requiresHidden === false && secret.hidden) {
+      setErrorMsg("Solo podés seleccionar secretos revelados.");
+      setSelectedSecret(null);
+      return;
+    }
+
+    // válido
+    setErrorMsg("");
+    setSelectedSecret(secret);
   };
 
+  const handleConfirm = () => {
+    if (!selectedSecret) {
+      setErrorMsg("Seleccioná un secreto válido antes de confirmar.");
+      return;
+    }
+    onConfirm(selectedSecret);
+  };
 
-    const overlay =
+  // ====== ESTILOS ======
+  const overlay =
     "fixed inset-0 flex items-center justify-center z-50 bg-black/60";
   const container =
     "bg-[#1D0000] border-4 border-[#825012] rounded-2xl w-[720px] flex flex-col p-8";
@@ -130,25 +122,32 @@ const HideRevealStealSecretsModal = ({
           <strong>Efecto:</strong> {effect}
         </p>
 
+        {/* ERROR */}
+        {errorMsg && (
+          <p className="text-red-400 text-center font-semibold mb-3">
+            {errorMsg}
+          </p>
+        )}
+
         {/* SECRETOS */}
-        <div className="flex justify-center gap-6 my-6">
+        <div className="flex justify-center gap-6 my-6 flex-wrap">
           {filteredSecrets.map((secret) => (
             <div
               key={secret.position}
-              onClick={() => setSelectedSecret(secret)}
+              onClick={() => SelectSecret(secret)}
               className={`${cardBox} ${
                 selectedSecret?.position === secret.position ? selectedCard : ""
               }`}
             >
               {secret.hidden ? (
                 <img
-                  src="/cards/secret_back.png"
+                  src="/cards/secret_front.png"
                   alt={`Secreto ${secret.position}`}
                   className="w-full h-full object-cover rounded-md opacity-90"
                 />
               ) : (
                 <img
-                  src={`/cards/secret_${secret.cardId}.png`}
+                  src="/cards/secret_back.png"
                   alt={`Secreto ${secret.position}`}
                   className="w-full h-full object-cover rounded-md"
                 />
@@ -159,10 +158,9 @@ const HideRevealStealSecretsModal = ({
 
         {/* BOTONES */}
         <div className={buttonsContainer}>
-          <ButtonGame disabled={!selectedSecret} onClick={handleAction}>
+          <ButtonGame disabled={!selectedSecret} onClick={handleConfirm}>
             {setType?.toLowerCase() === "pyne" ? "Ocultar" : "Revelar"}
           </ButtonGame>
-          <ButtonGame onClick={onClose}>Cancelar</ButtonGame>
         </div>
       </div>
     </div>
@@ -170,6 +168,7 @@ const HideRevealStealSecretsModal = ({
 };
 
 export default HideRevealStealSecretsModal;
+
 
 /*
 seleccionar jugador -> POST detective-action 
