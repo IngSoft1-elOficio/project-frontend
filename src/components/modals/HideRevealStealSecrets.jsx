@@ -66,7 +66,7 @@ const HideRevealStealSecretsModal = ({
     };
 
   // ====== FUNCIONES ======
-  const SelectSecret = (secret) => {
+  const validateSecrets = (secret) => {
     // si se requiere un secreto oculto pero selecciona uno revelado
     if (requiresHidden && !secret.hidden) {
       setErrorMsg("Solo podés seleccionar secretos ocultos.");
@@ -86,7 +86,7 @@ const HideRevealStealSecretsModal = ({
     setSelectedSecret(secret);
   };
 
-  const handleConfirm = () => {
+  const confirmSelection = () => {
     if (!selectedSecret) {
       setErrorMsg("Seleccioná un secreto válido antes de confirmar.");
       return;
@@ -134,7 +134,7 @@ const HideRevealStealSecretsModal = ({
           {filteredSecrets.map((secret) => (
             <div
               key={secret.position}
-              onClick={() => SelectSecret(secret)}
+              onClick={() => validateSecrets(secret)}
               className={`${cardBox} ${
                 selectedSecret?.position === secret.position ? selectedCard : ""
               }`}
@@ -158,7 +158,7 @@ const HideRevealStealSecretsModal = ({
 
         {/* BOTONES */}
         <div className={buttonsContainer}>
-          <ButtonGame disabled={!selectedSecret} onClick={handleConfirm}>
+          <ButtonGame disabled={!selectedSecret} onClick={confirmSelection}>
             {setType?.toLowerCase() === "pyne" ? "Ocultar" : "Revelar"}
           </ButtonGame>
         </div>
