@@ -212,10 +212,8 @@ export default function GameScreen() {
 
       const data = await response.json()
       console.log('Look Into The Ashes successful:', data)
-      gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: data })
     } catch (err) {
       setError(err.message)
-      gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: {} })
     } finally {
       setLoading(false)
     }
