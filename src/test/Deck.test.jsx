@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Deck from '../components/Deck.jsx';
 
 // Mock de la imagen card_back
@@ -26,9 +26,9 @@ describe('Deck', () => {
   it('Renderiza mazo regular con contador en cero', () => {
     render(<Deck cardsLeft={0} />);
     
-    const cardImage = screen.getByAltText('Top Discarded Card');
+    const cardImage = screen.getByAltText('Deck Empty');
     expect(cardImage).toBeInTheDocument();
-    expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
+    expect(cardImage).toHaveAttribute('src', '/cards/02-murder_escapes.png');
     
     expect(screen.getByText('0')).toBeInTheDocument();
   });
@@ -44,10 +44,27 @@ describe('Deck', () => {
 
   it('Maneja prop cardsLeft undefined', () => {
     render(<Deck />);
-    
     const cardImage = screen.getByAltText('Top Discarded Card');
     expect(cardImage).toBeInTheDocument();
     expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png');
+  });
+
+  it('Deck con disabled=false tiene clase activa y dispara click', () => {
+    const onClick = vi.fn();
+    render(<Deck cardsLeft={5} disabled={false} onClick={onClick} />);
+    const topCardDiv = screen.getByRole('img').parentElement;
+    expect(topCardDiv).toHaveClass('cursor-pointer');
+    fireEvent.click(topCardDiv);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('Deck con disabled=true tiene clase inactiva y no dispara click', () => {
+    const onClick = vi.fn();
+    render(<Deck cardsLeft={5} disabled={true} onClick={onClick} />);
+    const topCardDiv = screen.getByRole('img').parentElement;
+    expect(topCardDiv).toHaveClass('cursor-not-allowed');
+    fireEvent.click(topCardDiv);
+    expect(onClick).not.toHaveBeenCalled();
   });
 
 });
