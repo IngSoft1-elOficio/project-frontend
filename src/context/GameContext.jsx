@@ -42,7 +42,7 @@ const gameInitialState = {
     // Active action
     current: null, // { actionId, setType, stage, cards, hasWildcard }
     allowedPlayers: [],
-    secretsPool: 'hidden', // 'hidden' | 'revealed'
+    secretsPool: [],  // [{playerId:19,"position":1, "hidden": false, "cardId:2"},{playerId:19,...}]
     targetPlayerId: null,
 
     // Modals
