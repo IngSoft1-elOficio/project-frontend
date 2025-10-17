@@ -337,7 +337,7 @@ export default function GameScreen() {
           <SelectOtherPLayerSet
             player={gameState.eventCards.anotherVictim.selectedPlayer}
             sets ={gameState.sets}
-            onSelectSet={() => {}} 
+            onSelectSet={() => {}} // agregar funcion cuando este implementada en GameScreen 
           />
         )}
 
