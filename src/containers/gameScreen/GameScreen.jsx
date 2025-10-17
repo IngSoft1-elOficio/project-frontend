@@ -28,6 +28,47 @@ export default function GameScreen() {
 
   const roomId = gameState?.gameId || gameState?.roomId
 
+  // secretos
+
+  const handleActionOnSecret  = async (selectedSecret) => {
+    try {
+      const actionId = gameState.detectiveAction.current.actionId;
+      const targetPlayerId = gameState.detectiveAction.targetPlayerId;
+      const secretId = selectedSecret.cardId;
+
+      const body = {
+        actionId ,
+        targetPlayerId,
+        secretId,
+      };
+
+      // llamamos al endpoint
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Error al ejecutar acción");
+      }
+
+      const data = await response.json();
+      console.log("Acción detective completada", data);
+
+      } catch (error) {
+    console.error("Error al ejecutar acción de detective", error);
+    }
+  };
+
+
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
       if (prev.includes(cardId)) {
@@ -82,19 +123,6 @@ export default function GameScreen() {
       setLoading(false)
     }
   }
-
-  const dummyDetective = {
-  current: { setType: "poirot", hasWildcard: false },
-  showSelectSecret: true,
-  showChooseOwnSecret: false,
-};
-
-const dummySecretos = [
-  { position: 1, revealed: false },
-  { position: 2, revealed: true, name: "Carta del asesino", img_src: "/cards/secret_murderer.png" },
-  { position: 3, revealed: false },
-];
-
 
   const handleFinishTurn = async () => {
     setLoading(true)
@@ -343,12 +371,15 @@ const dummySecretos = [
           </div>
         ) : null}
 
+        {/*Modal acción sobre secretos*/ }
         <HideRevealStealSecretsModal
           isOpen={showSecretModal}
-           onClose={() => setShowSecretModal(false)}
-          detective={dummyDetective}
-          secretos={dummySecretos}
+          onClose={() => setShowSecretModal(false)}
+          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
+          onConfirm = {handleActionOnSecret}
         />
+
+
 
 
         {gameState?.gameEnded && (
