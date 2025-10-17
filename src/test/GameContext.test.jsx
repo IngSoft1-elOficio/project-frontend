@@ -368,35 +368,37 @@ describe('GameContext', () => {
     })
   })
 
-  describe('Detective Actions', () => {
-    it('handles detective action started', () => {
-      const { result } = renderHook(() => useGame(), {
-        wrapper: GameProvider
-      })
-      
-      act(() => {
-        result.current.connectToGame('room-123', 'user-456')
-      })
-      
-      const handler = mockSocket.on.mock.calls.find(
-        call => call[0] === 'detective_action_started'
-      )[1]
-      
-      act(() => {
-        handler({
-          player_id: 'user-123',
-          set_type: 'murder_weapon',
-          message: 'Detective action in progress'
-        })
-      })
-      
-      expect(result.current.gameState.detectiveAction.actionInProgress).toEqual({
-        playerId: 'user-123',
-        setType: 'murder_weapon',
-        step: 'started',
+describe('Detective Actions', () => {
+  it('handles detective action started', () => {
+    const { result } = renderHook(() => useGame(), {
+      wrapper: GameProvider
+    })
+    
+    act(() => {
+      result.current.connectToGame('room-123', 'user-456')
+    })
+    
+    const handler = mockSocket.on.mock.calls.find(
+      call => call[0] === 'detective_action_started'
+    )[1]
+    
+    act(() => {
+      handler({
+        player_id: 'user-123',
+        set_type: 'murder_weapon',
         message: 'Detective action in progress'
       })
     })
+    
+    expect(result.current.gameState.detectiveAction.actionInProgress).toEqual({
+      initiatorPlayerId: 'user-123',  // Changed from playerId
+      setType: 'murder_weapon',
+      step: 'select_target',  // Changed from 'started'
+      message: 'Detective action in progress'
+    })
+    
+    expect(result.current.gameState.detectiveAction.showSelectPlayer).toBe(true)
+  })
     
     it('handles detective target selected', () => {
       const { result } = renderHook(() => useGame(), {

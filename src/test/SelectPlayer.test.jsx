@@ -1,127 +1,361 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from "vitest";
-import SelectPlayerModal from "../components/modals/SelectPlayer";
+import SelectPlayerModal from '../components/modals/SelectPlayer';
 
-describe("SelectPlayerModal", () => {
-  const jugadoresMock = [
-    { id: 1, name: "Lucas", avatar: "avatar1.png", birthdate: "2000-01-01" },
-    { id: 2, name: "María", avatar: "avatar2.png", birthdate: "1995-03-05" },
-    { id: 3, name: "Juan", avatar: "avatar3.png", birthdate: "1992-07-10" },
+// Mock de los componentes con rutas correctas
+vi.mock('../components/ProfileCard', () => ({
+  default: ({ name, avatar, birthdate }) => (
+    <div data-testid="profile-card">
+      <div>{name}</div>
+      <div>{avatar}</div>
+      <div>{birthdate}</div>
+    </div>
+  )
+}));
+
+vi.mock('../components/Button', () => ({
+  default: ({ onClick, title, disabled, children }) => (
+    <button 
+      onClick={onClick} 
+      disabled={disabled}
+      data-testid={`button-${title?.toLowerCase()}`}
+    >
+      {children}
+    </button>
+  )
+}));
+
+describe('SelectPlayerModal', () => {
+  const mockJugadores = [
+    { id: '1', name: 'Jugador 1', avatar: 'avatar1.png', birthdate: '1990-01-01' },
+    { id: '2', name: 'Jugador 2', avatar: 'avatar2.png', birthdate: '1991-02-02' },
+    { id: '3', name: 'Jugador 3', avatar: 'avatar3.png', birthdate: '1992-03-03' }
   ];
 
-  const baseProps = {
+  const defaultProps = {
     isOpen: true,
     onClose: vi.fn(),
-    jugadores: jugadoresMock,
-    userId: 1,
+    jugadores: mockJugadores,
+    userId: '1',
     currentEventType: null,
     detectiveType: null,
-    anotherVictim: {},
-    detectiveAction: {},
+    anotherVictim: null,
+    detectiveAction: null,
     onPlayerSelect: vi.fn(),
     onConfirm: vi.fn(),
-    onCancel: vi.fn(),
+    onCancel: vi.fn()
   };
 
-  it("no renderiza si isOpen es false", () => {
-    render(<SelectPlayerModal {...baseProps} isOpen={false} />);
-    expect(screen.queryByText(/Confirmar/i)).toBeNull();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("muestra jugadores excepto el usuario actual", () => {
-    render(<SelectPlayerModal {...baseProps} currentEventType="another_victim" />);
-    const cards = screen.getAllByText(/María|Juan/);
-    expect(cards.length).toBe(2);
-    expect(screen.queryByText("Lucas")).toBeNull();
-  });
-
-  it("muestra mensaje correcto para another_victim sin selección", () => {
-    render(<SelectPlayerModal {...baseProps} currentEventType="another_victim" />);
-    expect(screen.getByText(/Selecciona un jugador para robar su set/i)).toBeInTheDocument();
-  });
-
-  it("resalta jugador seleccionado", () => {
-    const props = {
-      ...baseProps,
-      currentEventType: "another_victim",
-      anotherVictim: { selectedPlayer: jugadoresMock[1] },
-    };
-    render(<SelectPlayerModal {...props} />);
-    const selected = screen.getByText("María");
-    expect(selected.closest("div").className).toMatch(/ring-\[#FFD700\]/);
-  });
-
-  it("llama a onPlayerSelect al hacer click en un jugador", () => {
-    const onPlayerSelect = vi.fn();
-    render(
-      <SelectPlayerModal
-        {...baseProps}
-        currentEventType="another_victim"
-        onPlayerSelect={onPlayerSelect}
-      />
+  it('no renderiza nada cuando isOpen es false', () => {
+    const { container } = render(
+      <SelectPlayerModal {...defaultProps} isOpen={false} />
     );
-
-    const mariaCard = screen.getByText("María");
-    fireEvent.click(mariaCard);
-    expect(onPlayerSelect).toHaveBeenCalledWith(jugadoresMock[1]);
+    expect(container.firstChild).toBeNull();
   });
 
-  it("deshabilita el botón Confirmar si no hay selección", () => {
-    render(<SelectPlayerModal {...baseProps} currentEventType="another_victim" />);
-    const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
-    expect(confirmButton).toBeDisabled();
+  describe('Another Victim Event', () => {
+    it('muestra mensaje para seleccionar jugador cuando no hay selección', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+        />
+      );
+      expect(screen.getByText('Selecciona un jugador para robar su set de detective')).toBeInTheDocument();
+    });
+
+    it('muestra mensaje con jugador seleccionado', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
+        />
+      );
+      expect(screen.getByText('Robar set de detective de Jugador 2')).toBeInTheDocument();
+    });
+
+    it('permite seleccionar un jugador', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+        />
+      );
+      const cards = screen.getAllByTestId('profile-card');
+      // Los jugadores mostrados son mockJugadores[1] y mockJugadores[2] (excluye userId '1')
+      fireEvent.click(cards[0].parentElement);
+      expect(defaultProps.onPlayerSelect).toHaveBeenCalledWith(mockJugadores[1]);
+    });
+
+    it('habilita botón confirmar solo cuando hay jugador seleccionado', () => {
+      const { rerender } = render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+        />
+      );
+      expect(screen.getByTestId('button-confirmar')).toBeDisabled();
+
+      rerender(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
+        />
+      );
+      expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
+    });
   });
 
-  it("habilita el botón Confirmar si hay selección en another_victim", () => {
-    const props = {
-      ...baseProps,
-      currentEventType: "another_victim",
-      anotherVictim: { selectedPlayer: jugadoresMock[2] },
-    };
-    render(<SelectPlayerModal {...props} />);
-    const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
-    expect(confirmButton).not.toBeDisabled();
+  describe('Detective Tipo A (marple, pyne, poirot)', () => {
+    ['marple', 'pyne', 'poirot'].forEach(detective => {
+      describe(`Detective ${detective}`, () => {
+        it('muestra mensaje para seleccionar jugador', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+            />
+          );
+          expect(screen.getByText('Selecciona un jugador para robar su secreto')).toBeInTheDocument();
+        });
+
+        it('muestra mensaje con jugador seleccionado', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{ selectedPlayer: mockJugadores[1] }}
+            />
+          );
+          expect(screen.getByText('Robar secreto de Jugador 2')).toBeInTheDocument();
+        });
+
+        it('filtra correctamente los jugadores a mostrar', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+            />
+          );
+          const cards = screen.getAllByTestId('profile-card');
+          expect(cards).toHaveLength(2); // No incluye al usuario actual
+        });
+
+        it('habilita confirmar cuando hay selección', () => {
+          const { rerender } = render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+            />
+          );
+          expect(screen.getByTestId('button-confirmar')).toBeDisabled();
+
+          rerender(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{ selectedPlayer: mockJugadores[1] }}
+            />
+          );
+          expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
+        });
+      });
+    });
   });
 
-  it("llama a onConfirm cuando se hace click en Confirmar", () => {
-    const onConfirm = vi.fn();
-    const props = {
-      ...baseProps,
-      currentEventType: "another_victim",
-      anotherVictim: { selectedPlayer: jugadoresMock[2] },
-      onConfirm,
-    };
-    render(<SelectPlayerModal {...props} />);
-    const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
-    fireEvent.click(confirmButton);
-    expect(onConfirm).toHaveBeenCalled();
+  describe('Detective Tipo B (beresford, satterthwaite)', () => {
+    ['beresford', 'satterthwaite'].forEach(detective => {
+      describe(`Detective ${detective}`, () => {
+        it('muestra mensaje correcto cuando el usuario es el iniciador', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { initiatorPlayerId: '1' }
+              }}
+            />
+          );
+          expect(screen.getByText('Selecciona un jugador objetivo')).toBeInTheDocument();
+        });
+
+        it('muestra jugador seleccionado cuando es iniciador', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { initiatorPlayerId: '1' },
+                selectedPlayer: mockJugadores[1]
+              }}
+            />
+          );
+          expect(screen.getByText('Jugador seleccionado: Jugador 2')).toBeInTheDocument();
+        });
+
+        it('muestra mensaje correcto cuando el usuario es el objetivo', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { 
+                  initiatorPlayerId: '2',
+                  targetPlayerId: '1'
+                }
+              }}
+            />
+          );
+          expect(screen.getByText(/Has sido seleccionado por Jugador 2/)).toBeInTheDocument();
+        });
+
+        it('no muestra lista de jugadores cuando es objetivo', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { 
+                  initiatorPlayerId: '2',
+                  targetPlayerId: '1'
+                }
+              }}
+            />
+          );
+          expect(screen.queryAllByTestId('profile-card')).toHaveLength(0);
+        });
+
+        it('objetivo puede confirmar sin selección', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { 
+                  initiatorPlayerId: '2',
+                  targetPlayerId: '1'
+                }
+              }}
+            />
+          );
+          expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
+        });
+
+        it('muestra lista de jugadores cuando el usuario es el iniciador', () => {
+          render(
+            <SelectPlayerModal
+              {...defaultProps}
+              detectiveType={detective}
+              detectiveAction={{
+                actionInProgress: { initiatorPlayerId: '1' }
+              }}
+            />
+          );
+          
+          const cards = screen.getAllByTestId('profile-card');
+          // Excluye userId '1', quedan jugadores '2' y '3'
+          expect(cards).toHaveLength(2);
+        });
+      });
+    });
   });
 
-  it("llama a onCancel cuando se hace click en Cancelar", () => {
-    const onCancel = vi.fn();
-    render(<SelectPlayerModal {...baseProps} onCancel={onCancel} currentEventType="another_victim" />);
-    const cancelButton = screen.getByRole("button", { name: /Cancelar/i });
-    fireEvent.click(cancelButton);
-    expect(onCancel).toHaveBeenCalled();
+  describe('Interacciones de botones', () => {
+    it('llama a onConfirm cuando se hace clic en confirmar', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
+        />
+      );
+      const confirmButton = screen.getByText('Confirmar');
+      fireEvent.click(confirmButton);
+      expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('llama a onCancel cuando se hace clic en cancelar', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+        />
+      );
+      const cancelButton = screen.getByText('Cancelar');
+      fireEvent.click(cancelButton);
+      expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("muestra mensaje correcto para detectives tipo A", () => {
-    const props = {
-      ...baseProps,
-      detectiveType: "marple",
-      detectiveAction: {},
-    };
-    render(<SelectPlayerModal {...props} />);
-    expect(screen.getByText(/Selecciona un jugador para robar su secreto/i)).toBeInTheDocument();
+  describe('Resaltado de selección', () => {
+    it('resalta el jugador seleccionado en another_victim', () => {
+      const { container } = render(
+        <SelectPlayerModal
+          {...defaultProps}
+          currentEventType="another_victim"
+          anotherVictim={{ selectedPlayer: { ...mockJugadores[1], id: '2' } }}
+        />
+      );
+      const highlighted = container.querySelector('.ring-4.ring-\\[\\#FFD700\\]');
+      expect(highlighted).toBeInTheDocument();
+    });
+
+    it('resalta el jugador seleccionado en detective action', () => {
+      const { container } = render(
+        <SelectPlayerModal
+          {...defaultProps}
+          detectiveType="marple"
+          detectiveAction={{ selectedPlayer: { ...mockJugadores[1], id: '2' } }}
+        />
+      );
+      const highlighted = container.querySelector('.ring-4.ring-\\[\\#FFD700\\]');
+      expect(highlighted).toBeInTheDocument();
+    });
   });
 
-  it("muestra mensaje correcto cuando el jugador es el objetivo en detectives tipo B", () => {
-    const props = {
-      ...baseProps,
-      detectiveType: "beresford",
-      detectiveAction: { actionInProgress: { initiatorPlayerId: 2, targetPlayerId: 1 } },
-    };
-    render(<SelectPlayerModal {...props} />);
-    expect(screen.getByText(/Has sido seleccionado por María/i)).toBeInTheDocument();
+  describe('Casos edge', () => {
+    it('maneja jugadores sin nombre del iniciador correctamente', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          detectiveType="beresford"
+          detectiveAction={{
+            actionInProgress: { 
+              initiatorPlayerId: '999',
+              targetPlayerId: '1'
+            }
+          }}
+        />
+      );
+      expect(screen.getByText(/Has sido seleccionado por un jugador/)).toBeInTheDocument();
+    });
+
+    it('maneja lista de jugadores vacía', () => {
+      render(
+        <SelectPlayerModal
+          {...defaultProps}
+          jugadores={[{ id: '1', name: 'Solo User', avatar: 'av.png', birthdate: '1990-01-01' }]}
+          currentEventType="another_victim"
+        />
+      );
+      expect(screen.queryAllByTestId('profile-card')).toHaveLength(0);
+    });
+
+    it('maneja detectiveType desconocido', () => {
+      const { container } = render(
+        <SelectPlayerModal
+          {...defaultProps}
+          detectiveType="unknown_detective"
+        />
+      );
+      const heading = container.querySelector('h2');
+      expect(heading).toHaveTextContent('');
+    });
   });
 });
