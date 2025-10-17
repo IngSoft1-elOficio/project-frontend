@@ -3,7 +3,6 @@ import ButtonGame from "../ButtonGame.jsx";
 
 const HideRevealStealSecretsModal = ({
   isOpen,
-  onClose,
   detective,
   onConfirm,
 }) => {

@@ -11,6 +11,7 @@ import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
+import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -26,7 +27,6 @@ export default function GameScreen() {
   const [error, setError] = useState(null)
 
   const [showPlayerSets, setShowPlayerSets] = useState(false)
-
   const roomId = gameState?.gameId || gameState?.roomId
 
   // Obtener los sets del jugador actual
@@ -305,6 +305,46 @@ export default function GameScreen() {
     }
   }
 
+  //Handler de HideRevealStealSecrets
+  const handleActionOnSecret  = async (selectedSecret) => {
+    try {
+      const actionId = gameState.detectiveAction.current.actionId;
+      const executorId = gameState.userId;
+      const secretId = selectedSecret.cardId;
+
+      const body = {
+        actionId ,
+        executorId,
+        secretId,
+      };
+
+      // llamamos al endpoint
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Error al ejecutar acción");
+      }
+
+      const data = await response.json();
+      console.log("Acción detective completada", data);
+
+      } catch (error) {
+    console.error("Error al ejecutar acción de detective", error);
+    }
+  };
+
+
   // ========== HELPER FUNCTIONS ==========
 
   // Helper: Detectar el tipo de set basado en las cartas seleccionadas
@@ -534,9 +574,8 @@ export default function GameScreen() {
 
         {/*Modal acción sobre secretos*/ }
         <HideRevealStealSecretsModal
-          isOpen={showSecretModal}
-          onClose={() => setShowSecretModal(false)}
-          detective={mockDetectiveAction} //cambiar a gameState.detectiveAction
+          isOpen={gameState.detectiveAction.showSelectSecret}
+          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
           onConfirm = {handleActionOnSecret}
         />
 
