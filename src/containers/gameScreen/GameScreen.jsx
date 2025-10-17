@@ -14,7 +14,7 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState } = useGame()
+  const { gameState, gameDispatch } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -29,23 +29,22 @@ export default function GameScreen() {
   const roomId = gameState?.gameId || gameState?.roomId
 
   // Obtener los sets del jugador actual
-  const playerSets = useMemo(() => {
-    // Si gameState.sets no existe, retornar array vacío
-    if (!gameState.sets) {
-      console.log('⚠️ gameState.sets no está disponible')
-      return []
-    }
-
-    // Filtrar solo los sets del jugador actual
-    const filteredSets = gameState.sets.filter(
-      set => set.owner === userState.id || set.player_id === userState.id
-    )
-
-    console.log('✅ Sets del jugador:', filteredSets)
-    console.log(`   Total: ${filteredSets.length}`)
-
-    return filteredSets
-  }, [gameState.sets, userState.id])
+  const playerSetsForModal = (gameState.sets || [])
+    .filter(set => set.owner_id === userState.id)
+    .map((set, index) => {
+      const detectiveCard = (gameState.cards || []).find(
+        c => c.id === set.set_type
+      )
+      return {
+        id: index,
+        setType: set.set_type,
+        setName: detectiveCard
+          ? detectiveCard.name
+          : `Set tipo ${set.set_type}`,
+        cards: Array(set.count).fill({}),
+        hasWildcard: set.hasWildcard || false,
+      }
+    })
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -212,7 +211,7 @@ export default function GameScreen() {
     }
   }
 
-  const handleCreateSet = async () => {
+  const handlePlayDetective = async () => {
     console.log('🔍 Todas las cartas en mano:', gameState.mano)
     console.log(
       '🔍 Cartas seleccionadas con datos:',
@@ -289,6 +288,20 @@ export default function GameScreen() {
       console.log('✅ Set creado exitosamente!')
       console.log('📋 Action ID:', data.actionId)
       console.log('➡️ Next Action:', data.nextAction)
+
+      gameDispatch({
+        type: 'UPDATE_GAME_STATE_PUBLIC',
+        payload: {
+          sets: [
+            ...(gameState.sets || []),
+            {
+              owner_id: userState.id,
+              set_type: setType,
+              count: selectedCards.length,
+            },
+          ],
+        },
+      })
 
       // Limpiar selección y cerrar modal
       setSelectedCards([])
@@ -544,10 +557,10 @@ export default function GameScreen() {
       <PlayerSetsModal
         isOpen={showPlayerSets}
         onClose={() => setShowPlayerSets(false)}
-        sets={playerSets} // Ajusta según la estructura de tu contexto
+        sets={playerSetsForModal} // Ajusta según la estructura de tu contexto
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
-        onCreateSet={handleCreateSet}
+        onCreateSet={handlePlayDetective}
       />
     </main>
   )
