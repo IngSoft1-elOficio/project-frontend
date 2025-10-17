@@ -43,10 +43,10 @@ const PlayerSetsModal = ({
     'px-3 py-1 bg-[#640B01] text-[#B49150] border border-[#825012] rounded-full text-xs font-semibold'
   const setCards = 'flex gap-2 flex-wrap'
 
-  // Cartas (cambiar cuando se traigan las cartas reales)
+  // Cartas
   const miniCard =
-    'w-16 h-24 bg-[#640B01] border-2 border-[#825012] rounded flex items-center justify-center'
-  const miniCardText = 'text-xs text-[#B49150] font-semibold text-center px-1'
+    'w-16 h-24 border-2 border-[#825012] rounded flex items-center justify-center'
+  //const miniCardText = 'text-xs text-[#B49150] font-semibold text-center px-1'
 
   // Sidebar derecha
   const sidebar =
@@ -106,7 +106,9 @@ const PlayerSetsModal = ({
                     <div key={set.id || index} className={setCard}>
                       <div className={setHeader}>
                         <div>
-                          <h3 className={setTitle}>Set {index + 1}</h3>
+                          <h3 className={setTitle}>
+                            {set.setName || `Set ${index + 1}`}
+                          </h3>
                           {set.setType && (
                             <p className={setType}>
                               {getSetTypeName(set.setType)}
@@ -115,7 +117,7 @@ const PlayerSetsModal = ({
                         </div>
                         <span className={setBadge}>Jugado</span>
                       </div>
-                      {/* Cambiar cuando se traigan las cartas reales */}
+                      {/* Render de cartas */}
                       <div className={setCards}>
                         {set.cards &&
                           set.cards.map((card, cardIndex) => (
@@ -123,11 +125,14 @@ const PlayerSetsModal = ({
                               key={card.id || cardIndex}
                               className={miniCard}
                             >
-                              <span className={miniCardText}>
-                                {card.name ||
-                                  card.cardType ||
-                                  `C${cardIndex + 1}`}
-                              </span>
+                              <img
+                                src={card.img_src || '/cards/01-card_back.png'}
+                                alt={card.name || 'Card'}
+                                className="w-full h-full object-cover"
+                                onError={e => {
+                                  e.target.src = '/cards/01-card_back.png'
+                                }}
+                              />
                             </div>
                           ))}
                       </div>
@@ -138,7 +143,7 @@ const PlayerSetsModal = ({
             </div>
           </div>
 
-          {/* Right Sidebar - Actions */}
+          {/* Sidebar derecha - Acciones */}
           <div className={sidebar}>
             <ButtonGame onClick={onClose}>Volver</ButtonGame>
             <ButtonGame
@@ -159,7 +164,7 @@ const PlayerSetsModal = ({
           </div>
         </div>
 
-        {/* Bottom section - Player Hand */}
+        {/* Mano */}
         <div className={handSection}>
           <h3 className={handTitle}>
             Cartas en tu mano - Selecciona cartas de detective para crear un set

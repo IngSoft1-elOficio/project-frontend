@@ -1,7 +1,7 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import Deck from '../../components/Deck.jsx'
 import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
@@ -14,7 +14,7 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState, gameDispatch } = useGame()
+  const { gameState } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -32,18 +32,21 @@ export default function GameScreen() {
   const playerSetsForModal = (gameState.sets || [])
     .filter(set => set.owner_id === userState.id)
     .map((set, index) => {
-      const detectiveCard = (gameState.cards || []).find(
-        c => c.id === set.set_type
-      )
-      return {
+      // set.cards tiene {id, name, description, type, img_src}
+      const firstCard = set.cards?.[0]
+
+      const mappedSet = {
         id: index,
         setType: set.set_type,
-        setName: detectiveCard
-          ? detectiveCard.name
-          : `Set tipo ${set.set_type}`,
-        cards: Array(set.count).fill({}),
+        setName: firstCard?.name || `Detective Set`,
+        cards: set.cards || [],
         hasWildcard: set.hasWildcard || false,
       }
+
+      console.log('SET MAPEADO:', mappedSet)
+      console.log('PRIMERA CARTA:', firstCard)
+
+      return mappedSet
     })
 
   const handleCardSelect = cardId => {
@@ -212,27 +215,12 @@ export default function GameScreen() {
   }
 
   const handlePlayDetective = async () => {
-    console.log('🔍 Todas las cartas en mano:', gameState.mano)
     console.log(
-      '🔍 Cartas seleccionadas con datos:',
+      'Cartas seleccionadas para el set:',
       gameState.mano.filter(card => selectedCards.includes(card.id))
     )
-    // Validación: al menos una carta
-    if (selectedCards.length === 0) {
-      setError('Debes seleccionar al menos una carta de detective')
-      setTimeout(() => setError(null), 3000)
-      return
-    }
 
-    // Validación: detectar tipo de set
-    const setType = detectSetType(selectedCards)
-    if (!setType) {
-      setError('Las cartas seleccionadas no forman un set válido')
-      setTimeout(() => setError(null), 3000)
-      return
-    }
-
-    // Validación: cantidad mínima según tipo
+    // Cantidades minimas de cartas por tipo de set
     const minCards = {
       poirot: 3,
       marple: 3,
@@ -242,6 +230,22 @@ export default function GameScreen() {
       beresford: 2,
     }
 
+    // Caso crear set vacio
+    if (selectedCards.length === 0) {
+      setError('Debes seleccionar al menos una carta de detective')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Caso crear set invalido
+    const setType = detectSetType(selectedCards)
+    if (!setType) {
+      setError('Las cartas seleccionadas no forman un set válido')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Caso crear set con cartas insuficientes
     if (selectedCards.length < minCards[setType]) {
       setError(
         `Set de ${setType} requiere al menos ${minCards[setType]} cartas`
@@ -253,16 +257,11 @@ export default function GameScreen() {
     // Detectar si hay comodín
     const hasWildcard = checkForWildcard(selectedCards)
 
-    console.log('✅ Validaciones pasadas - Creando set...')
-    console.log('🃏 Tipo:', setType)
-    console.log('🎴 Cartas:', selectedCards)
-    console.log('⭐ Comodín:', hasWildcard)
-
     setLoading(true)
     setError(null)
 
+    // Caso crear set exitoso
     try {
-      // POST al backend
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
         {
@@ -285,30 +284,16 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('✅ Set creado exitosamente!')
-      console.log('📋 Action ID:', data.actionId)
-      console.log('➡️ Next Action:', data.nextAction)
-
-      gameDispatch({
-        type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          sets: [
-            ...(gameState.sets || []),
-            {
-              owner_id: userState.id,
-              set_type: setType,
-              count: selectedCards.length,
-            },
-          ],
-        },
-      })
+      console.log('Set creado exitosamente!')
+      console.log('Action ID:', data.actionId)
+      console.log('Next Action:', data.nextAction)
 
       // Limpiar selección y cerrar modal
       setSelectedCards([])
       setShowPlayerSets(false)
 
-      // El WebSocket actualizará automáticamente el gameState con el nuevo set
-      // y disparará 'detective_action_started' que el GameContext ya maneja
+      // Websocket actualiza el gameState con el nuevo set
+      //y notifica por detective_action_started
     } catch (err) {
       console.error('❌ Error al crear set:', err)
       setError(err.message)
