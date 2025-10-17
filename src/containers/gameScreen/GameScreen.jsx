@@ -28,7 +28,22 @@ export default function GameScreen() {
 
   const roomId = gameState?.gameId || gameState?.roomId
 
-  // secretos
+  //mocks
+  // MOCK DE DETECTIVE ACTION (para test local sin backend)
+  const mockDetectiveAction = {
+  current: {
+    setType: "Pyne", 
+    actionId: 123,
+  },
+  secretsPool: [
+    { playerId: 19, position: 1, hidden: true, cardId: 11 },
+    { playerId: 19, position: 2, hidden: false, cardId: 7 },
+    { playerId: 19, position: 3, hidden: true, cardId: 9 },
+    { playerId: 19, position: 4, hidden: true, cardId: 9 },
+  ],
+  targetPlayerId: 19,
+  };
+
 
   const handleActionOnSecret  = async (selectedSecret) => {
     try {
@@ -375,7 +390,7 @@ export default function GameScreen() {
         <HideRevealStealSecretsModal
           isOpen={showSecretModal}
           onClose={() => setShowSecretModal(false)}
-          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
+          detective={mockDetectiveAction} //cambiar a gameState.detectiveAction
           onConfirm = {handleActionOnSecret}
         />
 
