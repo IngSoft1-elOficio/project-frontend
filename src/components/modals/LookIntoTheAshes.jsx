@@ -2,20 +2,19 @@ import getCardsImage from "../HelperImageCards";
 
 export default function LookIntoTheAshes({ 
     isOpen,
-    onClose,
     discardedCards,
-    selectedCardLookAshes,
-    setSelectedCardLookAshes,
-    handleCardSelect
+    selectedCard,
+    setSelectedCard,
+    handleCardSelect,
+    isLoading
 }) {
     
   if (!isOpen) return null;
 
-  const handleSelect = () => {
-    if (selectedCardLookAshes) {
-      handleCardSelect(selectedCardLookAshes);
-      onClose();
-    }
+  const cards = discardedCards ?? [];
+
+  const handleSelect = async () => {
+    await handleCardSelect(selectedCard);
   };
 
   return (
@@ -41,14 +40,14 @@ export default function LookIntoTheAshes({
           </span>
         </div>
         <div className="flex flex-row gap-8 justify-center mb-10">
-          {discardedCards.map(card => {
+          {cards.map(card => {
             const imgSrc = getCardsImage(card);
             return (
               <div
                 key={card.id_card}
                 className={`border-4 rounded-xl cursor-pointer transition-all duration-150 flex p-0 m-0 bg-[#3D0800] overflow-hidden`
-                  + (selectedCardLookAshes === card.id_card ? ' border-[#FFD700]' : ' border-[#825012]')}
-                onClick={() => setSelectedCardLookAshes(card.id_card)}
+                  + (selectedCard === card.id_card ? ' border-[#FFD700]' : ' border-[#825012]')}
+                onClick={() => setSelectedCard(card.id_card)}
                 style={{ minWidth: 120, minHeight: 180, width: 120, height: 180 }}
               >
                 {imgSrc && (
@@ -66,11 +65,11 @@ export default function LookIntoTheAshes({
         <div className="flex justify-center">
           <button
             className={`px-6 py-3 text-lg rounded-xl font-[Limelight] border-2 cursor-pointer`
-              + (selectedCardLookAshes
+              + (selectedCard
                 ? ' bg-[#3D0800] text-[#FFD700] border-[#FFD700] hover:bg-[#4d1008] hover:text-yellow-400'
                 : ' bg-[#3D0800] text-[#B49150] border-[#825012] cursor-not-allowed')}
             onClick={handleSelect}
-            disabled={!selectedCardLookAshes}
+            disabled={!selectedCard || isLoading}
             style={{ fontFamily: 'Limelight, sans-serif' }}
           >
             Seleccionar

@@ -21,10 +21,17 @@ export default function GameScreen() {
     console.log('User state at playgame: ', userState)
   }, [gameState, userState])
 
+  useEffect(() => {
+    if (!gameState.eventCards?.lookAshes?.showSelectCard) {
+      setSelectedCardLookAshes(null);
+    }
+  }, [gameState.eventCards?.lookAshes?.showSelectCard]);
+
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
+  const [lookLoading, setLookLoading] = useState(false)
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -188,7 +195,8 @@ export default function GameScreen() {
     }
   }
 
-  const handleLookIntoTheAshes = async () => {
+  const handleLookIntoTheAshes = async (cardId) => {
+    setLookLoading(true);
     try {
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/select`,
@@ -200,7 +208,7 @@ export default function GameScreen() {
           },
           body: JSON.stringify({
             action_id: gameState.eventCards.lookAshes.actionId,
-            selected_card_id: selectedCardLookAshes.card_id,
+            selected_card_id: cardId,
           }),
         }
       )
@@ -215,7 +223,7 @@ export default function GameScreen() {
     } catch (err) {
       setError(err.message)
     } finally {
-      setLoading(false)
+      setLookLoading(false);
     }
   }
 
@@ -369,12 +377,12 @@ export default function GameScreen() {
       {/* Modal de Look Into The Ashes */}
       <div>
         <LookIntoTheAshes 
-          isOpen={gameState.eventCards.lookAshes.showSelectCard}
-          onClose={() => gameDispatch({ type: 'EVENT_LOOK_ASHES_COMPLETE', payload: {} })}
-          discardedCards={gameState.eventCards.lookAshes.availableCards}
+          isOpen={gameState.eventCards?.lookAshes?.showSelectCard}
+          discardedCards={gameState.eventCards?.lookAshes?.availableCards}
           selectedCard={selectedCardLookAshes}
           setSelectedCard={setSelectedCardLookAshes}
           handleCardSelect={handleLookIntoTheAshes}
+          isLoading={lookLoading}
         />
       </div>
     </main>

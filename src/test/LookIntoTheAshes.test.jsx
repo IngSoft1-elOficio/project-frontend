@@ -9,85 +9,59 @@ describe('LookIntoTheAshes', () => {
     { id_card: 'C3', name: 'Card Trade' },
   ];
 
-  it('does not render if isOpen is false', () => {
-    render(
-      <LookIntoTheAshes
-        isOpen={false}
-        onClose={vi.fn()}
-        discardedCards={mockCards}
-        selectedCardLookAshes={null}
-        setSelectedCardLookAshes={vi.fn()}
-        handleCardSelect={vi.fn()}
-      />
-    );
+  const defaultProps = {
+    isOpen: true,
+    discardedCards: mockCards,
+    selectedCard: null,
+    setSelectedCard: vi.fn(),
+    handleCardSelect: vi.fn(),
+    isLoading: false,
+  };
+
+  const renderModal = (props = {}) =>
+    render(<LookIntoTheAshes {...defaultProps} {...props} />);
+
+  it('no se renderiza si isOpen es false', () => {
+    renderModal({ isOpen: false });
     expect(screen.queryByText('Look Into The Ashes')).toBeNull();
   });
 
-  it('renders modal and cards when isOpen is true', () => {
-    render(
-      <LookIntoTheAshes
-        isOpen={true}
-        onClose={vi.fn()}
-        discardedCards={mockCards}
-        selectedCardLookAshes={null}
-        setSelectedCardLookAshes={vi.fn()}
-        handleCardSelect={vi.fn()}
-      />
-    );
+  it('renderiza modal y cartas cuando isOpen es true', () => {
+    renderModal();
     expect(screen.getByText('Look Into The Ashes')).toBeInTheDocument();
     expect(screen.getByText('Agrega una carta a tu mano')).toBeInTheDocument();
-    expect(screen.getAllByRole('img').length).toBe(mockCards.length);
+    expect(screen.getAllByRole('img')).toHaveLength(mockCards.length);
   });
 
-  it('calls setSelectedCardLookAshes when a card is clicked', () => {
-    const setSelectedCardLookAshes = vi.fn();
-    render(
-      <LookIntoTheAshes
-        isOpen={true}
-        onClose={vi.fn()}
-        discardedCards={mockCards}
-        selectedCardLookAshes={null}
-        setSelectedCardLookAshes={setSelectedCardLookAshes}
-        handleCardSelect={vi.fn()}
-      />
-    );
-    const cardDivs = screen.getAllByRole('img');
-    fireEvent.click(cardDivs[1]);
-    fireEvent.click(cardDivs[1].parentElement);
-    expect(setSelectedCardLookAshes).toHaveBeenCalledWith('C2');
+  it('llama setSelectedCard al clickear una carta', () => {
+    const setSelectedCard = vi.fn();
+    renderModal({ setSelectedCard });
+    const imgs = screen.getAllByRole('img');
+    fireEvent.click(imgs[1].parentElement);
+    expect(setSelectedCard).toHaveBeenCalledWith('C2');
   });
 
-  it('calls handleCardSelect and onClose when Seleccionar is clicked', () => {
+  it('llama handleCardSelect al clickear Seleccionar con seleccion', () => {
     const handleCardSelect = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <LookIntoTheAshes
-        isOpen={true}
-        onClose={onClose}
-        discardedCards={mockCards}
-        selectedCardLookAshes={'C1'}
-        setSelectedCardLookAshes={vi.fn()}
-        handleCardSelect={handleCardSelect}
-      />
-    );
-    const selectButton = screen.getByText('Seleccionar');
-    fireEvent.click(selectButton);
+    renderModal({ selectedCard: 'C1', handleCardSelect });
+    fireEvent.click(screen.getByText('Seleccionar'));
     expect(handleCardSelect).toHaveBeenCalledWith('C1');
-    expect(onClose).toHaveBeenCalled();
   });
 
-  it('button Seleccionar is disabled if no card is selected', () => {
-    render(
-      <LookIntoTheAshes
-        isOpen={true}
-        onClose={vi.fn()}
-        discardedCards={mockCards}
-        selectedCardLookAshes={null}
-        setSelectedCardLookAshes={vi.fn()}
-        handleCardSelect={vi.fn()}
-      />
-    );
-    const selectButton = screen.getByText('Seleccionar');
-    expect(selectButton).toBeDisabled();
+  it('deshabilita el boton si no hay seleccion', () => {
+    renderModal({ selectedCard: null, isLoading: false });
+    expect(screen.getByText('Seleccionar')).toBeDisabled();
+  });
+
+  it('deshabilita el boton si esta cargando', () => {
+    renderModal({ selectedCard: 'C1', isLoading: true });
+    const loadingButton = screen.getByText('Seleccionar');
+    expect(loadingButton).toBeDisabled();
+    expect(loadingButton.textContent).toMatch(/Enviando|Seleccionar/);
+  });
+
+  it('no rompe si discardedCards es undefined', () => {
+    renderModal({ discardedCards: undefined });
+    expect(screen.getByText('Look Into The Ashes')).toBeInTheDocument();
   });
 });
