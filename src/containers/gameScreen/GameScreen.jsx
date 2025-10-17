@@ -1,20 +1,20 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Deck from '../../components/Deck.jsx'
 import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
 import HandCards from '../../components/HandCards.jsx'
 import Secrets from '../../components/Secrets.jsx'
-import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
+import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState } = useGame()
+  const { gameState, gameDispatch } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -25,6 +25,7 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
+  const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
 
   const roomId = gameState?.gameId || gameState?.roomId
 
@@ -81,7 +82,7 @@ export default function GameScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(), // Add user_id header
+            HTTP_USER_ID: userState.id.toString(),
           },
           body: JSON.stringify({
             card_ids: cardsWithOrder,
@@ -212,6 +213,170 @@ export default function GameScreen() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // handlers de selectPlayerModal
+  const handlePlayerSelect = jugador => {
+    const { actionInProgress } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
+    const initiatorPlayerId =
+      gameState.detectiveAction?.actionInProgress?.initiatorPlayerId
+    const isInitiator = initiatorPlayerId === userState.id
+
+    // Caso 1: Another Victim
+    if (currentEventType === 'another_victim') {
+      gameDispatch({
+        type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
+        payload: jugador,
+      })
+      return
+    }
+
+    // Caso 2: Detectives Tipo A (marple, pyne, poirot)
+    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
+      gameDispatch({
+        type: 'DETECTIVE_PLAYER_SELECTED',
+        payload: { playerId: jugador.id, playerData: jugador },
+      })
+      return
+    }
+
+    // Caso 3: Detectives Tipo B (beresford, satterthwaite)
+    if (['beresford', 'satterthwaite'].includes(detectiveType) && isInitiator) {
+      gameDispatch({
+        type: 'DETECTIVE_PLAYER_SELECTED',
+        payload: { playerId: jugador.id, playerData: jugador },
+      })
+    }
+  }
+
+  const handleConfirmSelectPlayer = async () => {
+    const { actionInProgress, anotherVictim } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const { detectiveAction } = gameState
+    const detectiveType = detectiveAction?.actionInProgress?.setType
+    const initiatorPlayerId =
+      detectiveAction?.actionInProgress?.initiatorPlayerId
+    const isInitiator = initiatorPlayerId === userState.id
+    const isTarget =
+      detectiveAction?.actionInProgress?.targetPlayerId === userState.id
+
+    console.log('=== CONFIRM SELECT PLAYER ===')
+    console.log('currentEventType:', currentEventType)
+    console.log('detectiveType:', detectiveType)
+    console.log('isInitiator:', isInitiator)
+    console.log('isTarget:', isTarget)
+    console.log(
+      'selectedPlayer (anotherVictim):',
+      anotherVictim?.selectedPlayer
+    )
+    console.log('selectedPlayer (detective):', detectiveAction?.selectedPlayer)
+
+    // CASO 1: Another Victim - Hacer POST al backend
+    if (currentEventType === 'another_victim') {
+      console.log('-> Entrando en CASO 1: Another Victim')
+      const selectedPlayer = anotherVictim?.selectedPlayer
+      if (!selectedPlayer) {
+        console.log('-> ERROR: No hay selectedPlayer')
+        return
+      }
+
+      try {
+        const response = await fetch(
+          `/api/game/${roomId}/event/another-victim`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              card_id: anotherVictim.cardId,
+              target_player_id: selectedPlayer.id,
+            }),
+          }
+        )
+
+        if (!response.ok) throw new Error('Error al seleccionar jugador')
+        const data = await response.json()
+
+        gameDispatch({ type: 'EVENT_STEP_UPDATE', payload: data })
+        setIsSelectPlayerOpen(false)
+      } catch (error) {
+        console.error('Error en Another Victim:', error)
+        gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
+        setIsSelectPlayerOpen(false)
+      }
+      return
+    }
+
+    // CASO 2: Detectives Tipo A (marple, pyne, poirot)
+    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
+      console.log('-> Entrando en CASO 2: Detectives Tipo A')
+      const selectedPlayer = detectiveAction?.selectedPlayer
+      if (!selectedPlayer) {
+        console.log('-> ERROR: No hay selectedPlayer')
+        return
+      }
+
+      gameDispatch({
+        type: 'DETECTIVE_OPEN_SECRET_SELECTION',
+        payload: {
+          targetPlayer: selectedPlayer,
+          detectiveType: detectiveType,
+        },
+      })
+      setIsSelectPlayerOpen(false)
+      return
+    }
+
+    // CASO 3: Detectives Tipo B (beresford, satterthwaite)
+    if (['beresford', 'satterthwaite'].includes(detectiveType)) {
+      console.log('-> Entrando en CASO 3: Detectives Tipo B')
+      if (isInitiator) {
+        console.log('-> Fase 1: Iniciador confirmando')
+        const selectedPlayer = detectiveAction?.selectedPlayer
+        if (!selectedPlayer) {
+          console.log('-> ERROR: No hay selectedPlayer')
+          return
+        }
+
+        gameDispatch({
+          type: 'DETECTIVE_TARGET_CONFIRMED',
+          payload: {
+            targetPlayerId: selectedPlayer.id,
+            targetPlayerData: selectedPlayer,
+          },
+        })
+        setIsSelectPlayerOpen(false)
+      } else if (isTarget) {
+        console.log('-> Fase 2: Target confirmando')
+        gameDispatch({
+          type: 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS',
+          payload: {
+            playerId: userState.id,
+            initiatorPlayerId: initiatorPlayerId,
+          },
+        })
+        setIsSelectPlayerOpen(false)
+      } else {
+        console.log('-> ERROR: No es ni iniciador ni target')
+      }
+      return
+    }
+
+    console.log('-> ERROR: No se cumplió ninguna condición')
+  }
+
+  const handleCancelSelectPlayer = () => {
+    const { actionInProgress } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
+
+    if (currentEventType === 'another_victim') {
+      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
+    } else if (detectiveType) {
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
+    }
+    setIsSelectPlayerOpen(false)
   }
 
   const handlePlayDetective = async () => {
@@ -546,6 +711,21 @@ export default function GameScreen() {
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
         onCreateSet={handlePlayDetective}
+      />
+
+      {/* Modal de seleccionar jugador */}
+      <SelectPlayerModal
+        isOpen={isSelectPlayerOpen}
+        onClose={() => setIsSelectPlayerOpen(false)}
+        jugadores={gameState.jugadores || []}
+        userId={userState.id}
+        currentEventType={gameState.eventCards?.actionInProgress?.eventType}
+        detectiveType={gameState.detectiveAction?.actionInProgress?.setType}
+        anotherVictim={gameState.eventCards?.anotherVictim}
+        detectiveAction={gameState.detectiveAction}
+        onPlayerSelect={handlePlayerSelect}
+        onConfirm={handleConfirmSelectPlayer}
+        onCancel={handleCancelSelectPlayer}
       />
     </main>
   )
