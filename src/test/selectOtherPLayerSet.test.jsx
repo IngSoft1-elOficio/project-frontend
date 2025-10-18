@@ -69,9 +69,36 @@ describe('SelectOtherPLayerSet', () => {
 
   describe('Renderizado de sets', () => {
     const mockSets = [
-      { owner_id: 1, set_type: 'A', count: 3 },
-      { owner_id: 1, set_type: 'B', count: 2 },
-      { owner_id: 2, set_type: 'C', count: 4 }
+      {
+        id: 1,
+        owner_id: 1,
+        setType: 'A',
+        setName: 'Set Detective A',
+        cards: [
+          { id: 1, name: 'Card 1', img_src: '/cards/card1.png' },
+          { id: 2, name: 'Card 2', img_src: '/cards/card2.png' },
+          { id: 3, name: 'Card 3', img_src: '/cards/card3.png' }
+        ]
+      },
+      {
+        id: 2,
+        owner_id: 1,
+        setType: 'B',
+        setName: 'Set Detective B',
+        cards: [
+          { id: 4, name: 'Card 4', img_src: '/cards/card4.png' },
+          { id: 5, name: 'Card 5', img_src: '/cards/card5.png' }
+        ]
+      },
+      {
+        id: 3,
+        owner_id: 2,
+        setType: 'C',
+        setName: 'Set Detective C',
+        cards: [
+          { id: 6, name: 'Card 6', img_src: '/cards/card6.png' }
+        ]
+      }
     ]
 
     it('renderiza los sets del jugador correcto', () => {
@@ -83,12 +110,12 @@ describe('SelectOtherPLayerSet', () => {
         />
       )
 
-      expect(screen.getByText('Set 1')).toBeInTheDocument()
-      expect(screen.getByText('Set 2')).toBeInTheDocument()
-      expect(screen.queryByText('Set 3')).not.toBeInTheDocument()
+      expect(screen.getByText('Set Detective A')).toBeInTheDocument()
+      expect(screen.getByText('Set Detective B')).toBeInTheDocument()
+      expect(screen.queryByText('Set Detective C')).not.toBeInTheDocument()
     })
 
-    it('muestra el conteo correcto de cartas', () => {
+    it('muestra el badge "Jugado" en cada set', () => {
       render(
         <SelectOtherPLayerSet
           player={mockPlayer}
@@ -97,26 +124,39 @@ describe('SelectOtherPLayerSet', () => {
         />
       )
 
-      expect(screen.getByText('3 cartas')).toBeInTheDocument()
-      expect(screen.getByText('2 cartas')).toBeInTheDocument()
+      const jugadoBadges = screen.getAllByText('Jugado')
+      expect(jugadoBadges).toHaveLength(2) // Solo los sets del jugador 1
     })
 
-    it('usa singular "carta" cuando count es 1', () => {
-      const singleCardSet = [{ owner_id: 1, set_type: 'A', count: 1 }]
+    it('usa el nombre por defecto cuando no hay setName', () => {
+      const setsWithoutName = [
+        { id: 1, owner_id: 1, setType: 'A', cards: [] }
+      ]
       
       render(
         <SelectOtherPLayerSet
           player={mockPlayer}
-          sets={singleCardSet}
+          sets={setsWithoutName}
           onSelectSet={mockOnSelectSet}
         />
       )
 
-      expect(screen.getByText('1 carta')).toBeInTheDocument()
+      expect(screen.getByText('Set 1')).toBeInTheDocument()
     })
 
-    it('renderiza las mini-cartas visuales según el count', () => {
-      const sets = [{ owner_id: 1, set_type: 'A', count: 3 }]
+    it('renderiza las mini-cartas visuales según el array de cards', () => {
+      const sets = [
+        {
+          id: 1,
+          owner_id: 1,
+          setType: 'A',
+          cards: [
+            { id: 1, name: 'Card 1', img_src: '/cards/card1.png' },
+            { id: 2, name: 'Card 2', img_src: '/cards/card2.png' },
+            { id: 3, name: 'Card 3', img_src: '/cards/card3.png' }
+          ]
+        }
+      ]
       
       const { container } = render(
         <SelectOtherPLayerSet
@@ -126,12 +166,20 @@ describe('SelectOtherPLayerSet', () => {
         />
       )
 
-      const miniCards = container.querySelectorAll('.w-16.h-24')
-      expect(miniCards).toHaveLength(3)
+      const miniCardImages = container.querySelectorAll('img[alt]')
+      expect(miniCardImages).toHaveLength(3)
     })
 
-    it('muestra el owner_id del set', () => {
-      const sets = [{ owner_id: 1, set_type: 'A', count: 2 }]
+    it('renderiza las imágenes de las cartas correctamente', () => {
+      const sets = [
+        {
+          id: 1,
+          owner_id: 1,
+          cards: [
+            { id: 1, name: 'Test Card', img_src: '/cards/test.png' }
+          ]
+        }
+      ]
       
       render(
         <SelectOtherPLayerSet
@@ -141,14 +189,45 @@ describe('SelectOtherPLayerSet', () => {
         />
       )
 
-      expect(screen.getByText('Dueño: Jugador #1')).toBeInTheDocument()
+      const cardImage = screen.getByAltText('Test Card')
+      expect(cardImage).toBeInTheDocument()
+      expect(cardImage).toHaveAttribute('src', '/cards/test.png')
+    })
+
+    it('usa imagen por defecto cuando no hay img_src', () => {
+      const sets = [
+        {
+          id: 1,
+          owner_id: 1,
+          cards: [
+            { id: 1, name: 'Card without image' }
+          ]
+        }
+      ]
+      
+      render(
+        <SelectOtherPLayerSet
+          player={mockPlayer}
+          sets={sets}
+          onSelectSet={mockOnSelectSet}
+        />
+      )
+
+      const cardImage = screen.getByAltText('Card without image')
+      expect(cardImage).toHaveAttribute('src', '/cards/01-card_back.png')
     })
   })
 
   describe('Interacciones', () => {
-
     it('recibe onSelectSet como función', () => {
-      const sets = [{ owner_id: 1, set_type: 'A', count: 2 }]
+      const sets = [
+        {
+          id: 1,
+          owner_id: 1,
+          setType: 'A',
+          cards: []
+        }
+      ]
       
       render(
         <SelectOtherPLayerSet
@@ -176,8 +255,14 @@ describe('SelectOtherPLayerSet', () => {
   })
 
   describe('Casos edge', () => {
-    it('maneja sets con set_type undefined', () => {
-      const setsWithoutType = [{ owner_id: 1, count: 2 }]
+    it('maneja sets con setType undefined', () => {
+      const setsWithoutType = [
+        {
+          id: 1,
+          owner_id: 1,
+          cards: []
+        }
+      ]
       
       render(
         <SelectOtherPLayerSet
@@ -193,8 +278,20 @@ describe('SelectOtherPLayerSet', () => {
     it('maneja un jugador sin sets cuando otros jugadores tienen sets', () => {
       const playerWithoutSets = { id: 99, name: 'Jugador sin sets' }
       const sets = [
-        { owner_id: 1, set_type: 'A', count: 2 },
-        { owner_id: 2, set_type: 'B', count: 3 }
+        {
+          id: 1,
+          owner_id: 1,
+          setType: 'A',
+          setName: 'Set A',
+          cards: []
+        },
+        {
+          id: 2,
+          owner_id: 2,
+          setType: 'B',
+          setName: 'Set B',
+          cards: []
+        }
       ]
 
       render(
@@ -205,14 +302,17 @@ describe('SelectOtherPLayerSet', () => {
         />
       )
 
-      expect(screen.queryByText('Set 1')).not.toBeInTheDocument()
+      expect(screen.queryByText('Set A')).not.toBeInTheDocument()
+      expect(screen.queryByText('Set B')).not.toBeInTheDocument()
     })
 
     it('maneja múltiples sets del mismo jugador', () => {
       const manySets = Array.from({ length: 5 }, (_, i) => ({
+        id: i + 1,
         owner_id: 1,
-        set_type: `Type${i}`,
-        count: i + 1
+        setType: `Type${i}`,
+        setName: `Set ${i + 1}`,
+        cards: []
       }))
 
       render(
@@ -225,6 +325,28 @@ describe('SelectOtherPLayerSet', () => {
 
       expect(screen.getByText('Set 1')).toBeInTheDocument()
       expect(screen.getByText('Set 5')).toBeInTheDocument()
+    })
+
+    it('maneja sets sin cards array', () => {
+      const setsWithoutCards = [
+        {
+          id: 1,
+          owner_id: 1,
+          setType: 'A'
+        }
+      ]
+      
+      const { container } = render(
+        <SelectOtherPLayerSet
+          player={mockPlayer}
+          sets={setsWithoutCards}
+          onSelectSet={mockOnSelectSet}
+        />
+      )
+
+      // No debería haber imágenes de cartas
+      const cardImages = container.querySelectorAll('img[alt]')
+      expect(cardImages).toHaveLength(0)
     })
   })
 })

@@ -51,6 +51,18 @@ const SelectOtherPLayerSet = ({
 
   const filteredSetsPerPlayer = sets.filter(set => set.owner_id === player.id)
 
+  const getSetTypeName = setType => {
+    const typeNames = {
+      poirot: 'Poirot',
+      marple: 'Miss Marple',
+      satterthwaite: 'Satterthwaite',
+      eileenbrent: 'Eileen Brent',
+      beresford: 'Hermanos Beresford',
+      pyne: 'Parker Pyne',
+    }
+    return typeNames[setType] || 'Detective'
+  }
+
   // ========== RENDER ==========
   return (
     <div className={modalOverlay}>
@@ -81,40 +93,41 @@ const SelectOtherPLayerSet = ({
                 // Caso hay sets
                 <div className={setsGrid}>
                 {filteredSetsPerPlayer.map((set, index) => (
-                    <div key={index} className={setCard} onClick={() => setSelectedSet(set)}>
-                    <div className={setHeader}>
+                    <div key={set.id || index} className={setCard}>
+                      <div className={setHeader}>
                         <div>
-                            <h3 className={setTitle}>Set {index + 1}</h3>
-                            {set.set_type && (
-                                <p className={setType}>
-                                Detective #{set.set_type}
-                                </p>
-                            )}
+                          <h3 className={setTitle}>
+                            {set.setName || `Set ${index + 1}`}
+                          </h3>
+                          {set.setType && (
+                            <p className={setType}>
+                              {getSetTypeName(set.setType)}
+                            </p>
+                          )}
                         </div>
-                        <span className={setBadge}>
-                        {set.count} {set.count === 1 ? 'carta' : 'cartas'}
-                        </span>
+                        <span className={setBadge}>Jugado</span>
+                      </div>
+                      {/* Render de cartas */}
+                      <div className={setCards}>
+                        {set.cards &&
+                          set.cards.map((card, cardIndex) => (
+                            <div
+                              key={card.id || cardIndex}
+                              className={miniCard}
+                            >
+                              <img
+                                src={card.img_src || '/cards/01-card_back.png'}
+                                alt={card.name || 'Card'}
+                                className="w-full h-full object-cover"
+                                onError={e => {
+                                  e.target.src = '/cards/01-card_back.png'
+                                }}
+                              />
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                    
-                    {/* Visual representation of card count */}
-                    <div className={setCards}>
-                        {Array.from({ length: set.count }).map((_, cardIndex) => (
-                        <div
-                            key={cardIndex}
-                            className={miniCard}
-                        >
-                            <span className={miniCardText}>
-                            Detective #{set.set_type}
-                            </span>
-                        </div>
-                        ))}
-                    </div>
-                    
-                    <div className="mt-2 text-sm text-gray-500">
-                        Dueño: Jugador #{set.owner_id}
-                    </div>
-                    </div>
-                ))}
+                  ))}
                 </div>
             )}
             </div>
