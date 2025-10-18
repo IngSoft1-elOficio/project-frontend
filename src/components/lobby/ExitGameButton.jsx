@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Button from '../Button.jsx'
 
 export default function ExitGameButton({
@@ -8,6 +9,7 @@ export default function ExitGameButton({
   onError,
 }) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
   const handleExit = async () => {
     setIsLoading(true)
@@ -28,11 +30,11 @@ export default function ExitGameButton({
 
         // Manejo de errores
         if (response.status === 409) {
-          onError?.('La partida ya ha iniciado. No podes abandonarla ahora')
+          onError?.('La partida ya ha iniciado')
         } else if (response.status === 404) {
-          onError?.('La sala no fue encontrada')
+          onError?.('Sala no encontrada')
         } else if (response.status === 403) {
-          onError?.('No tenes permiso para realizar esta acción')
+          onError?.('El jugador no pertence a esta sala')
         } else {
           onError?.(errorData.detail || 'Error al abandonar la partida')
         }
@@ -41,6 +43,10 @@ export default function ExitGameButton({
 
       // Caso exitoso -> partida cancelada o jugador abandona sala
       console.log(isHost ? 'Partida cancelada' : 'Jugador abandonó la partida')
+      // Redirigir al lobby
+      navigate('/lobby')
+
+      // Caso error al abandonar - cancelar
     } catch (error) {
       console.error('Error al abandonar/cancelar partida:', error)
       onError?.('Error de conexión. Por favor, intenta de nuevo.')

@@ -26,6 +26,14 @@ export default function GameJoin() {
     }
   }, [gameState, userState])
 
+  // Redirigir jugadores cuando el host cancela la partida
+  useEffect(() => {
+    if (gameState.gameCancelled) {
+      console.log('El host canceló la partida, redirigiendo...')
+      navigate('/lobby')
+    }
+  }, [gameState.gameCancelled, navigate])
+
   const { gameId, jugadores, roomInfo } = gameState
 
   const handleStart = async () => {

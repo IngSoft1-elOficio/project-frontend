@@ -31,6 +31,7 @@ const gameInitialState = {
   mano: [],
   secretos: [],
   gameEnded: false,
+  gameCancelled: false,
   winners: [],
   ganaste: null,
   finish_reason: null,
@@ -140,6 +141,7 @@ const gameReducer = (state, action) => {
         roomId: action.payload.room.id,
         roomInfo: action.payload.room,
         jugadores: action.payload.players,
+        gameCancelled: false,
       }
 
     case 'UPDATE_GAME_STATE_PUBLIC':
@@ -197,6 +199,13 @@ const gameReducer = (state, action) => {
 
         finish_reason: action.payload.reason,
 
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'GAME_CANCELLED':
+      return {
+        ...state,
+        gameCancelled: true,
         lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
       }
 
@@ -793,19 +802,34 @@ export const GameProvider = ({ children }) => {
     // | CANCEL - EXIT GAME LISTENERS |
     // ------------------------
 
-    socket.on('game_cancelled', data => {
-      console.log('Partida cancelada:', data)
+    // Caso abandonar sala
+    socket.on('player_left', data => {
+      console.log('Un Jugador abandono la sala:', data)
+      if (data.player_id === userId) {
+        // Yo abandono la sala
+        console.log('Abandonando sala')
+        gameDispatch({
+          type: 'PLAYER_REMOVED_FROM_LOBBY',
+          payload: { timestamp: new Date().toISOString() },
+        })
+      } else {
+        // Otro abandona la sala => actualizar lista de jugadores
+        gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            jugadores: data.players,
+            timestamp: new Date().toISOString(),
+          },
+        })
+      }
     })
 
-    socket.on('player_left', data => {
-      console.log('Jugador abandono la sala:', data)
-      // Actualizar lista de jugadores
+    // Caso cancelar partida
+    socket.on('game_cancelled', data => {
+      console.log('Partida cancelada por el host:', data)
       gameDispatch({
-        type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          jugadores: data.players,
-          timestamp: new Date().toISOString(),
-        },
+        type: 'GAME_CANCELLED',
+        payload: { timestamp: new Date().toISOString() },
       })
     })
   }, [])
