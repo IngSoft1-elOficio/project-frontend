@@ -9,6 +9,7 @@ import HandCards from '../../components/HandCards.jsx'
 import Secrets from '../../components/Secrets.jsx'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import LookIntoTheAshes from '../../components/modals/LookIntoTheAshes.jsx'
 import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
@@ -22,9 +23,17 @@ export default function GameScreen() {
     console.log('User state at playgame: ', userState)
   }, [gameState, userState])
 
+  useEffect(() => {
+    if (!gameState.eventCards?.lookAshes?.showSelectCard) {
+      setSelectedCardLookAshes(null);
+    }
+  }, [gameState.eventCards?.lookAshes?.showSelectCard]);
+
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
+  const [lookLoading, setLookLoading] = useState(false)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
 
@@ -431,10 +440,7 @@ export default function GameScreen() {
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+    
           body: JSON.stringify({
             owner: userState.id,
             setType: setType,
@@ -548,7 +554,40 @@ export default function GameScreen() {
     return selectedCardData.some(card => card.name === 'Harley Quin Wildcard')
   }
 
-  const getErrorMessage = (status, errorData) => {
+  
+const handleLookIntoTheAshes = async (cardId) => {
+    setLookLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/select`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: gameState.eventCards.lookAshes.actionId,
+            selected_card_id: cardId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log('Look Into The Ashes successful:', data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLookLoading(false);
+    }
+  }
+
+const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
         return 'Error de validación: cartas inválidas o lista vacía'
@@ -712,6 +751,18 @@ export default function GameScreen() {
           />
         )}
 
+      </div>
+
+      {/* Modal de Look Into The Ashes */}
+      <div>
+        <LookIntoTheAshes 
+          isOpen={gameState.eventCards?.lookAshes?.showSelectCard}
+          discardedCards={gameState.eventCards?.lookAshes?.availableCards}
+          selectedCard={selectedCardLookAshes}
+          setSelectedCard={setSelectedCardLookAshes}
+          handleCardSelect={handleLookIntoTheAshes}
+          isLoading={lookLoading}
+        />
       </div>
       {/* Modal de sets */}
       <PlayerSetsModal
