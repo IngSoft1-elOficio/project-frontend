@@ -8,8 +8,9 @@ const HideRevealStealSecretsModal = ({
 }) => {
   if (!isOpen) return null;
 
-  const setType = detective?.detectiveAction?.actionInProgress?.setType|| "Detective";
+  const setType = detective?.actionInProgress?.setType || "Detective";
   const secretos = detective?.secretsPool || [];
+  const hasWildcard = detective?.current?.hasWildcard || false;
 
   const filteredSecrets = secretos.filter(
     (s) => s.playerId === detective.targetPlayerId
@@ -22,37 +23,37 @@ const HideRevealStealSecretsModal = ({
   const detectiveInfo = {
     poirot: {
       name: "Hercule Poirot",
-      effect: "Elige un secreto del jugador objetivo para revelar",
-      requiresHidden: true, // sólo puede revelar secretos ocultos
+      effect: "Elegí un secreto del jugador objetivo para revelar",
+      requiresHidden: true,
     },
     marple: {
       name: "Miss Marple",
-      effect: "Elige un secreto del jugador objetivo para revelar",
+      effect: "Elegí un secreto del jugador objetivo para revelar",
       requiresHidden: true,
     },
     satterthwaite: {
       name: "Mr. Satterthwaite",
-      effect: "Elige un secreto propio para revelar",
+      effect: "Elegí un secreto propio para revelar. ",
       requiresHidden: true,
     },
     pyne: {
       name: "Parker Pyne",
-      effect: "Elige un secreto para ocultar",
-      requiresHidden: false, // sólo puede ocultar secretos revelados
+      effect: "Elegí un secreto para ocultar",
+      requiresHidden: false,
     },
     eileenbrent: {
       name: "Lady Eileen 'Bundle' Brent",
-      effect: "Elige un secreto propio para revelar",
+      effect: "Elegí un secreto propio para revelar",
       requiresHidden: true,
     },
     tommyberesford: {
       name: "Tommy Beresford",
-      effect: "Elige un secreto propio para revelar",
+      effect: "Elegí un secreto propio para revelar",
       requiresHidden: true,
     },
     tuppenceberesford: {
       name: "Tuppence Beresford",
-      effect: "Elige un secreto propio para revelar",
+      effect: "Elegí un secreto propio para revelar",
       requiresHidden: true,
     },
   };
@@ -64,23 +65,25 @@ const HideRevealStealSecretsModal = ({
       requiresHidden: null,
     };
 
+  // ====== LÓGICA DEL EFECTO ======
+  let finalEffect = effect;
+  if (setType?.toLowerCase() === "satterthwaite" && hasWildcard) {
+    finalEffect +=
+      " Como este set se jugó con Harley Quin, el secreto revelado se agrega boca abajo a tus secretos.";
+  }
+
   // ====== FUNCIONES ======
   const validateSecrets = (secret) => {
-    // si se requiere un secreto oculto pero selecciona uno revelado
     if (requiresHidden && !secret.hidden) {
       setErrorMsg("Solo podés seleccionar secretos ocultos.");
       setSelectedSecret(null);
       return;
     }
-
-    // si se requiere un secreto revelado pero selecciona uno oculto
     if (requiresHidden === false && secret.hidden) {
       setErrorMsg("Solo podés seleccionar secretos revelados.");
       setSelectedSecret(null);
       return;
     }
-
-    // válido
     setErrorMsg("");
     setSelectedSecret(secret);
   };
@@ -118,7 +121,7 @@ const HideRevealStealSecretsModal = ({
 
         {/* EFECTO */}
         <p className={description}>
-          <strong>Efecto:</strong> {effect}
+           {finalEffect}
         </p>
 
         {/* ERROR */}
@@ -167,6 +170,7 @@ const HideRevealStealSecretsModal = ({
 };
 
 export default HideRevealStealSecretsModal;
+
 
 
 /*
