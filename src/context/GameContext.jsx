@@ -290,7 +290,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: true,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_CONFIRMED':
       return {
@@ -305,7 +305,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: false,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_NOTIFIED':
       return {
@@ -318,7 +318,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: true,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS':
       return {
@@ -333,7 +333,7 @@ const gameReducer = (state, action) => {
           showSelectSecret: true,
           targetForSecrets: action.payload.initiatorPlayerId,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_SELECTED':
       return {
@@ -505,7 +505,6 @@ const gameReducer = (state, action) => {
           },
         },
       }
-
 
     case 'EVENT_ANOTHER_VICTIM_COMPLETE':
       return {
@@ -788,6 +787,26 @@ export const GameProvider = ({ children }) => {
     socket.on('turn_finished', data => {
       console.log('✅ Turn finished:', data)
       gameDispatch({ type: 'FINISH_TURN' })
+    })
+
+    // ------------------------
+    // | CANCEL - EXIT GAME LISTENERS |
+    // ------------------------
+
+    socket.on('game_cancelled', data => {
+      console.log('Partida cancelada:', data)
+    })
+
+    socket.on('player_left', data => {
+      console.log('Jugador abandono la sala:', data)
+      // Actualizar lista de jugadores
+      gameDispatch({
+        type: 'UPDATE_GAME_STATE_PUBLIC',
+        payload: {
+          jugadores: data.players,
+          timestamp: new Date().toISOString(),
+        },
+      })
     })
   }, [])
 
