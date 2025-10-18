@@ -310,13 +310,57 @@ const gameReducer = (state, action) => {
         detectiveAction: {
           ...state.detectiveAction,
           actionInProgress: {
-            playerId: action.payload.player_id,
+            initiatorPlayerId: action.payload.player_id,
             setType: action.payload.set_type,
-            step: 'started',
+            step: 'select_target',
             message: action.payload.message,
           },
+          showSelectPlayer: true,
         },
-      }
+      };
+
+    case 'DETECTIVE_TARGET_CONFIRMED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            targetPlayerId: action.payload.targetPlayerId,
+            step: 'waiting_target_confirmation',
+            message: `Esperando confirmación de ${action.payload.targetPlayerData.name}`,
+          },
+          showSelectPlayer: false,
+        },
+      };
+
+    case 'DETECTIVE_TARGET_NOTIFIED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            step: 'target_must_confirm',
+          },
+          showSelectPlayer: true,
+        },
+      };
+
+    case 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          actionInProgress: {
+            ...state.detectiveAction.actionInProgress,
+            step: 'target_selecting_secret',
+          },
+          showSelectPlayer: false,
+          showSelectSecret: true,
+          targetForSecrets: action.payload.initiatorPlayerId,
+        },
+      };
 
     case 'DETECTIVE_TARGET_SELECTED':
       return {
@@ -466,6 +510,53 @@ const gameReducer = (state, action) => {
             actionId: action.payload.action_id,
             availableCards: action.payload.available_cards,
             showSelectCard: true,
+          },
+        },
+      }
+
+    case 'EVENT_ANOTHER_VICTIM_START':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            showSelectPlayer: true,
+            cardId: action.payload?.cardId || null,
+            selectedPlayer: null,
+          },
+          actionInProgress: {
+            playerId: action.payload?.playerId,
+            eventType: 'another_victim',
+            step: 'select_player',
+            message: 'Selecciona un jugador objetivo',
+          },
+        },
+      }
+
+
+    case 'EVENT_ANOTHER_VICTIM_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            showSelectPlayer: false,
+            selectedPlayer: null,
+            cardId: null,
+          },
+          actionInProgress: null,
+        },
+      }
+
+    case 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            selectedPlayer: action.payload,
           },
         },
       }

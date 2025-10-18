@@ -1,13 +1,12 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Deck from '../../components/Deck.jsx'
 import Discard from '../../components/Discard.jsx'
 import GameEndModal from '../../components/GameEndModal'
 import HandCards from '../../components/HandCards.jsx'
 import Secrets from '../../components/Secrets.jsx'
-import { useEffect } from 'react'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
 import Tabs from '../../components/game/Tabs.jsx'
@@ -15,10 +14,11 @@ import TabPanel from '../../components/game/TabPanel.jsx'
 import Log from '../../components/game/Log.jsx'
 import { OtherPlayerSets } from '../../components/game/OtherPlayerSets.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
+import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
-  const { gameState } = useGame()
+  const { gameState, gameDispatch } = useGame()
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -29,27 +29,30 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
+  const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
 
   const roomId = gameState?.gameId || gameState?.roomId
 
   // Obtener los sets del jugador actual
-  const playerSets = useMemo(() => {
-    // Si gameState.sets no existe, retornar array vacío
-    if (!gameState.sets) {
-      console.log('⚠️ gameState.sets no está disponible')
-      return []
-    }
+  const playerSetsForModal = (gameState.sets || [])
+    .filter(set => set.owner_id === userState.id)
+    .map((set, index) => {
+      // set.cards tiene {id, name, description, type, img_src}
+      const firstCard = set.cards?.[0]
 
-    // Filtrar solo los sets del jugador actual
-    const filteredSets = gameState.sets.filter(
-      set => set.owner === userState.id || set.player_id === userState.id
-    )
+      const mappedSet = {
+        id: index,
+        setType: set.set_type,
+        setName: firstCard?.name || `Detective Set`,
+        cards: set.cards || [],
+        hasWildcard: set.hasWildcard || false,
+      }
 
-    console.log('✅ Sets del jugador:', filteredSets)
-    console.log(`   Total: ${filteredSets.length}`)
+      console.log('SET MAPEADO:', mappedSet)
+      console.log('PRIMERA CARTA:', firstCard)
 
-    return filteredSets
-  }, [gameState.sets, userState.id])
+      return mappedSet
+    })
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -118,7 +121,7 @@ export default function GameScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(), // Add user_id header
+            HTTP_USER_ID: userState.id.toString(),
           },
           body: JSON.stringify({
             card_ids: cardsWithOrder,
@@ -220,19 +223,22 @@ export default function GameScreen() {
     }
   }
 
-  const handleDraft = async (cardId) => {
+  const handleDraft = async cardId => {
     try {
-      const response = await fetch(`http://localhost:8000/game/${gameState.gameId}/draft/pick`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP_USER_ID': userState.id.toString()
-        },
-        body: JSON.stringify({
-          card_id: cardId,
-          user_id: userState.id
-        })
-      })
+      const response = await fetch(
+        `http://localhost:8000/game/${gameState.gameId}/draft/pick`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify({
+            card_id: cardId,
+            user_id: userState.id,
+          }),
+        }
+      )
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -248,47 +254,336 @@ export default function GameScreen() {
     }
   }
 
-  const handleCreateSet = async (set) => {
-    console.log('Crear set - pendiente implementar')
-    console.log('Cartas seleccionadas:', selectedCards)
+  // handlers de selectPlayerModal
+  const handlePlayerSelect = jugador => {
+    const { actionInProgress } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
+    const initiatorPlayerId =
+      gameState.detectiveAction?.actionInProgress?.initiatorPlayerId
+    const isInitiator = initiatorPlayerId === userState.id
 
-    // TODO: Implementar cuando el backend esté listo
-    // POST /api/game/{room_id}/play-detective-set
-
-    /*
-      owner: int = Field(..., description="ID del jugador que baja el set")
-      setType: SetType = Field(..., description="Tipo de set de detective")
-      cards: List[int] = Field(..., min_length=1, description="IDs de las cartas del set")
-      hasWildcard: bool = Field(default=False, description="Si el set incluye a Harley Quin como comodín") 
-    */
-
-    try {
-      const response = await fetch(`http://localhost:8000/api/game/${gameState.roomId}//play-detective-set`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP_USER_ID': userState.id.toString()
-        },
-        body: JSON.stringify({
-          owner: "",
-          setType:"",
-          cards: [],
-          hasWildcard: Boolean,
-        })
+    // Caso 1: Another Victim
+    if (currentEventType === 'another_victim') {
+      gameDispatch({
+        type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
+        payload: jugador,
       })
+      return
+    }
+
+    // Caso 2: Detectives Tipo A (marple, pyne, poirot)
+    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
+      gameDispatch({
+        type: 'DETECTIVE_PLAYER_SELECTED',
+        payload: { playerId: jugador.id, playerData: jugador },
+      })
+      return
+    }
+
+    // Caso 3: Detectives Tipo B (beresford, satterthwaite)
+    if (['beresford', 'satterthwaite'].includes(detectiveType) && isInitiator) {
+      gameDispatch({
+        type: 'DETECTIVE_PLAYER_SELECTED',
+        payload: { playerId: jugador.id, playerData: jugador },
+      })
+    }
+  }
+
+  const handleConfirmSelectPlayer = async () => {
+    const { actionInProgress, anotherVictim } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const { detectiveAction } = gameState
+    const detectiveType = detectiveAction?.actionInProgress?.setType
+    const initiatorPlayerId =
+      detectiveAction?.actionInProgress?.initiatorPlayerId
+    const isInitiator = initiatorPlayerId === userState.id
+    const isTarget =
+      detectiveAction?.actionInProgress?.targetPlayerId === userState.id
+
+    console.log('=== CONFIRM SELECT PLAYER ===')
+    console.log('currentEventType:', currentEventType)
+    console.log('detectiveType:', detectiveType)
+    console.log('isInitiator:', isInitiator)
+    console.log('isTarget:', isTarget)
+    console.log(
+      'selectedPlayer (anotherVictim):',
+      anotherVictim?.selectedPlayer
+    )
+    console.log('selectedPlayer (detective):', detectiveAction?.selectedPlayer)
+
+    // CASO 1: Another Victim - Hacer POST al backend
+    if (currentEventType === 'another_victim') {
+      console.log('-> Entrando en CASO 1: Another Victim')
+      const selectedPlayer = anotherVictim?.selectedPlayer
+      if (!selectedPlayer) {
+        console.log('-> ERROR: No hay selectedPlayer')
+        return
+      }
+
+      try {
+        const response = await fetch(
+          `/api/game/${roomId}/event/another-victim`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              card_id: anotherVictim.cardId,
+              target_player_id: selectedPlayer.id,
+            }),
+          }
+        )
+
+        if (!response.ok) throw new Error('Error al seleccionar jugador')
+        const data = await response.json()
+
+        gameDispatch({ type: 'EVENT_STEP_UPDATE', payload: data })
+        setIsSelectPlayerOpen(false)
+      } catch (error) {
+        console.error('Error en Another Victim:', error)
+        gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
+        setIsSelectPlayerOpen(false)
+      }
+      return
+    }
+
+    // CASO 2: Detectives Tipo A (marple, pyne, poirot)
+    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
+      console.log('-> Entrando en CASO 2: Detectives Tipo A')
+      const selectedPlayer = detectiveAction?.selectedPlayer
+      if (!selectedPlayer) {
+        console.log('-> ERROR: No hay selectedPlayer')
+        return
+      }
+
+      gameDispatch({
+        type: 'DETECTIVE_OPEN_SECRET_SELECTION',
+        payload: {
+          targetPlayer: selectedPlayer,
+          detectiveType: detectiveType,
+        },
+      })
+      setIsSelectPlayerOpen(false)
+      return
+    }
+
+    // CASO 3: Detectives Tipo B (beresford, satterthwaite)
+    if (['beresford', 'satterthwaite'].includes(detectiveType)) {
+      console.log('-> Entrando en CASO 3: Detectives Tipo B')
+      if (isInitiator) {
+        console.log('-> Fase 1: Iniciador confirmando')
+        const selectedPlayer = detectiveAction?.selectedPlayer
+        if (!selectedPlayer) {
+          console.log('-> ERROR: No hay selectedPlayer')
+          return
+        }
+
+        gameDispatch({
+          type: 'DETECTIVE_TARGET_CONFIRMED',
+          payload: {
+            targetPlayerId: selectedPlayer.id,
+            targetPlayerData: selectedPlayer,
+          },
+        })
+        setIsSelectPlayerOpen(false)
+      } else if (isTarget) {
+        console.log('-> Fase 2: Target confirmando')
+        gameDispatch({
+          type: 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS',
+          payload: {
+            playerId: userState.id,
+            initiatorPlayerId: initiatorPlayerId,
+          },
+        })
+        setIsSelectPlayerOpen(false)
+      } else {
+        console.log('-> ERROR: No es ni iniciador ni target')
+      }
+      return
+    }
+
+    console.log('-> ERROR: No se cumplió ninguna condición')
+  }
+
+  const handleCancelSelectPlayer = () => {
+    const { actionInProgress } = gameState.eventCards
+    const currentEventType = actionInProgress?.eventType
+    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
+
+    if (currentEventType === 'another_victim') {
+      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
+    } else if (detectiveType) {
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
+    }
+    setIsSelectPlayerOpen(false)
+  }
+
+  const handlePlayDetective = async () => {
+    console.log(
+      'Cartas seleccionadas para el set:',
+      gameState.mano.filter(card => selectedCards.includes(card.id))
+    )
+
+    // Cantidades minimas de cartas por tipo de set
+    const minCards = {
+      poirot: 3,
+      marple: 3,
+      satterthwaite: 2,
+      pyne: 2,
+      eileenbrent: 2,
+      beresford: 2,
+    }
+
+    // Caso crear set vacio
+    if (selectedCards.length === 0) {
+      setError('Debes seleccionar al menos una carta de detective')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Caso crear set invalido
+    const setType = detectSetType(selectedCards)
+    if (!setType) {
+      setError('Las cartas seleccionadas no forman un set válido')
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Caso crear set con cartas insuficientes
+    if (selectedCards.length < minCards[setType]) {
+      setError(
+        `Set de ${setType} requiere al menos ${minCards[setType]} cartas`
+      )
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    // Detectar si hay comodín
+    const hasWildcard = checkForWildcard(selectedCards)
+
+    setLoading(true)
+    setError(null)
+
+    // Caso crear set exitoso
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            owner: userState.id,
+            setType: setType,
+            cards: selectedCards,
+            hasWildcard: hasWildcard,
+          }),
+        }
+      )
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(getErrorMessage(response.status, errorData))
+        throw new Error(errorData.detail || 'Error al crear el set')
       }
 
       const data = await response.json()
-      console.log('Draft successful:', data)
+      console.log('Set creado exitosamente!')
+      console.log('Action ID:', data.actionId)
+      console.log('Next Action:', data.nextAction)
+
+      // Limpiar selección y cerrar modal
+      setSelectedCards([])
+      setShowPlayerSets(false)
+
+      // Websocket actualiza el gameState con el nuevo set
+      //y notifica por detective_action_started
     } catch (err) {
+      console.error('❌ Error al crear set:', err)
       setError(err.message)
+      setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
+  }
+
+  // ========== HELPER FUNCTIONS ==========
+
+  // Helper: Detectar el tipo de set basado en las cartas seleccionadas
+  const detectSetType = cardIds => {
+    const selectedCardData = gameState.mano.filter(card =>
+      cardIds.includes(card.id)
+    )
+
+    if (selectedCardData.length === 0) return null
+
+    // Verificar que todas sean cartas de detective
+    const nonDetectiveCards = selectedCardData.filter(
+      card => card.type !== 'DETECTIVE'
+    )
+    if (nonDetectiveCards.length > 0) {
+      console.log('⚠️ Hay cartas que no son de detective:', nonDetectiveCards)
+      return null
+    }
+
+    // Mapeo de nombres a tipos de set
+    const nameToSetType = {
+      'Hercule Poirot': 'poirot',
+      'Miss Marple': 'marple',
+      'Mr Satterthwaite': 'satterthwaite',
+      'Parker Pyne': 'pyne',
+      'Lady Eileen "Bundle" Brent': 'eileenbrent',
+      'Tommy Beresford': 'beresford',
+      'Tuppence Beresford': 'beresford',
+      'Harley Quin Wildcard': 'wildcard',
+    }
+
+    // Separar comodines de cartas normales
+    const wildcards = selectedCardData.filter(
+      card => nameToSetType[card.name] === 'wildcard'
+    )
+    const normalCards = selectedCardData.filter(
+      card => nameToSetType[card.name] !== 'wildcard'
+    )
+
+    // Debe haber al menos 1 carta normal (no solo comodines)
+    if (normalCards.length === 0) {
+      console.log('⚠️ Solo hay comodines, no es válido')
+      return null
+    }
+
+    // Obtener los tipos únicos (sin comodines)
+    const uniqueTypes = [
+      ...new Set(normalCards.map(card => nameToSetType[card.name])),
+    ]
+
+    // Caso especial: Beresford acepta Tommy + Tuppence
+    if (uniqueTypes.includes('beresford')) {
+      // Verificar que TODAS las cartas normales sean Beresford
+      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'beresford') {
+        return 'beresford'
+      } else if (uniqueTypes.length > 1) {
+        console.log('⚠️ Mezclando Beresford con otros tipos')
+        return null
+      }
+    }
+
+    // Para el resto: todas las cartas normales deben ser del mismo tipo
+    if (uniqueTypes.length !== 1) {
+      console.log('⚠️ Cartas de diferentes tipos:', uniqueTypes)
+      return null
+    }
+
+    return uniqueTypes[0]
+  }
+
+  // Helper: Verificar si hay un comodín (Harley Quin) en las cartas seleccionadas
+  const checkForWildcard = cardIds => {
+    const selectedCardData = gameState.mano.filter(card =>
+      cardIds.includes(card.id)
+    )
+
+    return selectedCardData.some(card => card.name === 'Harley Quin Wildcard')
   }
 
   const getErrorMessage = (status, errorData) => {
@@ -347,12 +642,16 @@ export default function GameScreen() {
         backgroundPosition: 'center',
       }}
     >
-    {/* Error display */}
-    {error && (
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-[100]">
-        {error}
-      </div>
-    )}
+      
+      {/* Error display */}
+      {error && (
+        <div
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl"
+          style={{ zIndex: 9999, minWidth: '300px' }}
+        >
+          {error}
+        </div>
+      )}
 
     {/* MAIN CONTENT AREA (Tabs) */}
     <div className="relative flex-1 min-h-screen px-4 py-3">
@@ -480,11 +779,11 @@ export default function GameScreen() {
       </div>
 
       <ButtonGame
-                onClick={() => setShowPlayerSets(true)}
-                disabled={loading}
-              >
-                Ver Sets
-              </ButtonGame>
+        onClick={() => setShowPlayerSets(true)}
+        disabled={loading || gameState.drawAction.hasDiscarded}
+      >
+        Ver Sets
+      </ButtonGame>
 
       {/* Action buttons */}
       {gameState.turnoActual == userState.id && (
@@ -504,7 +803,19 @@ export default function GameScreen() {
 
           {/* Botones */}
           <div className="flex flex-col space-y-3">
-            { ( !gameState.drawAction.hasDiscarded || selectedCards.length > 0 ) && (
+            
+            {(selectedCards.length === 1 ) && (
+                <ButtonGame
+                  onClick={handlePLayEventCard}
+                  disabled={
+                    loading
+                  }
+                >
+                  Jugar Carta
+                </ButtonGame>
+            )}
+
+            {( !gameState.drawAction.hasDiscarded || selectedCards.length > 0 ) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={
@@ -515,7 +826,7 @@ export default function GameScreen() {
                 >
                   Descartar
                 </ButtonGame>
-              )}
+            )}
          
             {gameState.drawAction.hasDiscarded &&
               gameState.drawAction.hasDrawn &&
@@ -523,7 +834,8 @@ export default function GameScreen() {
                 <ButtonGame onClick={handleFinishTurn} disabled={loading}>
                   Finalizar Turno
                 </ButtonGame>
-              )}
+            )}
+          
           </div>
         </div>
       )}
@@ -542,11 +854,27 @@ export default function GameScreen() {
       <PlayerSetsModal
         isOpen={showPlayerSets}
         onClose={() => setShowPlayerSets(false)}
-        sets={playerSets} // Ajusta según la estructura de tu contexto
+        sets={playerSetsForModal} // Ajusta según la estructura de tu contexto
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
-        onCreateSet={handleCreateSet}
+        onCreateSet={handlePlayDetective}
       />
+
+      {/* Modal de seleccionar jugador */}
+      <SelectPlayerModal
+        isOpen={isSelectPlayerOpen}
+        onClose={() => setIsSelectPlayerOpen(false)}
+        jugadores={gameState.jugadores || []}
+        userId={userState.id}
+        currentEventType={gameState.eventCards?.actionInProgress?.eventType}
+        detectiveType={gameState.detectiveAction?.actionInProgress?.setType}
+        anotherVictim={gameState.eventCards?.anotherVictim}
+        detectiveAction={gameState.detectiveAction}
+        onPlayerSelect={handlePlayerSelect}
+        onConfirm={handleConfirmSelectPlayer}
+        onCancel={handleCancelSelectPlayer}
+      />
+
     </main>
   )
 }
