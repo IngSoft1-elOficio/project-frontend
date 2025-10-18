@@ -69,6 +69,8 @@ const gameInitialState = {
     // Another Victim
     anotherVictim: {
       showSelectPlayer: false,
+      selectedPlayer: null,
+      showSelectSets: false,
     },
 
     // Look Into Ashes
