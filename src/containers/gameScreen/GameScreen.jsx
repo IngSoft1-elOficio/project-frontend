@@ -64,38 +64,63 @@ export default function GameScreen() {
     })
   }
 
-  const handlePLayEventCard = async (c) => {
-    
-    // Verificar que es Another Victim, que es la unica carta de evento que vamos a implementar (puede cambiar)
-    
-    console.log(`Gonna play card: ${c}`);
-    
-    try {
+  const handlePLayEventCard = async () => {
+    console.log("Played CardId == " + selectedCards[0])
 
-      const response = await fetch(
-        `http://localhost:8000/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(), // Add user_id header
-          },
-          body: JSON.stringify({}),
+    if (selectedCards[0] == 429) { // Es Look Into The AShes
+      try {
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/play`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              HTTP_USER_ID: userState.id.toString(), // Add user_id header
+            },
+            body: JSON.stringify({
+                card_id: selectedCards[0]
+            }),
+          }
+        )
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(getErrorMessage(response.status, errorData))
         }
-      )
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(getErrorMessage(response.status, errorData))
+        const data = await response.json()
+        console.log('Played card succesfull:', data)
+        setSelectedCards([])      
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
       }
-
-      const data = await response.json()
-      console.log('Played card succesfull:', data)
-      setSelectedCards([])      
-    } catch {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    } else if (selectedCards[0] == 431) { // Es Another Victim
+        try {
+          const response = await fetch(
+            `http://localhost:8000/`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                HTTP_USER_ID: userState.id.toString(), // Add user_id header
+              },
+              body: JSON.stringify({}),
+            }
+          )
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(getErrorMessage(response.status, errorData))
+          }
+          const data = await response.json()
+          console.log('Played card succesfull:', data)
+          setSelectedCards([])      
+        } catch (err) {
+          setError(err.message)
+        } finally {
+          setLoading(false)
+        }
+    } else {
+      return
     }
   }
 
