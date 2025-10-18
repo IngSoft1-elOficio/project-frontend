@@ -41,7 +41,7 @@ export default function GameScreen() {
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
 
-  const roomId = gameState?.gameId || gameState?.roomId
+  const roomId = gameState?.roomId
 
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
@@ -124,13 +124,17 @@ export default function GameScreen() {
         const data = await response.json()
         console.log('Played card successfully:', data)
         
-        // TODO: Handle the response data (available_cards, action_id)
-        // You probably want to show these cards to the player
         if (data.available_cards) {
           console.log("Available cards from discard:", data.available_cards)
-          // Here you should open a modal or UI to show these cards
-          // and allow the player to select one
         }
+
+        gameDispatch({
+          type: 'EVENT_LOOK_ASHES_PLAYED',
+          payload: {
+            action_id: data.action_id,
+            available_cards: data.available_cards,
+          },
+        })
         
         setSelectedCards([])
       } catch (err) {
@@ -670,8 +674,17 @@ export default function GameScreen() {
   }
 
   
-const handleLookIntoTheAshes = async (cardId) => {
-    setLookLoading(true);
+  const handleSelectCardFromAshes = async (selectedCardId) => {
+    const { lookAshes } = gameState.eventCards
+    
+    if (!lookAshes?.actionId) {
+      setError('No action ID found')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
     try {
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/select`,
@@ -679,26 +692,34 @@ const handleLookIntoTheAshes = async (cardId) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(),
+            'http-user-id': userState.id.toString(),
           },
           body: JSON.stringify({
-            action_id: gameState.eventCards.lookAshes.actionId,
-            selected_card_id: cardId,
+            action_id: lookAshes.actionId,
+            selected_card_id: selectedCardId,
           }),
         }
-      );
+      )
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Backend error response:", errorData)
         throw new Error(getErrorMessage(response.status, errorData))
       }
 
       const data = await response.json()
-      console.log('Look Into The Ashes successful:', data)
+      console.log('Card selected successfully:', data)
+
+      // Close the modal and reset the state
+      gameDispatch({
+        type: 'EVENT_LOOK_ASHES_COMPLETE',
+      })
+
     } catch (err) {
+      console.error("Error selecting card from ashes:", err)
       setError(err.message)
     } finally {
-      setLookLoading(false);
+      setLoading(false)
     }
   }
 
@@ -996,11 +1017,8 @@ const getErrorMessage = (status, errorData) => {
       <div>
         <LookIntoTheAshes 
           isOpen={gameState.eventCards?.lookAshes?.showSelectCard}
-          discardedCards={gameState.eventCards?.lookAshes?.availableCards}
-          selectedCard={selectedCardLookAshes}
-          setSelectedCard={setSelectedCardLookAshes}
-          handleCardSelect={handleLookIntoTheAshes}
-          isLoading={lookLoading}
+          availableCards={gameState.eventCards.lookAshes.availableCards}
+          onSelectCard={handleSelectCardFromAshes}
         />
       </div>
 
