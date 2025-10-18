@@ -455,6 +455,14 @@ const gameReducer = (state, action) => {
     // ---------------
 
     case 'EVENT_ACTION_STARTED':
+      const eventLog = {
+        id: `event-${Date.now()}`,
+        message: action.payload.message,
+        type: 'event',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload.player_id,
+      };
+      
       return {
         ...state,
         eventCards: {
@@ -469,6 +477,7 @@ const gameReducer = (state, action) => {
               `Playing ${action.payload.card_name}...`,
           },
         },
+        logs: [...state.logs, eventLog].slice(-50)
       }
 
     case 'EVENT_STEP_UPDATE':
