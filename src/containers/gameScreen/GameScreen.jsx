@@ -56,71 +56,120 @@ export default function GameScreen() {
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
-      if (prev.includes(cardId)) {
-        return prev.filter(id => id !== cardId)
+      const isSelected = prev.some(card => card.id === cardId)
+      if (isSelected) {
+        return prev.filter(card => card.id !== cardId)
       } else {
-        return [...prev, cardId]
+        const card = gameState.mano.find(c => c.id === cardId)
+        return [...prev, { id: cardId, name: card?.name || '' }]
       }
     })
   }
 
   const handlePLayEventCard = async () => {
-    console.log("Played CardId == " + selectedCards[0])
-
-    if (selectedCards[0] == 429) { // Es Look Into The AShes
+    console.log("Played Card Name: " + selectedCards[0]?.name)
+    console.log("Played Card ID: " + selectedCards[0]?.id)
+    
+    if (selectedCards[0]?.name === "Look into the ashes") {
+      console.log("Attempting to play Look Into The Ashes with ID: " + selectedCards[0]?.id)
+      
+      setLoading(true)
+      setError(null)
+      
       try {
+        // Ensure card_id is a number (Pydantic expects int)
+        const cardId = Number(selectedCards[0]?.id)
+        
+        if (isNaN(cardId)) {
+          throw new Error("Invalid card ID")
+        }
+        
+        const requestBody = {
+          card_id: cardId
+        }
+        
+        console.log("Request body:", JSON.stringify(requestBody))
+        console.log("card_id type:", typeof cardId, "value:", cardId)
+        
         const response = await fetch(
           `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/play`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              HTTP_USER_ID: userState.id.toString(), // Add user_id header
+              'http-user-id': userState.id.toString(), // Kebab-case to match backend alias
             },
-            body: JSON.stringify({
-                card_id: selectedCards[0]
-            }),
+            body: JSON.stringify(requestBody),
           }
         )
+        
         if (!response.ok) {
-          const errorData = await response.json()
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Backend error response:", errorData)
+          console.error("Response status:", response.status)
+          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
           throw new Error(getErrorMessage(response.status, errorData))
         }
+        
         const data = await response.json()
-        console.log('Played card succesfull:', data)
-        setSelectedCards([])      
+        console.log('Played card successfully:', data)
+        
+        // TODO: Handle the response data (available_cards, action_id)
+        // You probably want to show these cards to the player
+        if (data.available_cards) {
+          console.log("Available cards from discard:", data.available_cards)
+          // Here you should open a modal or UI to show these cards
+          // and allow the player to select one
+        }
+        
+        setSelectedCards([])
       } catch (err) {
+        console.error("Error playing Look Into The Ashes:", err)
         setError(err.message)
       } finally {
         setLoading(false)
       }
-    } else if (selectedCards[0] == 431) { // Es Another Victim
-        try {
-          const response = await fetch(
-            `http://localhost:8000/`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                HTTP_USER_ID: userState.id.toString(), // Add user_id header
-              },
-              body: JSON.stringify({}),
-            }
-          )
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(getErrorMessage(response.status, errorData))
+    } else if (selectedCards[0]?.name === "Another Victim") {
+      console.log("Attempting to play Another Victim")
+      
+      setLoading(true)
+      setError(null)
+      
+      try {
+        // TODO: Implement Another Victim endpoint
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/event/another-victim`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              HTTP_USER_ID: userState.id.toString(),
+            },
+            body: JSON.stringify({
+              card_id: parseInt(selectedCards[0]?.id, 10)
+            }),
           }
-          const data = await response.json()
-          console.log('Played card succesfull:', data)
-          setSelectedCards([])      
-        } catch (err) {
-          setError(err.message)
-        } finally {
-          setLoading(false)
+        )
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error("Backend error:", errorData)
+          throw new Error(getErrorMessage(response.status, errorData))
         }
+        
+        const data = await response.json()
+        console.log('Played card successfully:', data)
+        setSelectedCards([])
+      } catch (err) {
+        console.error("Error playing Another Victim:", err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
     } else {
-      return
+      console.log("Card not implemented yet:", selectedCards[0]?.name)
+      setError("Esta carta aún no está implementada")
+      setTimeout(() => setError(null), 3000)
     }
   }
 
@@ -134,9 +183,9 @@ export default function GameScreen() {
     setError(null)
 
     try {
-      const cardsWithOrder = selectedCards.map((cardId, index) => ({
+      const cardsWithOrder = selectedCards.map((card, index) => ({
         order: index + 1,
-        card_id: cardId,
+        card_id: card.id,
       }))
       console.log('Orden de descarte:', cardsWithOrder)
 
@@ -444,9 +493,11 @@ export default function GameScreen() {
   }
 
   const handlePlayDetective = async () => {
+    const selectedCardIds = selectedCards.map(card => card.id)
+  
     console.log(
       'Cartas seleccionadas para el set:',
-      gameState.mano.filter(card => selectedCards.includes(card.id))
+      gameState.mano.filter(card => selectedCardIds.includes(card.id))
     )
 
     // Cantidades minimas de cartas por tipo de set
@@ -467,7 +518,7 @@ export default function GameScreen() {
     }
 
     // Caso crear set invalido
-    const setType = detectSetType(selectedCards)
+    const setType = detectSetType(selectedCardIds)
     if (!setType) {
       setError('Las cartas seleccionadas no forman un set válido')
       setTimeout(() => setError(null), 3000)
@@ -484,8 +535,8 @@ export default function GameScreen() {
     }
 
     // Detectar si hay comodín
-    const hasWildcard = checkForWildcard(selectedCards)
-
+    const hasWildcard = checkForWildcard(selectedCardIds)
+    
     setLoading(true)
     setError(null)
 
@@ -501,7 +552,7 @@ export default function GameScreen() {
           body: JSON.stringify({
             owner: userState.id,
             setType: setType,
-            cards: selectedCards,
+            cards: selectedCardIds,
             hasWildcard: hasWildcard,
           }),
         }
