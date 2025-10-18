@@ -9,6 +9,7 @@ import HandCards from '../../components/HandCards.jsx'
 import Secrets from '../../components/Secrets.jsx'
 import ButtonGame from '../../components/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
+import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 
@@ -702,6 +703,15 @@ export default function GameScreen() {
             finish_reason={gameState.finish_reason || 'La partida ha terminado'}
           />
         )}
+
+        {gameState.eventCards?.anotherVictim?.showSelectSets && (
+          <SelectOtherPLayerSet
+            player={gameState.eventCards.anotherVictim.selectedPlayer}
+            sets ={gameState.sets}
+            onSelectSet={() => {}} // agregar funcion cuando este implementada en GameScreen 
+          />
+        )}
+
       </div>
       {/* Modal de sets */}
       <PlayerSetsModal
