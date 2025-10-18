@@ -492,7 +492,7 @@ export default function GameScreen() {
       }
 
       // Detectives de dos pasos (target entrega secreto)
-      if (["beresford", "satterthwaite"].includes(detectiveType)) {
+      if (["beresford", "satterthwaite, eileenbrent"].includes(detectiveType)) {
         body = {
           actionId,
           executorId,
