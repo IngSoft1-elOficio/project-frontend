@@ -12,7 +12,9 @@ import Draft from '../../components/game/Draft.jsx'
 import LookIntoTheAshes from '../../components/modals/LookIntoTheAshes.jsx'
 import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
+import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
+
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -36,7 +38,6 @@ export default function GameScreen() {
   const [lookLoading, setLookLoading] = useState(false)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
-
   const roomId = gameState?.gameId || gameState?.roomId
 
   // Obtener los sets del jugador actual
@@ -59,6 +60,7 @@ export default function GameScreen() {
 
       return mappedSet
     })
+
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -475,6 +477,61 @@ export default function GameScreen() {
     }
   }
 
+  //Handler de HideRevealStealSecrets
+  const handleActionOnSecret = async (selectedSecret) => {
+    try {
+      const actionId = gameState.detectiveAction.current?.actionId;
+      const executorId = userState.id; // jugador que ejecuta
+      const secretId = selectedSecret.cardId;
+      const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
+      const targetPlayerId = gameState.detectiveAction.targetPlayerId;
+
+      let body = {}; 
+
+      // Detectives de un solo paso (owner roba secreto)
+      if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          targetPlayerId,
+          secretId,
+        };
+      }
+
+      // Detectives de dos pasos (target entrega secreto)
+      if (["beresford", "satterthwaite, eileenbrent"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          secretId,
+        };
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Error al ejecutar acción");
+      }
+
+      const data = await response.json();
+      console.log("Acción detective completada", data);
+    } catch (error) {
+      console.error("Error al ejecutar acción de detective", error);
+    }
+  };
+
+
   // ========== HELPER FUNCTIONS ==========
 
   // Helper: Detectar el tipo de set basado en las cartas seleccionadas
@@ -734,6 +791,16 @@ const getErrorMessage = (status, errorData) => {
             </div>
           </div>
         ) : null}
+
+        {/*Modal acción sobre secretos*/ }
+        <HideRevealStealSecretsModal
+          isOpen={gameState.detectiveAction.showSelectSecret || gameState.detectiveAction.showChooseOwnSecret} // || gameStatedetectiveAction.showChooseOwnSecret
+          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
+          onConfirm = {handleActionOnSecret}
+        />
+
+
+
 
         {gameState?.gameEnded && (
           <GameEndModal
