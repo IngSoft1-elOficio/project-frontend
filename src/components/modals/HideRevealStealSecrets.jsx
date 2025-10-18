@@ -8,7 +8,7 @@ const HideRevealStealSecretsModal = ({
 }) => {
   if (!isOpen) return null;
 
-  const setType = detective?.current?.setType || "Detective";
+  const setType = detective?.detectiveAction?.actionInProgress?.setType|| "Detective";
   const secretos = detective?.secretsPool || [];
 
   const filteredSecrets = secretos.filter(

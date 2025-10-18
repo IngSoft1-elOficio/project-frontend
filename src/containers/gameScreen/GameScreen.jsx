@@ -471,19 +471,35 @@ export default function GameScreen() {
   }
 
   //Handler de HideRevealStealSecrets
-  const handleActionOnSecret  = async (selectedSecret) => {
+  const handleActionOnSecret = async (selectedSecret) => {
     try {
-      const actionId = gameState.detectiveAction.current.actionId;
-      const executorId = gameState.userId;
+      const actionId = gameState.detectiveAction.current?.actionId;
+      const executorId = userState.id; // jugador que ejecuta
       const secretId = selectedSecret.cardId;
+      const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
+      const targetPlayerId = gameState.detectiveAction.targetPlayerId;
 
-      const body = {
-        actionId ,
-        executorId,
-        secretId,
-      };
+      let body = {}; 
 
-      // llamamos al endpoint
+      // Detectives de un solo paso (owner roba secreto)
+      if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          targetPlayerId,
+          secretId,
+        };
+      }
+
+      // Detectives de dos pasos (target entrega secreto)
+      if (["beresford", "satterthwaite"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          secretId,
+        };
+      }
+
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
         {
@@ -503,9 +519,8 @@ export default function GameScreen() {
 
       const data = await response.json();
       console.log("Acción detective completada", data);
-
-      } catch (error) {
-    console.error("Error al ejecutar acción de detective", error);
+    } catch (error) {
+      console.error("Error al ejecutar acción de detective", error);
     }
   };
 
@@ -739,7 +754,7 @@ export default function GameScreen() {
 
         {/*Modal acción sobre secretos*/ }
         <HideRevealStealSecretsModal
-          isOpen={gameState.detectiveAction.showSelectSecret}
+          isOpen={gameState.detectiveAction.showSelectSecret || gameState.detectiveAction.showChooseOwnSecret} // || gameStatedetectiveAction.showChooseOwnSecret
           detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
           onConfirm = {handleActionOnSecret}
         />
