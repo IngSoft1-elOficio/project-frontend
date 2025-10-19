@@ -37,6 +37,7 @@ const gameInitialState = {
   finish_reason: null,
   lastUpdate: null,
   connected: false,
+  playerLeftNotification: null,
 
   // Detective Actions
   detectiveAction: {
@@ -207,6 +208,22 @@ const gameReducer = (state, action) => {
         ...state,
         gameCancelled: true,
         lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'PLAYER_LEFT_NOTIFICATION':
+      return {
+        ...state,
+        playerLeftNotification: {
+          playerName: action.payload.playerName,
+          timestamp: action.payload.timestamp,
+        },
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'CLEAR_PLAYER_LEFT_NOTIFICATION':
+      return {
+        ...state,
+        playerLeftNotification: null,
       }
 
     // ----------------------
@@ -818,6 +835,15 @@ export const GameProvider = ({ children }) => {
           type: 'UPDATE_GAME_STATE_PUBLIC',
           payload: {
             jugadores: data.players,
+            timestamp: new Date().toISOString(),
+          },
+        })
+
+        // Notificar que un jugador salio
+        gameDispatch({
+          type: 'PLAYER_LEFT_NOTIFICATION',
+          payload: {
+            playerName: 'Un jugador',
             timestamp: new Date().toISOString(),
           },
         })

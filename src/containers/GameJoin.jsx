@@ -11,6 +11,7 @@ import ExitGameButton from '../components/lobby/ExitGameButton'
 export default function GameJoin() {
   const navigate = useNavigate()
   const [error, setErrorMessage] = useState(null)
+  const [notification, setNotification] = useState(null)
 
   // Contexts
   const { gameState, gameDispatch } = useGame()
@@ -26,13 +27,32 @@ export default function GameJoin() {
     }
   }, [gameState, userState])
 
-  // Redirigir jugadores cuando el host cancela la partida
+  // Redirigir jugadores cuando el host cancela la partida y mostrar notificacion
   useEffect(() => {
     if (gameState.gameCancelled) {
-      console.log('El host canceló la partida, redirigiendo...')
-      navigate('/lobby')
+      console.log('El host cancelo la partida, redirigiendo al lobby')
+      setNotification('El host cancelo la partida')
+
+      // Esperar un momento para que se vea la notificación antes de redirigir
+      setTimeout(() => {
+        navigate('/lobby')
+      }, 3000)
     }
   }, [gameState.gameCancelled, navigate])
+
+  // Mostrar notificacion cuando un jugador abandona
+  useEffect(() => {
+    if (gameState.playerLeftNotification) {
+      const playerName = gameState.playerLeftNotification.playerName
+      setNotification(`${playerName} abandono la partida`)
+
+      // Limpiar notificacion despues de 3 segundos
+      setTimeout(() => {
+        setNotification(null)
+        gameDispatch({ type: 'CLEAR_PLAYER_LEFT_NOTIFICATION' })
+      }, 3000)
+    }
+  }, [gameState.playerLeftNotification, gameDispatch])
 
   const { gameId, jugadores, roomInfo } = gameState
 
@@ -101,6 +121,16 @@ export default function GameJoin() {
           style={{ zIndex: 9999, maxWidth: '500px' }}
         >
           {error}
+        </div>
+      )}
+
+      {/* Notification display */}
+      {notification && (
+        <div
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-2xl font-limelight"
+          style={{ zIndex: 9999, maxWidth: '500px' }}
+        >
+          {notification}
         </div>
       )}
 
