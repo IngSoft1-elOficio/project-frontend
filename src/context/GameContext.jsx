@@ -29,6 +29,7 @@ const gameInitialState = {
   },
   sets: [],
   mano: [],
+  secretsFromAllPlayers: [],
   secretos: [],
   gameEnded: false,
   winners: [],
@@ -111,546 +112,763 @@ const gameInitialState = {
   },
 }
 
-const gameReducer = (state, action) => {
-  switch (action.type) {
-    // -------------------
-    // | GAME-CONNECTION |
-    // -------------------
+  const gameReducer = (state, action) => {
+    switch (action.type) {
+      // -------------------
+      // | GAME-CONNECTION |
+      // -------------------
 
-    case 'SOCKET_CONNECTED':
-      return {
-        ...state,
-        connected: true,
-      }
+      case 'SOCKET_CONNECTED':
+        return {
+          ...state,
+          connected: true,
+        }
 
-    case 'SOCKET_DISCONNECTED':
-      return {
-        ...state,
-        connected: false,
-      }
+      case 'SOCKET_DISCONNECTED':
+        return {
+          ...state,
+          connected: false,
+        }
 
-    case 'SET_GAME_ID':
-      return {
-        ...state,
-        gameId: action.payload,
-      }
+      case 'SET_GAME_ID':
+        return {
+          ...state,
+          gameId: action.payload,
+        }
 
-    case 'INITIALIZE_GAME':
-      return {
-        ...state,
-        gameId: action.payload.room.game_id,
-        roomId: action.payload.room.id,
-        roomInfo: action.payload.room,
-        jugadores: action.payload.players,
-      }
+      case 'INITIALIZE_GAME':
+        const initLog = {
+          id: `init-${Date.now()}`,
+          message: action.payload.message || 'Juego inicializado',
+          type: 'system',
+          timestamp: new Date().toISOString(),
+        };
 
-    case 'UPDATE_GAME_STATE_PUBLIC':
-      return {
-        ...state,
-        roomId: action.payload.room_id ?? state.roomId,
-        gameId: action.payload.game_id ?? state.gameId,
-        status: action.payload.status ?? state.status,
-        turnoActual: action.payload.turno_actual ?? state.turnoActual,
+        return {
+          ...state,
+          gameId: action.payload.room.game_id,
+          roomId: action.payload.room.id,
+          roomInfo: action.payload.room,
+          jugadores: action.payload.players,
+          logs: [...state.logs, initLog].slice(-50)
+        }
 
-        jugadores:
-          Array.isArray(action.payload.jugadores) &&
-          action.payload.jugadores.length > 0
-            ? action.payload.jugadores
-            : state.jugadores,
+      case 'UPDATE_GAME_STATE_PUBLIC':
+        const updateLog = {
+          id: `update-${Date.now()}`,
+          message: action.payload.message || 'Estado del juego actualizado',
+          type: 'system',
+          timestamp: new Date().toISOString(),
+        };
 
-        mazos:
-          action.payload.mazos && Object.keys(action.payload.mazos).length > 0
-            ? action.payload.mazos
-            : state.mazos,
+        return {
+          ...state,
+          roomId: action.payload.room_id ?? state.roomId,
+          gameId: action.payload.game_id ?? state.gameId,
+          status: action.payload.status ?? state.status,
+          turnoActual: action.payload.turno_actual ?? state.turnoActual,
 
-        sets:
-          Array.isArray(action.payload.sets) && action.payload.sets.length > 0
-            ? action.payload.sets
-            : state.sets,
+          jugadores:
+            Array.isArray(action.payload.jugadores) &&
+            action.payload.jugadores.length > 0
+              ? action.payload.jugadores
+              : state.jugadores,
 
-        gameEnded: action.payload.game_ended ?? state.gameEnded,
-        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
-      }
+          mazos:
+            action.payload.mazos && Object.keys(action.payload.mazos).length > 0
+              ? action.payload.mazos
+              : state.mazos,
 
-    case 'UPDATE_GAME_STATE_PRIVATE':
-      return {
-        ...state,
-        userId: action.payload.user_id ?? state.userId,
-        mano: Array.isArray(action.payload.mano)
-          ? action.payload.mano
-          : state.mano,
+          sets:
+            Array.isArray(action.payload.sets) && action.payload.sets.length > 0
+              ? action.payload.sets
+              : state.sets,
+          
+          secretsFromAllPlayers:
+            Array.isArray(action.payload.secretsFromAllPlayers) && action.payload.secretsFromAllPlayers.length > 0
+              ? action.payload.secretsFromAllPlayers
+              : state.secretsFromAllPlayers,
 
-        secretos: Array.isArray(action.payload.secretos)
-          ? action.payload.secretos
-          : state.secretos,
+          gameEnded: action.payload.game_ended ?? state.gameEnded,
+          lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+          logs: action.payload.message ? [...state.logs, updateLog].slice(-50) : state.logs
+        }
 
-        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
-      }
+      case 'UPDATE_GAME_STATE_PRIVATE':
+        return {
+          ...state,
+          userId: action.payload.user_id ?? state.userId,
+          mano: Array.isArray(action.payload.mano)
+            ? action.payload.mano
+            : state.mano,
 
-    case 'GAME_ENDED':
-      return {
-        ...state,
-        gameEnded: true,
-        ganaste: action.payload.ganaste ?? false,
+          secretos: Array.isArray(action.payload.secretos)
+            ? action.payload.secretos
+            : state.secretos,
 
-        winners: Array.isArray(action.payload.winners)
-          ? action.payload.winners
-          : state.winners,
+          lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+        }
 
-        finish_reason: action.payload.reason,
+      case 'GAME_ENDED':
+        const endLog = {
+          id: `end-${Date.now()}`,
+          message: action.payload.message || action.payload.reason || 'Juego terminado',
+          type: 'game_end',
+          timestamp: new Date().toISOString(),
+        };
 
-        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
-      }
+        return {
+          ...state,
+          gameEnded: true,
+          ganaste: action.payload.ganaste ?? false,
 
-    // ----------------------
-    // | CARDS DRAW-DISCARD |
-    // ----------------------
-    case 'PLAYER_MUST_DRAW':
-      console.log(
-        'PLAYER_MUST_DRAW, cardsToDrawRemaining = ',
-        action.payload.cards_to_draw
-      )
-      const isMe = action.payload.player_id === state.userId
+          winners: Array.isArray(action.payload.winners)
+            ? action.payload.winners
+            : state.winners,
 
-      const discardLog = {
-        id: `discard-${Date.now()}`,
-        message: action.payload.message,
-        type: 'discard',
-        timestamp: new Date().toISOString(),
-        playerId: action.payload.player_id,
-      };
+          finish_reason: action.payload.reason,
 
-      return {
-        ...state,
-        drawAction: {
-          cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
-          otherPlayerDrawing: !isMe
-            ? {
-                playerId: action.payload.player_id,
-                cardsRemaining: action.payload.cards_to_draw,
-                message: action.payload.message,
-              }
-            : null,
-          hasDiscarded: true,
-          hasDrawn: false,
-        },
-        logs: [...state.logs, discardLog].slice(-50)
-      }
+          lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+          logs: [...state.logs, endLog].slice(-50)
+        }
 
-    case 'CARD_DRAWN_SIMPLE':
-      const isMeDrawing = action.payload.player_id === state.userId
-      const cardsRemaining = action.payload.cards_remaining
+      // ----------------------
+      // | CARDS DRAW-DISCARD |
+      // ----------------------
+      case 'PLAYER_MUST_DRAW':
+        console.log(
+          'PLAYER_MUST_DRAW, cardsToDrawRemaining = ',
+          action.payload.cards_to_draw
+        )
+        const isMe = action.payload.player_id === state.userId
 
-      const drawLog = {
-        id: `draw-${Date.now()}`,
-        message: action.payload.message,
-        type: 'draw',
-        timestamp: new Date().toISOString(),
-        playerId: action.payload.player_id,
-      };
+        const discardLog = {
+          id: `discard-${Date.now()}`,
+          message: action.payload.message,
+          type: 'discard',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
 
-      return {
-        ...state,
-        drawAction: {
-          cardsToDrawRemaining: isMeDrawing
-            ? cardsRemaining
-            : state.drawAction.cardsToDrawRemaining,
-          otherPlayerDrawing:
-            !isMeDrawing && cardsRemaining > 0
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
+            otherPlayerDrawing: !isMe
               ? {
                   playerId: action.payload.player_id,
-                  cardsRemaining: cardsRemaining,
+                  cardsRemaining: action.payload.cards_to_draw,
                   message: action.payload.message,
                 }
               : null,
-          hasDiscarded: state.drawAction.hasDiscarded,
-          hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
-        },
-        logs: [...state.logs, drawLog].slice(-50)
-      }
-
-    case 'DRAW_ACTION_COMPLETE':
-      console.log('DRAW_ACTION_COMPLETE')
-      return {
-        ...state,
-        drawAction: {
-          cardsToDrawRemaining: 0,
-          otherPlayerDrawing: null,
-          hasDiscarded: true,
-          hasDrawn: true,
-        },
-      }
-
-    case 'FINISH_TURN':
-      console.log('FINISH_TURN')
-
-      const finishTurnLog = {
-        id: `turn-${Date.now()}`,
-        message: action.payload.message,
-        type: 'turn',
-        timestamp: new Date().toISOString(),
-        playerId: action.payload.player_id,
-      };
-
-      return {
-        ...state,
-        drawAction: {
-          cardsToDrawRemaining: 0,
-          otherPlayerDrawing: null,
-          hasDiscarded: false,
-          hasDrawn: false,
-        },
-        logs: [...state.logs, finishTurnLog].slice(-50)
-      }
-
-    // ---------------------
-    // | DETECTIVE ACTIONS |
-    // ---------------------
-
-    case 'DETECTIVE_ACTION_STARTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          actionInProgress: {
-            initiatorPlayerId: action.payload.player_id,
-            setType: action.payload.set_type,
-            step: 'select_target',
-            message: action.payload.message,
+            hasDiscarded: true,
+            hasDrawn: false,
           },
-        },
-      };
+          logs: [...state.logs, discardLog].slice(-50)
+        }
 
-    case 'DETECTIVE_TARGET_CONFIRMED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          targetPlayerId: action.payload.targetPlayerId,
-          showSelectPlayer: false,
-          showWaiting: true, // Show a waiting modal/message
-          actionInProgress: {
-            ...state.detectiveAction.actionInProgress,
+      case 'CARD_DRAWN_SIMPLE':
+        const isMeDrawing = action.payload.player_id === state.userId
+        const cardsRemaining = action.payload.cards_remaining
+
+        const drawLog = {
+          id: `draw-${Date.now()}`,
+          message: action.payload.message,
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: isMeDrawing
+              ? cardsRemaining
+              : state.drawAction.cardsToDrawRemaining,
+            otherPlayerDrawing:
+              !isMeDrawing && cardsRemaining > 0
+                ? {
+                    playerId: action.payload.player_id,
+                    cardsRemaining: cardsRemaining,
+                    message: action.payload.message,
+                  }
+                : null,
+            hasDiscarded: state.drawAction.hasDiscarded,
+            hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
+          },
+          logs: [...state.logs, drawLog].slice(-50)
+        }
+
+      case 'DRAW_ACTION_COMPLETE':
+        console.log('DRAW_ACTION_COMPLETE')
+        
+        const drawCompleteLog = {
+          id: `draw-complete-${Date.now()}`,
+          message: action.payload?.message || 'Robo de cartas completado',
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload?.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: true,
+            hasDrawn: true,
+          },
+          logs: [...state.logs, drawCompleteLog].slice(-50)
+        }
+
+      case 'FINISH_TURN':
+        console.log('FINISH_TURN')
+
+        const finishTurnLog = {
+          id: `turn-${Date.now()}`,
+          message: action.payload.message,
+          type: 'turn',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+          },
+          logs: [...state.logs, finishTurnLog].slice(-50)
+        }
+
+      // ---------------------
+      // | DETECTIVE ACTIONS |
+      // ---------------------
+
+      case 'DETECTIVE_ACTION_STARTED':
+        const detectiveStartLog = {
+          id: `detective-start-${Date.now()}`,
+          message: action.payload.message,
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            actionInProgress: {
+              initiatorPlayerId: action.payload.player_id,
+              setType: action.payload.set_type,
+              step: 'select_target',
+              message: action.payload.message,
+            },
+          },
+          logs: [...state.logs, detectiveStartLog].slice(-50)
+        };
+
+      case 'DETECTIVE_TARGET_CONFIRMED':
+        const targetConfirmedLog = {
+          id: `detective-confirmed-${Date.now()}`,
+          message: `Esperando confirmación de ${action.payload.targetPlayerData?.name || 'jugador objetivo'}`,
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.targetPlayerId,
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
             targetPlayerId: action.payload.targetPlayerId,
-            step: 'waiting_target_confirmation',
-            message: `Esperando confirmación de ${action.payload.targetPlayerData.name}`,
-          },
-        },
-      };
-
-    case 'DETECTIVE_PLAYER_SELECTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          targetPlayerId: action.payload.playerId,
-          showSelectPlayer: false,
-          showSelectSecret: action.payload.needsSecret,
-          showWaiting: !action.payload.needsSecret,
-        },
-      };
-
-    case 'DETECTIVE_TARGET_NOTIFIED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          actionInProgress: {
-            ...state.detectiveAction.actionInProgress,
-            step: 'target_must_confirm',
-          },
-          showSelectPlayer: true,
-        },
-      };
-
-    case 'DETECTIVE_TARGET_SELECTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          actionInProgress: {
-            ...state.detectiveAction.actionInProgress,
-            targetPlayerId: action.payload.target_player_id,
-            step: 'waiting_for_secret',
-            message: action.payload.message,
-          },
-        },
-      }
-
-    case 'DETECTIVE_START_CREATE_SET':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          showCreateSet: true,
-        },
-      }
-
-    case 'DETECTIVE_SET_SUBMITTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          current: {
-            actionId: action.payload.actionId,
-            setType: action.payload.setType,
-            stage: action.payload.stage,
-            cards: action.payload.cards,
-            hasWildcard: action.payload.hasWildcard,
-          },
-          allowedPlayers: action.payload.allowedPlayers,
-          secretsPool: action.payload.secretsPool,
-          showCreateSet: false,
-          showSelectPlayer: true,
-        },
-      }
-
-    case 'DETECTIVE_INCOMING_REQUEST':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          incomingRequest: {
-            actionId: action.payload.action_id,
-            requesterId: action.payload.requester_id,
-            setType: action.payload.set_type,
-          },
-          showChooseOwnSecret: true,
-        },
-      }
-
-    case 'DETECTIVE_ACTION_COMPLETE':
-      return {
-        ...state,
-        detectiveAction: {
-          current: null,
-          allowedPlayers: [],
-          secretsPool: 'hidden',
-          targetPlayerId: null,
-          showCreateSet: false,
-          showSelectPlayer: false,
-          showSelectSecret: false,
-          showWaiting: false,
-          incomingRequest: null,
-          showChooseOwnSecret: false,
-          actionInProgress: null,
-        },
-      }
-
-    // ---------------
-    // | EVENT CARDS |
-    // ---------------
-
-    case 'EVENT_ACTION_STARTED':
-      const eventLog = {
-        id: `event-${Date.now()}`,
-        message: action.payload.message,
-        type: 'event',
-        timestamp: new Date().toISOString(),
-        playerId: action.payload.player_id,
-      };
-      
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          actionInProgress: {
-            playerId: action.payload.player_id,
-            eventType: action.payload.event_type,
-            cardName: action.payload.card_name,
-            step: action.payload.step,
-            message:
-              action.payload.message ||
-              `Playing ${action.payload.card_name}...`,
-          },
-        },
-        logs: [...state.logs, eventLog].slice(-50)
-      }
-
-    case 'EVENT_STEP_UPDATE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          actionInProgress: {
-            ...state.eventCards.actionInProgress,
-            step: action.payload.step,
-            message: action.payload.message,
-          },
-        },
-      }
-
-    case 'EVENT_CARDS_OFF_TABLE_START':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          cardsOffTable: { showSelectPlayer: true },
-        },
-      }
-
-    case 'EVENT_CARDS_OFF_TABLE_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          cardsOffTable: { showSelectPlayer: false },
-          actionInProgress: null,
-        },
-      }
-
-    case 'EVENT_LOOK_ASHES_PLAYED':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          lookAshes: {
-            actionId: action.payload.action_id,
-            availableCards: action.payload.available_cards,
-            showSelectCard: true,
-          },
-        },
-      }
-
-    case 'EVENT_ANOTHER_VICTIM_START':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          anotherVictim: {
-            showSelectPlayer: true,
-            selectedPlayer: null,
-          },
-          actionInProgress: {
-            playerId: action.payload?.playerId,
-            eventType: 'another_victim',
-            step: 'select_player',
-            message: 'Selecciona un jugador objetivo',
-          },
-        },
-      }
-
-    case 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          anotherVictim: {
-            ...state.eventCards.anotherVictim,
-            selectedPlayer: action.payload,
-            showSelectSets: true,
             showSelectPlayer: false,
+            showWaiting: true,
+            actionInProgress: {
+              ...state.detectiveAction.actionInProgress,
+              targetPlayerId: action.payload.targetPlayerId,
+              step: 'waiting_target_confirmation',
+              message: `Esperando confirmación de ${action.payload.targetPlayerData?.name || 'jugador'}`,
+            },
           },
-        },
-      }
-    
-    case 'EVENT_ANOTHER_VICTIM_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          anotherVictim: {
-            ...state.eventCards.anotherVictim,
+          logs: [...state.logs, targetConfirmedLog].slice(-50)
+        };
+
+      case 'DETECTIVE_PLAYER_SELECTED':
+        const playerSelectedLog = {
+          id: `detective-selected-${Date.now()}`,
+          message: action.payload.message || 'Jugador seleccionado',
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.playerId,
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            targetPlayerId: action.payload.playerId,
             showSelectPlayer: false,
-            showSelectSets: false,
-            selectedPlayer: null,
-            selectedSet: null,
+            showSelectSecret: action.payload.needsSecret,
+            showWaiting: !action.payload.needsSecret,
           },
-          actionInProgress: null,
-        },
-      }
+          logs: action.payload.message ? [...state.logs, playerSelectedLog].slice(-50) : state.logs
+        };
 
-    case 'EVENT_LOOK_ASHES_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          lookAshes: {
-            actionId: null,
-            availableCards: [],
-            showSelectCard: false,
-          },
-          actionInProgress: null,
-        },
-      }
+      case 'DETECTIVE_TARGET_NOTIFIED':
+        const targetNotifiedLog = {
+          id: `detective-notified-${Date.now()}`,
+          message: action.payload.message || 'Objetivo notificado',
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+        };
 
-    case 'EVENT_ONE_MORE_PLAYED':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          oneMore: {
-            ...state.eventCards.oneMore,
-            actionId: action.payload.action_id,
-            availableSecrets: action.payload.available_secrets,
-            showSelectSecret: true,
-          },
-        },
-      }
-
-    case 'EVENT_ONE_MORE_SECRET_SELECTED':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          oneMore: {
-            ...state.eventCards.oneMore,
-            selectedSecretId: action.payload.secret_id,
-            allowedPlayers: action.payload.allowed_players,
-            showSelectSecret: false,
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            actionInProgress: {
+              ...state.detectiveAction.actionInProgress,
+              step: 'target_must_confirm',
+            },
             showSelectPlayer: true,
           },
-        },
-      }
+          logs: action.payload?.message ? [...state.logs, targetNotifiedLog].slice(-50) : state.logs
+        };
 
-    case 'EVENT_ONE_MORE_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          oneMore: {
-            actionId: null,
-            availableSecrets: [],
+      case 'DETECTIVE_TARGET_SELECTED':
+        const targetSelectedLog = {
+          id: `detective-target-${Date.now()}`,
+          message: action.payload.message,
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.target_player_id,
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            actionInProgress: {
+              ...state.detectiveAction.actionInProgress,
+              targetPlayerId: action.payload.target_player_id,
+              step: 'waiting_for_secret',
+              message: action.payload.message,
+            },
+          },
+          logs: [...state.logs, targetSelectedLog].slice(-50)
+        }
+
+      case 'DETECTIVE_START_CREATE_SET':
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            showCreateSet: true,
+          },
+        }
+
+      case 'DETECTIVE_SET_SUBMITTED':
+        const setSubmittedLog = {
+          id: `detective-set-${Date.now()}`,
+          message: action.payload.message || `Set de detective ${action.payload.setType} jugado`,
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            current: {
+              actionId: action.payload.actionId,
+              setType: action.payload.setType,
+              stage: action.payload.stage,
+              cards: action.payload.cards,
+              hasWildcard: action.payload.hasWildcard,
+            },
+            allowedPlayers: action.payload.allowedPlayers,
+            secretsPool: action.payload.secretsPool,
+            showCreateSet: false,
+            showSelectPlayer: true,
+          },
+          logs: [...state.logs, setSubmittedLog].slice(-50)
+        }
+
+      case 'DETECTIVE_INCOMING_REQUEST':
+        const incomingRequestLog = {
+          id: `detective-request-${Date.now()}`,
+          message: action.payload.message || 'Solicitud de detective recibida',
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.requester_id,
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            ...state.detectiveAction,
+            incomingRequest: {
+              actionId: action.payload.action_id,
+              requesterId: action.payload.requester_id,
+              setType: action.payload.set_type,
+            },
+            showChooseOwnSecret: true,
+          },
+          logs: [...state.logs, incomingRequestLog].slice(-50)
+        }
+
+      case 'DETECTIVE_ACTION_COMPLETE':
+        const detectiveCompleteLog = {
+          id: `detective-complete-${Date.now()}`,
+          message: action.payload?.message || 'Acción de detective completada',
+          type: 'detective',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          detectiveAction: {
+            current: null,
             allowedPlayers: [],
-            selectedSecretId: null,
-            showSelectSecret: false,
+            secretsPool: 'hidden',
+            targetPlayerId: null,
+            showCreateSet: false,
             showSelectPlayer: false,
+            showSelectSecret: false,
+            showWaiting: false,
+            incomingRequest: null,
+            showChooseOwnSecret: false,
+            actionInProgress: null,
           },
-          actionInProgress: null,
-        },
-      }
+          logs: [...state.logs, detectiveCompleteLog].slice(-50)
+        }
 
-    case 'EVENT_DELAY_ESCAPE_PLAYED':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          delayEscape: {
-            actionId: action.payload.action_id,
-            availableCards: action.payload.available_cards,
-            showOrderCards: true,
+      // ---------------
+      // | EVENT CARDS |
+      // ---------------
+
+      case 'EVENT_ACTION_STARTED':
+        const eventLog = {
+          id: `event-${Date.now()}`,
+          message: action.payload.message,
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+        
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            actionInProgress: {
+              playerId: action.payload.player_id,
+              eventType: action.payload.event_type,
+              cardName: action.payload.card_name,
+              step: action.payload.step,
+              message:
+                action.payload.message ||
+                `Playing ${action.payload.card_name}...`,
+            },
           },
-        },
-      }
+          logs: [...state.logs, eventLog].slice(-50)
+        }
 
-    case 'EVENT_DELAY_ESCAPE_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          delayEscape: {
-            actionId: null,
-            availableCards: [],
-            showOrderCards: false,
+      case 'EVENT_STEP_UPDATE':
+        const stepUpdateLog = {
+          id: `event-step-${Date.now()}`,
+          message: action.payload.message,
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            actionInProgress: {
+              ...state.eventCards.actionInProgress,
+              step: action.payload.step,
+              message: action.payload.message,
+            },
           },
-          actionInProgress: null,
-        },
-      }
+          logs: action.payload.message ? [...state.logs, stepUpdateLog].slice(-50) : state.logs
+        }
 
-    default:
-      return state
+      case 'EVENT_CARDS_OFF_TABLE_START':
+        const cardsOffTableLog = {
+          id: `event-cards-off-${Date.now()}`,
+          message: action.payload?.message || 'Cards Off the Table jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload?.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            cardsOffTable: { showSelectPlayer: true },
+          },
+          logs: [...state.logs, cardsOffTableLog].slice(-50)
+        }
+
+      case 'EVENT_CARDS_OFF_TABLE_COMPLETE':
+        const cardsOffCompleteLog = {
+          id: `event-cards-off-complete-${Date.now()}`,
+          message: action.payload?.message || 'Cards Off the Table completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            cardsOffTable: { showSelectPlayer: false },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, cardsOffCompleteLog].slice(-50)
+        }
+
+      case 'EVENT_LOOK_ASHES_PLAYED':
+        const lookAshesLog = {
+          id: `event-ashes-${Date.now()}`,
+          message: action.payload.message || 'Look Into the Ashes jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            lookAshes: {
+              actionId: action.payload.action_id,
+              availableCards: action.payload.available_cards,
+              showSelectCard: true,
+            },
+          },
+          logs: [...state.logs, lookAshesLog].slice(-50)
+        }
+
+      case 'EVENT_ANOTHER_VICTIM_START':
+        const anotherVictimLog = {
+          id: `event-victim-${Date.now()}`,
+          message: action.payload?.message || 'Another Victim jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload?.playerId,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            anotherVictim: {
+              showSelectPlayer: true,
+              selectedPlayer: null,
+            },
+            actionInProgress: {
+              playerId: action.payload?.playerId,
+              eventType: 'another_victim',
+              step: 'select_player',
+              message: 'Selecciona un jugador objetivo',
+            },
+          },
+          logs: [...state.logs, anotherVictimLog].slice(-50)
+        }
+
+      case 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER':
+        const victimSelectLog = {
+          id: `event-victim-select-${Date.now()}`,
+          message: action.payload.message || `Jugador seleccionado para Another Victim`,
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            anotherVictim: {
+              ...state.eventCards.anotherVictim,
+              selectedPlayer: action.payload,
+              showSelectSets: true,
+              showSelectPlayer: false,
+            },
+          },
+          logs: action.payload?.message ? [...state.logs, victimSelectLog].slice(-50) : state.logs
+        }
+      
+      case 'EVENT_ANOTHER_VICTIM_COMPLETE':
+        const victimCompleteLog = {
+          id: `event-victim-complete-${Date.now()}`,
+          message: action.payload?.message || 'Another Victim completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            anotherVictim: {
+              ...state.eventCards.anotherVictim,
+              showSelectPlayer: false,
+              showSelectSets: false,
+              selectedPlayer: null,
+              selectedSet: null,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, victimCompleteLog].slice(-50)
+        }
+
+      case 'EVENT_LOOK_ASHES_COMPLETE':
+        const ashesCompleteLog = {
+          id: `event-ashes-complete-${Date.now()}`,
+          message: action.payload?.message || 'Look Into the Ashes completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            lookAshes: {
+              actionId: null,
+              availableCards: [],
+              showSelectCard: false,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, ashesCompleteLog].slice(-50)
+        }
+
+      case 'EVENT_ONE_MORE_PLAYED':
+        const oneMoreLog = {
+          id: `event-one-more-${Date.now()}`,
+          message: action.payload.message || 'And Then There Was One More jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            oneMore: {
+              ...state.eventCards.oneMore,
+              actionId: action.payload.action_id,
+              availableSecrets: action.payload.available_secrets,
+              showSelectSecret: true,
+            },
+          },
+          logs: [...state.logs, oneMoreLog].slice(-50)
+        }
+
+      case 'EVENT_ONE_MORE_SECRET_SELECTED':
+        const oneMoreSecretLog = {
+          id: `event-one-more-secret-${Date.now()}`,
+          message: action.payload.message || 'Secreto seleccionado para One More',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            oneMore: {
+              ...state.eventCards.oneMore,
+              selectedSecretId: action.payload.secret_id,
+              allowedPlayers: action.payload.allowed_players,
+              showSelectSecret: false,
+              showSelectPlayer: true,
+            },
+          },
+          logs: action.payload?.message ? [...state.logs, oneMoreSecretLog].slice(-50) : state.logs
+        }
+
+      case 'EVENT_ONE_MORE_COMPLETE':
+        const oneMoreCompleteLog = {
+          id: `event-one-more-complete-${Date.now()}`,
+          message: action.payload?.message || 'One More completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            oneMore: {
+              actionId: null,
+              availableSecrets: [],
+              allowedPlayers: [],
+              selectedSecretId: null,
+              showSelectSecret: false,
+              showSelectPlayer: false,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, oneMoreCompleteLog].slice(-50)
+        }
+
+      case 'EVENT_DELAY_ESCAPE_PLAYED':
+        const delayEscapeLog = {
+          id: `event-delay-${Date.now()}`,
+          message: action.payload.message || 'Delay the Murderers Escape jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            delayEscape: {
+              actionId: action.payload.action_id,
+              availableCards: action.payload.available_cards,
+              showOrderCards: true,
+            },
+          },
+          logs: [...state.logs, delayEscapeLog].slice(-50)
+        }
+
+      case 'EVENT_DELAY_ESCAPE_COMPLETE':
+        const delayCompleteLog = {
+          id: `event-delay-complete-${Date.now()}`,
+          message: action.payload?.message || 'Delay the Murderers Escape completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            delayEscape: {
+              actionId: null,
+              availableCards: [],
+              showOrderCards: false,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, delayCompleteLog].slice(-50)
+        }
+
+      default:
+        return state
+    }
   }
-}
 
 export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState)

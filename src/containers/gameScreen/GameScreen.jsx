@@ -12,12 +12,13 @@ import Draft from '../../components/game/Draft.jsx'
 import Tabs from '../../components/game/Tabs.jsx'
 import TabPanel from '../../components/game/TabPanel.jsx'
 import Log from '../../components/game/Log.jsx'
-import { OtherPlayerSets } from '../../components/game/OtherPlayerSets.jsx'
+import OtherPlayerSets from '../../components/game/OtherPlayerSets.jsx'
 import LookIntoTheAshes from '../../components/modals/LookIntoTheAshes.jsx'
 import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
+import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 
 
 export default function GameScreen() {
@@ -38,10 +39,8 @@ export default function GameScreen() {
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
-  const [lookLoading, setLookLoading] = useState(false)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
-  const [isSelectPlayerOpen, setIsSelectPlayerOpen] = useState(false)
+  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
   const roomId = gameState?.roomId
 
@@ -432,7 +431,7 @@ export default function GameScreen() {
   // selectedCards [...prev, { id: cardId, name: card?.name || '' }]
   // cardsFromExistingSet [...prev, { id: cardId, name: card?.name || '' }]
   const handlePlayDetective = async (cardsFromExistingSet = null) => {
-      console.log("cardsFromExistingSet:", cardsFromExistingSet);
+    console.log("cardsFromExistingSet:", cardsFromExistingSet);
     let cardsToUse = [];
     
     // Determine which cards to use
@@ -479,6 +478,19 @@ export default function GameScreen() {
       setError(`Set de ${setType} requiere al menos ${minCards[setType]} cartas`);
       setTimeout(() => setError(null), 3000);
       return;
+    }
+
+    // Check if Pyne can be played (need revealed secrets from other players)
+    if (setType === 'pyne') {
+      const hasOtherPlayersWithRevealedSecrets = gameState.secretsFromAllPlayers?.some(
+        secret => secret.player_id !== userState.id && !secret.hidden
+      );
+      
+      if (!hasOtherPlayersWithRevealedSecrets) {
+        setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
     }
 
     const hasWildcard = checkForWildcard(cardsToUse);
@@ -615,16 +627,17 @@ export default function GameScreen() {
 
   //Handler de HideRevealStealSecrets
   const handleActionOnSecret = async (selectedSecret) => {
-
     try {
       const actionId = gameState.detectiveAction.current?.actionId;
       const executorId = userState.id; // jugador que ejecuta
-      const secretId = selectedSecret.cardId;
+      const secretId = selectedSecret.id; // ✅ Changed from cardId to id
       const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
-      const targetPlayerId = gameState.detectiveAction.targetPlayerId;
+      const targetPlayerId = gameState.detectiveAction.actionInProgress?.targetPlayerId; // ✅ Fixed path
+      
+      console.log(secretId)
 
-      let body = {}; 
-
+      let body = {};
+      
       // Detectives de un solo paso (owner roba secreto)
       if (["marple", "pyne", "poirot"].includes(detectiveType)) {
         body = {
@@ -634,16 +647,18 @@ export default function GameScreen() {
           secretId,
         };
       }
-
+      
       // Detectives de dos pasos (target entrega secreto)
-      if (["beresford", "satterthwaite, eileenbrent"].includes(detectiveType)) {
+      if (["beresford", "satterthwaite", "eileenbrent"].includes(detectiveType)) { // ✅ Fixed string separation
         body = {
           actionId,
           executorId,
           secretId,
         };
       }
-
+      
+      console.log('Sending detective action:', body); // ✅ Added debug log
+      
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
         {
@@ -655,14 +670,15 @@ export default function GameScreen() {
           body: JSON.stringify(body),
         }
       );
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData?.detail || "Error al ejecutar acción");
       }
-
+      
       const data = await response.json();
       console.log("Acción detective completada", data);
+      
     } catch (error) {
       console.error("Error al ejecutar acción de detective", error);
     }
@@ -930,7 +946,7 @@ const getErrorMessage = (status, errorData) => {
               </>
             ) : (         /*  Tab de otro jugador  */
 
-              <div className='flex flex-col items-center gap-5'>
+              <div className='flex flex-col items-center gap-5 overflow-y-auto h-96'>
                 
                 {/* Secretos de otro jugador */}
                 <div className="">
@@ -938,7 +954,7 @@ const getErrorMessage = (status, errorData) => {
                     Secretos
                   </h2>
 
-                  {printCardBacks(player.total_secrets_count, "secrets")}
+                  <OtherPlayerSecrets player={player} />
 
                 </div>
 
@@ -1073,7 +1089,6 @@ const getErrorMessage = (status, errorData) => {
           onPlayerSelect={handlePlayerSelect}
         />)
       }
-      
 
       {/*Modal acción sobre secretos*/ }
       {(gameState.detectiveAction.showChooseOwnSecret || gameState.detectiveAction.showSelectSecret) && (
