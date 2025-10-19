@@ -16,7 +16,9 @@ import { OtherPlayerSets } from '../../components/game/OtherPlayerSets.jsx'
 import LookIntoTheAshes from '../../components/modals/LookIntoTheAshes.jsx'
 import SelectOtherPLayerSet from '../../components/modals/SelectOtherPLayerSet.jsx'
 import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
+import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
+
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -58,11 +60,9 @@ export default function GameScreen() {
         hasWildcard: set.hasWildcard || false,
       }
 
-      console.log('SET MAPEADO:', mappedSet)
-      console.log('PRIMERA CARTA:', firstCard)
-
       return mappedSet
     })
+
 
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
@@ -107,7 +107,7 @@ export default function GameScreen() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'http-user-id': userState.id.toString(), // Kebab-case to match backend alias
+              'http-user-id': userState.id.toString(), 
             },
             body: JSON.stringify(requestBody),
           }
@@ -143,43 +143,20 @@ export default function GameScreen() {
       } finally {
         setLoading(false)
       }
+      
     } else if (selectedCards[0]?.name === "Another Victim") {
       console.log("Attempting to play Another Victim")
       
       setLoading(true)
       setError(null)
-      
-      try {
-        // TODO: Implement Another Victim endpoint
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/event/another-victim`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              HTTP_USER_ID: userState.id.toString(),
-            },
-            body: JSON.stringify({
-              card_id: parseInt(selectedCards[0]?.id, 10)
-            }),
-          }
-        )
-        
-        if (!response.ok) {
-          const errorData = await response.json()
-          console.error("Backend error:", errorData)
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-        
-        const data = await response.json()
-        console.log('Played card successfully:', data)
-        setSelectedCards([])
-      } catch (err) {
-        console.error("Error playing Another Victim:", err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+
+      // Jugar la carta y seleccionar el jugador objetivo y el set objetivo
+
+      gameDispatch({
+        type: 'EVENT_ANOTHER_VICTIM_START',
+        payload: { playerId: userState.id },
+      })
+
     } else {
       console.log("Card not implemented yet:", selectedCards[0]?.name)
       setError("Esta carta aún no está implementada")
@@ -343,178 +320,139 @@ export default function GameScreen() {
   }
 
   // handlers de selectPlayerModal
-  const handlePlayerSelect = jugador => {
-    const { actionInProgress } = gameState.eventCards
-    const currentEventType = actionInProgress?.eventType
-    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
-    const initiatorPlayerId =
-      gameState.detectiveAction?.actionInProgress?.initiatorPlayerId
-    const isInitiator = initiatorPlayerId === userState.id
-
-    // Caso 1: Another Victim
+  const handlePlayerSelect = async (jugadorId) => {
+    console.log("SELECTED PLAYER = ", jugadorId);
+    
+    const { actionInProgress } = gameState.eventCards;
+    const currentEventType = actionInProgress?.eventType;
+    
+    const { current: detectiveAction } = gameState.detectiveAction;
+    const detectiveSetType = detectiveAction?.setType;
+    const actionId = detectiveAction?.actionId;
+    
+    // Caso 1: Another Victim (selecting target player for set steal)
     if (currentEventType === 'another_victim') {
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
-        payload: jugador,
-      })
-      return
+        payload: jugadorId,
+      });
+      return;
     }
-
-    // Caso 2: Detectives Tipo A (marple, pyne, poirot)
-    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
+    
+    // Caso 2: Detective Action - Player Selection
+    if (detectiveAction && actionId) {
+     
+      console.log(`Selecting player ${jugadorId} for detective action ${actionId}`);
+        
+      // Update local state to show we're waiting
       gameDispatch({
-        type: 'DETECTIVE_PLAYER_SELECTED',
-        payload: { playerId: jugador.id, playerData: jugador },
-      })
-      return
-    }
-
-    // Caso 3: Detectives Tipo B (beresford, satterthwaite)
-    if (['beresford', 'satterthwaite'].includes(detectiveType) && isInitiator) {
-      gameDispatch({
-        type: 'DETECTIVE_PLAYER_SELECTED',
-        payload: { playerId: jugador.id, playerData: jugador },
-      })
-    }
-  }
-
-  const handleConfirmSelectPlayer = async () => {
-    const { actionInProgress, anotherVictim } = gameState.eventCards
-    const currentEventType = actionInProgress?.eventType
-    const { detectiveAction } = gameState
-    const detectiveType = detectiveAction?.actionInProgress?.setType
-    const initiatorPlayerId =
-      detectiveAction?.actionInProgress?.initiatorPlayerId
-    const isInitiator = initiatorPlayerId === userState.id
-    const isTarget =
-      detectiveAction?.actionInProgress?.targetPlayerId === userState.id
-
-    console.log('=== CONFIRM SELECT PLAYER ===')
-    console.log('currentEventType:', currentEventType)
-    console.log('detectiveType:', detectiveType)
-    console.log('isInitiator:', isInitiator)
-    console.log('isTarget:', isTarget)
-    console.log(
-      'selectedPlayer (anotherVictim):',
-      anotherVictim?.selectedPlayer
-    )
-    console.log('selectedPlayer (detective):', detectiveAction?.selectedPlayer)
-
-    // CASO 1: Another Victim - Hacer POST al backend
-    if (currentEventType === 'another_victim') {
-      console.log('-> Entrando en CASO 1: Another Victim')
-      const selectedPlayer = anotherVictim?.selectedPlayer
-      if (!selectedPlayer) {
-        console.log('-> ERROR: No hay selectedPlayer')
-        return
-      }
-
-      try {
-        const response = await fetch(
-          `/api/game/${roomId}/event/another-victim`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              card_id: anotherVictim.cardId,
-              target_player_id: selectedPlayer.id,
-            }),
-          }
-        )
-
-        if (!response.ok) throw new Error('Error al seleccionar jugador')
-        const data = await response.json()
-
-        gameDispatch({ type: 'EVENT_STEP_UPDATE', payload: data })
-        setIsSelectPlayerOpen(false)
-      } catch (error) {
-        console.error('Error en Another Victim:', error)
-        gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
-        setIsSelectPlayerOpen(false)
-      }
-      return
-    }
-
-    // CASO 2: Detectives Tipo A (marple, pyne, poirot)
-    if (['marple', 'pyne', 'poirot'].includes(detectiveType)) {
-      console.log('-> Entrando en CASO 2: Detectives Tipo A')
-      const selectedPlayer = detectiveAction?.selectedPlayer
-      if (!selectedPlayer) {
-        console.log('-> ERROR: No hay selectedPlayer')
-        return
-      }
-
-      gameDispatch({
-        type: 'DETECTIVE_OPEN_SECRET_SELECTION',
+        type: 'DETECTIVE_TARGET_CONFIRMED',
         payload: {
-          targetPlayer: selectedPlayer,
-          detectiveType: detectiveType,
+          targetPlayerId: jugadorId,
+          targetPlayerData: jugadorId,
         },
-      })
-      setIsSelectPlayerOpen(false)
-      return
-    }
+      });
 
-    // CASO 3: Detectives Tipo B (beresford, satterthwaite)
-    if (['beresford', 'satterthwaite'].includes(detectiveType)) {
-      console.log('-> Entrando en CASO 3: Detectives Tipo B')
-      if (isInitiator) {
-        console.log('-> Fase 1: Iniciador confirmando')
-        const selectedPlayer = detectiveAction?.selectedPlayer
-        if (!selectedPlayer) {
-          console.log('-> ERROR: No hay selectedPlayer')
-          return
-        }
+      console.log(detectiveSetType)
+
+      // si es marple --> seleccionar secreto tamb
+      if (detectiveSetType == "marple" || detectiveSetType == "poirot" || detectiveSetType == "pyne") {
+        // seleccionar secreto
 
         gameDispatch({
-          type: 'DETECTIVE_TARGET_CONFIRMED',
+          type: 'DETECTIVE_PLAYER_SELECTED',
           payload: {
-            targetPlayerId: selectedPlayer.id,
-            targetPlayerData: selectedPlayer,
+            ...detectiveAction,
+            targetPlayerId: jugadorId,
+            needsSecret: true,
           },
         })
-        setIsSelectPlayerOpen(false)
-      } else if (isTarget) {
-        console.log('-> Fase 2: Target confirmando')
-        gameDispatch({
-          type: 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS',
-          payload: {
-            playerId: userState.id,
-            initiatorPlayerId: initiatorPlayerId,
-          },
-        })
-        setIsSelectPlayerOpen(false)
+
       } else {
-        console.log('-> ERROR: No es ni iniciador ni target')
+        // si es otro no seleccionar secreto
+        try {
+          // Call backend - Step 1: Select target player
+          const response = await fetch(
+            `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                HTTP_USER_ID: userState.id.toString(),
+              },
+              body: JSON.stringify({
+                actionId: actionId,
+                executorId: userState.id,
+                targetPlayerId: jugadorId,
+                secretId: null, // null for player selection step
+              }),
+            }
+          );
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Backend error:", errorData);
+            throw new Error(getErrorMessage(response.status, errorData));
+          }
+          
+          const data = await response.json();
+          console.log("Target player selected successfully:", data);
+
+          gameDispatch({
+            type: 'DETECTIVE_PLAYER_SELECTED',
+            payload: {
+              ...detectiveAction,
+              targetPlayerId: jugadorId,
+              needsSecret: false,
+            },
+          })
+          
+          // Backend will emit WebSocket events:
+          // - detective_target_selected (to all players)
+          // - select_own_secret (to target player only)
+          
+        } catch (error) {
+          console.error('Error selecting target player:', error);
+          // Reset to player selection state on error
+          gameDispatch({
+            type: 'DETECTIVE_SET_SUBMITTED',
+            payload: {
+              ...detectiveAction,
+              allowedPlayers: gameState.detectiveAction.allowedPlayers,
+              secretsPool: gameState.detectiveAction.secretsPool,
+            },
+          });
+          setError(error.message);
+          setTimeout(() => setError(null), 5000);
+        }
       }
-      return
+    }  
+  };
+
+  // selectedCards [...prev, { id: cardId, name: card?.name || '' }]
+  // cardsFromExistingSet [...prev, { id: cardId, name: card?.name || '' }]
+  const handlePlayDetective = async (cardsFromExistingSet = null) => {
+      console.log("cardsFromExistingSet:", cardsFromExistingSet);
+    let cardsToUse = [];
+    
+    // Determine which cards to use
+    if (cardsFromExistingSet) {
+      // Use cards passed as argument (from Another Victim)
+      if (Array.isArray(cardsFromExistingSet)) {
+        cardsToUse = cardsFromExistingSet; // Already has { id, name } format
+      } else {
+        console.error("cardsFromExistingSet is not an array:", cardsFromExistingSet);
+        setError("Error: formato de cartas inválido");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+    } else {
+      // Use cards from state (from manual selection)
+      cardsToUse = selectedCards; // Already has { id, name } format
     }
 
-    console.log('-> ERROR: No se cumplió ninguna condición')
-  }
+    console.log("Cartas seleccionadas para el set:", cardsToUse);
 
-  const handleCancelSelectPlayer = () => {
-    const { actionInProgress } = gameState.eventCards
-    const currentEventType = actionInProgress?.eventType
-    const detectiveType = gameState.detectiveAction?.actionInProgress?.setType
-
-    if (currentEventType === 'another_victim') {
-      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' })
-    } else if (detectiveType) {
-      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
-    }
-    setIsSelectPlayerOpen(false)
-  }
-
-  const handlePlayDetective = async () => {
-    const selectedCardIds = selectedCards.map(card => card.id)
-  
-    console.log(
-      'Cartas seleccionadas para el set:',
-      gameState.mano.filter(card => selectedCardIds.includes(card.id))
-    )
-
-    // Cantidades minimas de cartas por tipo de set
     const minCards = {
       poirot: 3,
       marple: 3,
@@ -522,158 +460,281 @@ export default function GameScreen() {
       pyne: 2,
       eileenbrent: 2,
       beresford: 2,
+    };
+
+    if (cardsToUse.length === 0) {
+      setError("Debes seleccionar al menos una carta de detective");
+      setTimeout(() => setError(null), 3000);
+      return;
     }
 
-    // Caso crear set vacio
-    if (selectedCards.length === 0) {
-      setError('Debes seleccionar al menos una carta de detective')
-      setTimeout(() => setError(null), 3000)
-      return
-    }
-
-    // Caso crear set invalido
-    const setType = detectSetType(selectedCardIds)
+    const setType = detectSetType(cardsToUse); // Pass full objects
     if (!setType) {
-      setError('Las cartas seleccionadas no forman un set válido')
-      setTimeout(() => setError(null), 3000)
-      return
+      setError("Las cartas seleccionadas no forman un set válido");
+      setTimeout(() => setError(null), 3000);
+      return;
     }
 
-    // Caso crear set con cartas insuficientes
-    if (selectedCards.length < minCards[setType]) {
-      setError(
-        `Set de ${setType} requiere al menos ${minCards[setType]} cartas`
-      )
-      setTimeout(() => setError(null), 3000)
-      return
+    if (cardsToUse.length < minCards[setType]) {
+      setError(`Set de ${setType} requiere al menos ${minCards[setType]} cartas`);
+      setTimeout(() => setError(null), 3000);
+      return;
     }
 
-    // Detectar si hay comodín
-    const hasWildcard = checkForWildcard(selectedCardIds)
-    
-    setLoading(true)
-    setError(null)
+    const hasWildcard = checkForWildcard(cardsToUse);
 
-    // Caso crear set exitoso
+    setLoading(true);
+    setError(null);
+
     try {
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
         {
-    
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
           body: JSON.stringify({
             owner: userState.id,
-            setType: setType,
-            cards: selectedCardIds,
-            hasWildcard: hasWildcard,
+            setType,
+            cards: cardsToUse.map(card => card.id), // Send only IDs to backend
+            hasWildcard,
           }),
         }
-      )
+      );
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al crear el set')
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al crear el set");
       }
 
-      const data = await response.json()
-      console.log('Set creado exitosamente!')
-      console.log('Action ID:', data.actionId)
-      console.log('Next Action:', data.nextAction)
+      const data = await response.json();
+      console.log("Set creado exitosamente!");
+      console.log("Action ID:", data.actionId);
+      console.log("Next Action:", data.nextAction);
 
-      // Limpiar selección y cerrar modal
-      setSelectedCards([])
-      setShowPlayerSets(false)
+      // Dispatch the action that prepares for player selection
+      gameDispatch({
+        type: 'DETECTIVE_SET_SUBMITTED',
+        payload: {
+          actionId: data.actionId,
+          setType: setType, // Use the detected setType
+          stage: 'awaiting_player_selection',
+          cards: cardsToUse,
+          hasWildcard: hasWildcard,
+          allowedPlayers: data.nextAction.allowedPlayers || [],
+          secretsPool: data.nextAction.metadata?.secretsPool || [],
+        },
+      });
 
-      // Websocket actualiza el gameState con el nuevo set
-      //y notifica por detective_action_started
+      // Only clear selected cards if using manual selection
+      if (!cardsFromExistingSet) {
+        setSelectedCards([]);
+      }
+
     } catch (err) {
-      console.error('❌ Error al crear set:', err)
-      setError(err.message)
-      setTimeout(() => setError(null), 5000)
+      console.error("❌ Error al crear set:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // ========== HELPER FUNCTIONS ==========
+  const handleSelectSet = async (selectedSet) => {
+    if (!selectedSet) {
+      console.warn("No set selected");
+      return;
+    }
+
+    console.log("Selected Set:", selectedSet);
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // POST to the Another Victim event endpoint
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/another-victim`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify({
+            originalOwnerId: selectedSet.owner_id,
+            setPosition: selectedSet.position,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Backend error:", errorData);
+        throw new Error(getErrorMessage(response.status, errorData));
+      }
+
+      const data = await response.json();
+      console.log("Played Another Victim successfully:", data);
+
+      // {
+      //   success: true,
+      //   transferredSet: {
+      //     position: 1,
+      //     cards: [...],
+      //     newOwnerId: 45,
+      //     originalOwnerId: 89
+      //   }
+      // }
+
+      // si se movio el set, jugar el efecto del set 
+      // en GameState.sets[] --> set:  { owner_id: int, position: int, set_type: string , … }
+      // selectedSet --> { owner_id , position }
+      // where selected set == set para jugar
+      if (data.movedSet) {
+        const cardsFromMovedSet = data.movedSet.cards.map(card => ({
+          id: card.id,
+          name: card.name || ''
+        }));
+        // cardsFromExistingSet [...prev, { id: cardId, name: card?.name || '' }]
+        handlePlayDetective(cardsFromMovedSet);
+        }
+
+      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });      
+      
+    } catch (err) {
+      console.error("❌ Error playing Another Victim:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  //Handler de HideRevealStealSecrets
+  const handleActionOnSecret = async (selectedSecret) => {
+
+    try {
+      const actionId = gameState.detectiveAction.current?.actionId;
+      const executorId = userState.id; // jugador que ejecuta
+      const secretId = selectedSecret.cardId;
+      const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
+      const targetPlayerId = gameState.detectiveAction.targetPlayerId;
+
+      let body = {}; 
+
+      // Detectives de un solo paso (owner roba secreto)
+      if (["marple", "pyne", "poirot"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          targetPlayerId,
+          secretId,
+        };
+      }
+
+      // Detectives de dos pasos (target entrega secreto)
+      if (["beresford", "satterthwaite, eileenbrent"].includes(detectiveType)) {
+        body = {
+          actionId,
+          executorId,
+          secretId,
+        };
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Error al ejecutar acción");
+      }
+
+      const data = await response.json();
+      console.log("Acción detective completada", data);
+    } catch (error) {
+      console.error("Error al ejecutar acción de detective", error);
+    }
+  };
 
   // Helper: Detectar el tipo de set basado en las cartas seleccionadas
-  const detectSetType = cardIds => {
+  const detectSetType = selectedCards => {
+    if (selectedCards.length === 0) return null;
+
+    // Pull real card data from gameState to validate `type` (if needed)
     const selectedCardData = gameState.mano.filter(card =>
-      cardIds.includes(card.id)
-    )
+      selectedCards.some(sel => sel.id === card.id)
+    );
 
-    if (selectedCardData.length === 0) return null
-
-    // Verificar que todas sean cartas de detective
     const nonDetectiveCards = selectedCardData.filter(
-      card => card.type !== 'DETECTIVE'
-    )
+      card => card.type !== "DETECTIVE"
+    );
     if (nonDetectiveCards.length > 0) {
-      console.log('⚠️ Hay cartas que no son de detective:', nonDetectiveCards)
-      return null
+      console.log("⚠️ Hay cartas que no son de detective:", nonDetectiveCards);
+      return null;
     }
 
-    // Mapeo de nombres a tipos de set
     const nameToSetType = {
-      'Hercule Poirot': 'poirot',
-      'Miss Marple': 'marple',
-      'Mr Satterthwaite': 'satterthwaite',
-      'Parker Pyne': 'pyne',
-      'Lady Eileen "Bundle" Brent': 'eileenbrent',
-      'Tommy Beresford': 'beresford',
-      'Tuppence Beresford': 'beresford',
-      'Harley Quin Wildcard': 'wildcard',
-    }
+      "Hercule Poirot": "poirot",
+      "Miss Marple": "marple",
+      "Mr Satterthwaite": "satterthwaite",
+      "Parker Pyne": "pyne",
+      'Lady Eileen "Bundle" Brent': "eileenbrent",
+      "Tommy Beresford": "beresford",
+      "Tuppence Beresford": "beresford",
+      "Harley Quin Wildcard": "wildcard",
+    };
 
-    // Separar comodines de cartas normales
-    const wildcards = selectedCardData.filter(
-      card => nameToSetType[card.name] === 'wildcard'
-    )
-    const normalCards = selectedCardData.filter(
-      card => nameToSetType[card.name] !== 'wildcard'
-    )
+    const wildcards = selectedCards.filter(
+      card => nameToSetType[card.name] === "wildcard"
+    );
+    const normalCards = selectedCards.filter(
+      card => nameToSetType[card.name] !== "wildcard"
+    );
 
-    // Debe haber al menos 1 carta normal (no solo comodines)
     if (normalCards.length === 0) {
-      console.log('⚠️ Solo hay comodines, no es válido')
-      return null
+      console.log("⚠️ Solo hay comodines, no es válido");
+      return null;
     }
 
-    // Obtener los tipos únicos (sin comodines)
     const uniqueTypes = [
       ...new Set(normalCards.map(card => nameToSetType[card.name])),
-    ]
+    ];
 
-    // Caso especial: Beresford acepta Tommy + Tuppence
-    if (uniqueTypes.includes('beresford')) {
-      // Verificar que TODAS las cartas normales sean Beresford
-      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'beresford') {
-        return 'beresford'
+    if (uniqueTypes.includes("beresford")) {
+      if (uniqueTypes.length === 1 && uniqueTypes[0] === "beresford") {
+        return "beresford";
       } else if (uniqueTypes.length > 1) {
-        console.log('⚠️ Mezclando Beresford con otros tipos')
-        return null
+        console.log("⚠️ Mezclando Beresford con otros tipos");
+        return null;
       }
     }
 
-    // Para el resto: todas las cartas normales deben ser del mismo tipo
     if (uniqueTypes.length !== 1) {
-      console.log('⚠️ Cartas de diferentes tipos:', uniqueTypes)
-      return null
+      console.log("⚠️ Cartas de diferentes tipos:", uniqueTypes);
+      return null;
     }
 
-    return uniqueTypes[0]
-  }
+    return uniqueTypes[0];
+  };
+
 
   // Helper: Verificar si hay un comodín (Harley Quin) en las cartas seleccionadas
-  const checkForWildcard = cardIds => {
-    const selectedCardData = gameState.mano.filter(card =>
-      cardIds.includes(card.id)
-    )
+  const checkForWildcard = selectedCards => {
+    return selectedCards.some(card => card.name === "Harley Quin Wildcard");
+  };
 
-    return selectedCardData.some(card => card.name === 'Harley Quin Wildcard')
-  }
-
-  
   const handleSelectCardFromAshes = async (selectedCardId) => {
     const { lookAshes } = gameState.eventCards
     
@@ -992,26 +1053,36 @@ const getErrorMessage = (status, errorData) => {
       <PlayerSetsModal
         isOpen={showPlayerSets}
         onClose={() => setShowPlayerSets(false)}
-        sets={playerSetsForModal} // Ajusta según la estructura de tu contexto
+        sets={playerSetsForModal} 
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
-        onCreateSet={handlePlayDetective}
+        onCreateSet={() => handlePlayDetective()}
       />
 
+      {gameState.eventCards?.anotherVictim?.showSelectSets && (
+          <SelectOtherPLayerSet
+            player={gameState.eventCards.anotherVictim.selectedPlayer}
+            sets ={gameState.sets}
+            onSelectSet={handleSelectSet} // agregar funcion cuando este implementada en GameScreen 
+          />
+        )}
+
       {/* Modal de seleccionar jugador */}
-      <SelectPlayerModal
-        isOpen={isSelectPlayerOpen}
-        onClose={() => setIsSelectPlayerOpen(false)}
-        jugadores={gameState.jugadores || []}
-        userId={userState.id}
-        currentEventType={gameState.eventCards?.actionInProgress?.eventType}
-        detectiveType={gameState.detectiveAction?.actionInProgress?.setType}
-        anotherVictim={gameState.eventCards?.anotherVictim}
-        detectiveAction={gameState.detectiveAction}
-        onPlayerSelect={handlePlayerSelect}
-        onConfirm={handleConfirmSelectPlayer}
-        onCancel={handleCancelSelectPlayer}
-      />
+      { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || gameState.detectiveAction?.showSelectPlayer ) && 
+        (<SelectPlayerModal
+          onPlayerSelect={handlePlayerSelect}
+        />)
+      }
+      
+
+      {/*Modal acción sobre secretos*/ }
+      {(gameState.detectiveAction.showChooseOwnSecret || gameState.detectiveAction.showSelectSecret) && (
+          <HideRevealStealSecretsModal
+          isOpen={gameState.detectiveAction.showSelectSecret || gameState.detectiveAction.showChooseOwnSecret} // || gameStatedetectiveAction.showChooseOwnSecret
+          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
+          onConfirm = {handleActionOnSecret}
+        />
+      )}
 
       {/* Modal de Look Into The Ashes */}
       <div>

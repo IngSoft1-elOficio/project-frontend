@@ -43,7 +43,7 @@ const gameInitialState = {
     // Active action
     current: null, // { actionId, setType, stage, cards, hasWildcard }
     allowedPlayers: [],
-    secretsPool: 'hidden', // 'hidden' | 'revealed'
+    secretsPool: [],  // [{playerId:19,"position":1, "hidden": false, "cardId:2"},{playerId:19,...}]
     targetPlayerId: null,
 
     // Modals
@@ -71,6 +71,7 @@ const gameInitialState = {
       showSelectPlayer: false,
       selectedPlayer: null,
       showSelectSets: false,
+      selectedSet: null,
     },
 
     // Look Into Ashes
@@ -317,7 +318,6 @@ const gameReducer = (state, action) => {
             step: 'select_target',
             message: action.payload.message,
           },
-          showSelectPlayer: true,
         },
       };
 
@@ -326,13 +326,27 @@ const gameReducer = (state, action) => {
         ...state,
         detectiveAction: {
           ...state.detectiveAction,
+          targetPlayerId: action.payload.targetPlayerId,
+          showSelectPlayer: false,
+          showWaiting: true, // Show a waiting modal/message
           actionInProgress: {
             ...state.detectiveAction.actionInProgress,
             targetPlayerId: action.payload.targetPlayerId,
             step: 'waiting_target_confirmation',
             message: `Esperando confirmación de ${action.payload.targetPlayerData.name}`,
           },
+        },
+      };
+
+    case 'DETECTIVE_PLAYER_SELECTED':
+      return {
+        ...state,
+        detectiveAction: {
+          ...state.detectiveAction,
+          targetPlayerId: action.payload.playerId,
           showSelectPlayer: false,
+          showSelectSecret: action.payload.needsSecret,
+          showWaiting: !action.payload.needsSecret,
         },
       };
 
@@ -346,21 +360,6 @@ const gameReducer = (state, action) => {
             step: 'target_must_confirm',
           },
           showSelectPlayer: true,
-        },
-      };
-
-    case 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          actionInProgress: {
-            ...state.detectiveAction.actionInProgress,
-            step: 'target_selecting_secret',
-          },
-          showSelectPlayer: false,
-          showSelectSecret: true,
-          targetForSecrets: action.payload.initiatorPlayerId,
         },
       };
 
@@ -403,18 +402,6 @@ const gameReducer = (state, action) => {
           secretsPool: action.payload.secretsPool,
           showCreateSet: false,
           showSelectPlayer: true,
-        },
-      }
-
-    case 'DETECTIVE_PLAYER_SELECTED':
-      return {
-        ...state,
-        detectiveAction: {
-          ...state.detectiveAction,
-          targetPlayerId: action.payload.playerId,
-          showSelectPlayer: false,
-          showSelectSecret: action.payload.needsSecret,
-          showWaiting: !action.payload.needsSecret,
         },
       }
 
@@ -532,7 +519,6 @@ const gameReducer = (state, action) => {
           ...state.eventCards,
           anotherVictim: {
             showSelectPlayer: true,
-            cardId: action.payload?.cardId || null,
             selectedPlayer: null,
           },
           actionInProgress: {
@@ -544,22 +530,6 @@ const gameReducer = (state, action) => {
         },
       }
 
-
-    case 'EVENT_ANOTHER_VICTIM_COMPLETE':
-      return {
-        ...state,
-        eventCards: {
-          ...state.eventCards,
-          anotherVictim: {
-            ...state.eventCards.anotherVictim,
-            showSelectPlayer: false,
-            selectedPlayer: null,
-            cardId: null,
-          },
-          actionInProgress: null,
-        },
-      }
-
     case 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER':
       return {
         ...state,
@@ -568,7 +538,25 @@ const gameReducer = (state, action) => {
           anotherVictim: {
             ...state.eventCards.anotherVictim,
             selectedPlayer: action.payload,
+            showSelectSets: true,
+            showSelectPlayer: false,
           },
+        },
+      }
+    
+    case 'EVENT_ANOTHER_VICTIM_COMPLETE':
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          anotherVictim: {
+            ...state.eventCards.anotherVictim,
+            showSelectPlayer: false,
+            showSelectSets: false,
+            selectedPlayer: null,
+            selectedSet: null,
+          },
+          actionInProgress: null,
         },
       }
 
