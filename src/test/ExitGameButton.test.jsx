@@ -210,4 +210,22 @@ describe('ExitGameButton', () => {
     // Resolver el fetch para limpiar
     resolvePromise({ ok: true })
   })
+
+  // Test 11: Error genérico sin "detail" en la respuesta
+  it('usa mensaje por defecto cuando no hay detail en el error', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({}), // <-- sin detail
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} />)
+    const button = screen.getByText('Abandonar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Error al abandonar la partida')
+    })
+  })
 })
