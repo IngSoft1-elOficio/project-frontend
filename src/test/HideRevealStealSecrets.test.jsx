@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import React, { useEffect } from 'react'
+import { GameProvider, useGame } from '../context/GameContext.jsx'
 import HideRevealStealSecrets from "../components/modals/HideRevealStealSecrets.jsx"
 
-// Mock del botón reutilizado en el modal
+// Mock del ButtonGame
 vi.mock('../components/ButtonGame.jsx', () => ({
   default: ({ onClick, disabled, children }) => (
     <button
@@ -15,29 +17,61 @@ vi.mock('../components/ButtonGame.jsx', () => ({
   ),
 }))
 
+// Mock de socket.io-client para evitar conexiones reales
+vi.mock('socket.io-client', () => ({
+  default: vi.fn(() => ({
+    on: vi.fn(),
+    emit: vi.fn(),
+    disconnect: vi.fn(),
+  })),
+}))
+
+// Componente helper para inyectar estado en el GameContext
+const StateInjector = ({ secretsFromAllPlayers }) => {
+  const { gameDispatch } = useGame()
+  
+  useEffect(() => {
+    if (secretsFromAllPlayers) {
+      gameDispatch({
+        type: 'UPDATE_GAME_STATE_PUBLIC',
+        payload: { secretsFromAllPlayers }
+      })
+    }
+  }, [secretsFromAllPlayers, gameDispatch])
+  
+  return null
+}
+
 describe('HideRevealStealSecrets', () => {
   const mockOnConfirm = vi.fn()
 
+  const defaultSecrets = [
+    { id: 1, position: 1, player_id: 10, hidden: true },
+    { id: 2, position: 2, player_id: 10, hidden: false },
+    { id: 3, position: 3, player_id: 11, hidden: true },
+  ]
+
   const defaultDetective = {
-    current: { setType: 'Poirot' },
-    actionInProgress: { setType: 'Poirot' },
-    targetPlayerId: 10,
-    secretsPool: [
-      { position: 1, playerId: 10, hidden: true },
-      { position: 2, playerId: 10, hidden: false },
-      { position: 3, playerId: 11, hidden: true },
-    ],
+    current: { hasWildcard: false },
+    actionInProgress: { 
+      setType: 'Poirot',
+      targetPlayerId: 10,
+    },
   }
 
-  const renderModal = (props = {}) =>
-    render(
-      <HideRevealStealSecrets
-        isOpen={true}
-        detective={defaultDetective}
-        onConfirm={mockOnConfirm}
-        {...props}
-      />
+  const renderModal = (props = {}, secrets = defaultSecrets) => {
+    return render(
+      <GameProvider>
+        <StateInjector secretsFromAllPlayers={secrets} />
+        <HideRevealStealSecrets
+          isOpen={true}
+          detective={defaultDetective}
+          onConfirm={mockOnConfirm}
+          {...props}
+        />
+      </GameProvider>
     )
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -45,11 +79,13 @@ describe('HideRevealStealSecrets', () => {
 
   it('no renderiza nada cuando isOpen es false', () => {
     const { container } = render(
-      <HideRevealStealSecrets
-        isOpen={false}
-        detective={defaultDetective}
-        onConfirm={mockOnConfirm}
-      />
+      <GameProvider>
+        <HideRevealStealSecrets
+          isOpen={false}
+          detective={defaultDetective}
+          onConfirm={mockOnConfirm}
+        />
+      </GameProvider>
     )
     expect(container.firstChild).toBeNull()
   })
@@ -65,7 +101,7 @@ describe('HideRevealStealSecrets', () => {
   it('filtra los secretos solo del jugador objetivo', () => {
     renderModal()
     const cards = screen.getAllByRole('img')
-    expect(cards).toHaveLength(2)
+    expect(cards).toHaveLength(2) // Solo los del jugador 10
   })
 
   it('muestra error si selecciona un secreto revelado cuando requiere oculto', () => {
@@ -94,6 +130,11 @@ describe('HideRevealStealSecrets', () => {
     renderModal()
     const button = screen.getByTestId('button-confirm')
     expect(button).toBeDisabled()
+  })
+
+  it('no llama a onConfirm si el botón está deshabilitado', () => {
+    renderModal()
+    const button = screen.getByTestId('button-confirm')
     fireEvent.click(button)
     expect(mockOnConfirm).not.toHaveBeenCalled()
   })
@@ -114,9 +155,11 @@ describe('HideRevealStealSecrets', () => {
 
   it('detective pyne solo permite seleccionar secretos revelados', () => {
     const pyneDetective = {
-      ...defaultDetective,
-      current: { setType: 'Pyne' },
-      actionInProgress: { setType: 'Pyne' },
+      current: { hasWildcard: false },
+      actionInProgress: { 
+        setType: 'Pyne',
+        targetPlayerId: 10,
+      },
     }
     renderModal({ detective: pyneDetective })
 
@@ -139,19 +182,57 @@ describe('HideRevealStealSecrets', () => {
 
   it('maneja detective desconocido', () => {
     const unknown = {
-      ...defaultDetective,
-      current: { setType: 'Desconocido' },
-      actionInProgress: { setType: 'Desconocido' },
+      current: { hasWildcard: false },
+      actionInProgress: { 
+        setType: 'Desconocido',
+        targetPlayerId: 10,
+      },
     }
     renderModal({ detective: unknown })
     expect(screen.getByText('Detective desconocido')).toBeInTheDocument()
     expect(screen.getByText('Sin efecto')).toBeInTheDocument()
   })
 
-  it('maneja secretsPool vacío sin errores', () => {
-    renderModal({
-      detective: { ...defaultDetective, secretsPool: [] },
-    })
+  it('maneja secretsFromAllPlayers vacío sin errores', () => {
+    renderModal({}, [])
+    
     expect(screen.queryAllByRole('img')).toHaveLength(0)
+    expect(
+      screen.getByText('No hay secretos disponibles para seleccionar')
+    ).toBeInTheDocument()
+  })
+
+  it('muestra efecto especial para Satterthwaite con wildcard', () => {
+    const satterthwaiteDetective = {
+      current: { hasWildcard: true },
+      actionInProgress: { 
+        setType: 'Satterthwaite',
+        targetPlayerId: 10,
+      },
+    }
+    renderModal({ detective: satterthwaiteDetective })
+    
+    expect(screen.getByText('Mr. Satterthwaite')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Como este set se jugó con Harley Quin/)
+    ).toBeInTheDocument()
+  })
+
+  it('muestra el texto correcto en el botón para Poirot', () => {
+    renderModal()
+    expect(screen.getByTestId('button-confirm')).toHaveTextContent('Revelar')
+  })
+
+  it('muestra el texto correcto en el botón para Pyne', () => {
+    const pyneDetective = {
+      current: { hasWildcard: false },
+      actionInProgress: { 
+        setType: 'Pyne',
+        targetPlayerId: 10,
+      },
+    }
+    
+    renderModal({ detective: pyneDetective })
+    expect(screen.getByTestId('button-confirm')).toHaveTextContent('Ocultar')
   })
 })
