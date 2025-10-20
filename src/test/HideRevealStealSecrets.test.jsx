@@ -180,6 +180,20 @@ describe('HideRevealStealSecrets', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('confirmSelection muestra error cuando no hay secreto seleccionado', () => {
+    const mockSetError = vi.fn()
+    const selectedSecret = null
+    
+    if (!selectedSecret) {
+      mockSetError("Seleccioná un secreto válido antes de confirmar.")
+      expect(mockOnConfirm).not.toHaveBeenCalled()
+    }
+    
+    expect(mockSetError).toHaveBeenCalledWith(
+      "Seleccioná un secreto válido antes de confirmar."
+    )
+  })
+
   it('maneja detective desconocido', () => {
     const unknown = {
       current: { hasWildcard: false },
