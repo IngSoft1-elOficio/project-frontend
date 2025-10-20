@@ -628,7 +628,7 @@ export default function GameScreen() {
   //Handler de HideRevealStealSecrets
   const handleActionOnSecret = async (selectedSecret) => {
     try {
-      const actionId = gameState.detectiveAction.current?.actionId;
+      const actionId = gameState.detectiveAction.current?.actionId || gameState.detectiveAction?.incomingRequest?.actionId;
       const executorId = userState.id; // jugador que ejecuta
       const secretId = selectedSecret.id; // ✅ Changed from cardId to id
       const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
@@ -758,6 +758,8 @@ export default function GameScreen() {
       setError('No action ID found')
       return
     }
+
+    console.log("Attempting to send card id = " + selectedCardId)
 
     setLoading(true)
     setError(null)
