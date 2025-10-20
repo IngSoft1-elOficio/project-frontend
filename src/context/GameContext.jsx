@@ -31,11 +31,13 @@ const gameInitialState = {
   mano: [],
   secretos: [],
   gameEnded: false,
+  gameCancelled: false,
   winners: [],
   ganaste: null,
   finish_reason: null,
   lastUpdate: null,
   connected: false,
+  playerLeftNotification: null,
 
   // Detective Actions
   detectiveAction: {
@@ -140,6 +142,7 @@ const gameReducer = (state, action) => {
         roomId: action.payload.room.id,
         roomInfo: action.payload.room,
         jugadores: action.payload.players,
+        gameCancelled: false,
       }
 
     case 'UPDATE_GAME_STATE_PUBLIC':
@@ -198,6 +201,29 @@ const gameReducer = (state, action) => {
         finish_reason: action.payload.reason,
 
         lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'GAME_CANCELLED':
+      return {
+        ...state,
+        gameCancelled: true,
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'PLAYER_LEFT_NOTIFICATION':
+      return {
+        ...state,
+        playerLeftNotification: {
+          playerName: action.payload.playerName,
+          timestamp: action.payload.timestamp,
+        },
+        lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+      }
+
+    case 'CLEAR_PLAYER_LEFT_NOTIFICATION':
+      return {
+        ...state,
+        playerLeftNotification: null,
       }
 
     // ----------------------
@@ -290,7 +316,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: true,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_CONFIRMED':
       return {
@@ -305,7 +331,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: false,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_NOTIFIED':
       return {
@@ -318,7 +344,7 @@ const gameReducer = (state, action) => {
           },
           showSelectPlayer: true,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_ACKNOWLEDGED_OPEN_SECRETS':
       return {
@@ -333,7 +359,7 @@ const gameReducer = (state, action) => {
           showSelectSecret: true,
           targetForSecrets: action.payload.initiatorPlayerId,
         },
-      };
+      }
 
     case 'DETECTIVE_TARGET_SELECTED':
       return {
@@ -505,7 +531,6 @@ const gameReducer = (state, action) => {
           },
         },
       }
-
 
     case 'EVENT_ANOTHER_VICTIM_COMPLETE':
       return {
@@ -788,6 +813,50 @@ export const GameProvider = ({ children }) => {
     socket.on('turn_finished', data => {
       console.log('✅ Turn finished:', data)
       gameDispatch({ type: 'FINISH_TURN' })
+    })
+
+    // ------------------------
+    // | CANCEL - EXIT GAME LISTENERS |
+    // ------------------------
+
+    // Caso abandonar sala
+    socket.on('player_left', data => {
+      console.log('Un Jugador abandono la sala:', data)
+      if (data.player_id === userId) {
+        // Yo abandono la sala
+        console.log('Abandonando sala')
+        gameDispatch({
+          type: 'PLAYER_REMOVED_FROM_LOBBY',
+          payload: { timestamp: new Date().toISOString() },
+        })
+      } else {
+        // Otro abandona la sala => actualizar lista de jugadores
+        gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            jugadores: data.players,
+            timestamp: new Date().toISOString(),
+          },
+        })
+
+        // Notificar que un jugador salio
+        gameDispatch({
+          type: 'PLAYER_LEFT_NOTIFICATION',
+          payload: {
+            playerName: 'Un jugador',
+            timestamp: new Date().toISOString(),
+          },
+        })
+      }
+    })
+
+    // Caso cancelar partida
+    socket.on('game_cancelled', data => {
+      console.log('Partida cancelada por el host:', data)
+      gameDispatch({
+        type: 'GAME_CANCELLED',
+        payload: { timestamp: new Date().toISOString() },
+      })
     })
   }, [])
 
