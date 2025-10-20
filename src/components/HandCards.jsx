@@ -16,7 +16,7 @@ export default function HandCards({ selectedCards, onSelect }) {
     }}>
       {hand.map((card) => {
         const src = getCardsImage(card);
-        const isSelected = selectedCards.includes(card.id);
+        const isSelected = selectedCards.some(selected => selected.id === card.id);
         
         return (
           <button

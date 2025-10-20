@@ -210,4 +210,62 @@ describe('ExitGameButton', () => {
     // Resolver el fetch para limpiar
     resolvePromise({ ok: true })
   })
+
+  // Test 11: Error genérico sin "detail" en la respuesta
+  it('usa mensaje por defecto cuando no hay detail en el error', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({}), // <-- sin detail
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} />)
+    const button = screen.getByText('Abandonar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Error al abandonar la partida')
+    })
+  })
+
+  it('loggea "Jugador abandonó la partida" cuando no es host', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} isHost={false} />)
+    const button = screen.getByText('Abandonar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith('Jugador abandonó la partida')
+    })
+
+    logSpy.mockRestore()
+  })
+
+  it('loggea "Partida cancelada" cuando es host', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} isHost={true} />)
+    const button = screen.getByText('Cancelar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith('Partida cancelada')
+    })
+
+    logSpy.mockRestore()
+  })
 })

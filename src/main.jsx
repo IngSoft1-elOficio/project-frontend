@@ -13,7 +13,7 @@ import { GameProvider } from './context/GameContext.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <UserProvider>
-      <GameProvider>
+      <GameProvider autoReconnect={true}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<App />} />

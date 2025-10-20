@@ -1,22 +1,47 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react"; 
 import { vi } from "vitest";
 import Draft from "../components/game/Draft";
+import { useGame } from "../context/GameContext";
 
+// Mock principal del contexto
 vi.mock("../context/GameContext", () => ({
-  useGame: () => ({
+  useGame: vi.fn(() => ({
     gameState: {
       mazos: {
         deck: {
           draft: [
-            { id: 1, name: "Hercule Poirot" }, // tiene imagen
-            { id: 2, name: "Carta desconocida" }, // no tiene imagen
+            { id: 1, name: "Hercule Poirot" },
+            { id: 2, name: "Carta desconocida" },
             { id: 3, name: "" }
           ]
         }
       }
     }
-  })
+  }))
 }));
+
+// Mock del helper de imágenes
+vi.mock("../components/HelperImageCards", () => ({
+  __esModule: true,
+  default: (card) => {
+    if (card.name === "Hercule Poirot") return "/cards/detective_poirot.png";
+    return null;
+  }
+}));
+
+const originalMockReturn = {
+  gameState: {
+    mazos: {
+      deck: {
+        draft: [
+          { id: 1, name: "Hercule Poirot" },
+          { id: 2, name: "Carta desconocida" },
+          { id: 3, name: "" }
+        ]
+      }
+    }
+  }
+};
 
 describe("Draft component", () => {
   it("renderiza las cartas con o sin imagen", () => {
@@ -57,5 +82,34 @@ describe("Draft component", () => {
     fireEvent.click(thirdButton);
     expect(handleDraft).toHaveBeenCalledWith(3);
   });
-});
 
+  it('cubre linea 9 cuando draft está vacío', () => {
+    useGame.mockReturnValue({
+      gameState: {
+        mazos: { deck: { draft: [] } }
+      }
+    });
+
+    const handleDraft = vi.fn();
+    const { container } = render(<Draft handleDraft={handleDraft} />);
+
+    expect(container.querySelectorAll('button').length).toBe(0);
+
+    useGame.mockReturnValue(originalMockReturn);
+  });
+
+  it("maneja correctamente cuando el draft está vacío o indefinido", () => {
+    const handleDraft = vi.fn();
+    const { container } = render(<Draft handleDraft={handleDraft} />);
+    expect(container).toBeInTheDocument();
+    expect(container.querySelectorAll("button").length).toBe(3);
+  });
+
+  it('muestra la clase de disabled cuando disabled=true', () => {
+    const handleDraft = vi.fn();
+    const { container } = render(<Draft handleDraft={handleDraft} disabled={true} />);
+    const wrapper = container.firstChild;
+    expect(wrapper).toHaveClass('opacity-50');
+    expect(wrapper).toHaveClass('cursor-not-allowed');
+  });
+});

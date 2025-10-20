@@ -1,20 +1,32 @@
 import React, { useState } from "react";
 import ButtonGame from "../ButtonGame.jsx";
+import { useGame } from '../../context/GameContext.jsx'
 
 const HideRevealStealSecretsModal = ({
   isOpen,
   detective,
   onConfirm,
 }) => {
+  const { gameState } = useGame()
+
   if (!isOpen) return null;
+  console.log("El detective que llego es", detective);
 
   const setType = detective?.actionInProgress?.setType || "Detective";
-  const secretos = detective?.secretsPool || [];
-  const hasWildcard = detective?.current?.hasWildcard || false;
-
-  const filteredSecrets = secretos.filter(
-    (s) => s.playerId === detective.targetPlayerId
+  
+  // Get targetPlayerId from actionInProgress, not from detective root
+  const targetPlayerId = detective?.actionInProgress?.targetPlayerId;
+  
+  // Always use secretsFromAllPlayers as it has the 'id' field needed for the API
+  const filteredSecrets = gameState.secretsFromAllPlayers.filter(
+    (s) => s.player_id == targetPlayerId
   );
+
+  console.log('Target Player ID:', targetPlayerId);
+  console.log('Filtered Secrets:', filteredSecrets);
+  console.log('First secret structure:', filteredSecrets[0]);
+
+  const hasWildcard = detective?.current?.hasWildcard || false;
 
   const [selectedSecret, setSelectedSecret] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -53,6 +65,11 @@ const HideRevealStealSecretsModal = ({
     },
     tuppenceberesford: {
       name: "Tuppence Beresford",
+      effect: "Elegí un secreto propio para revelar",
+      requiresHidden: true,
+    },
+    beresford: {
+      name: "Hermanos Beresford",
       effect: "Elegí un secreto propio para revelar",
       requiresHidden: true,
     },
@@ -133,29 +150,35 @@ const HideRevealStealSecretsModal = ({
 
         {/* SECRETOS */}
         <div className="flex justify-center gap-6 my-6 flex-wrap">
-          {filteredSecrets.map((secret) => (
-            <div
-              key={secret.position}
-              onClick={() => validateSecrets(secret)}
-              className={`${cardBox} ${
-                selectedSecret?.position === secret.position ? selectedCard : ""
-              }`}
-            >
-              {secret.hidden ? (
-                <img
-                  src="/cards/secret_front.png"
-                  alt={`Secreto ${secret.position}`}
-                  className="w-full h-full object-cover rounded-md opacity-90"
-                />
-              ) : (
-                <img
-                  src="/cards/secret_back.png"
-                  alt={`Secreto ${secret.position}`}
-                  className="w-full h-full object-cover rounded-md"
-                />
-              )}
-            </div>
-          ))}
+          {filteredSecrets.length > 0 ? (
+            filteredSecrets.map((secret) => (
+              <div
+                key={secret.position}
+                onClick={() => validateSecrets(secret)}
+                className={`${cardBox} ${
+                  selectedSecret?.position === secret.position ? selectedCard : ""
+                }`}
+              >
+                {secret.hidden ? (
+                  <img
+                    src="/cards/secret_front.png"
+                    alt={`Secreto ${secret.position}`}
+                    className="w-full h-full object-cover rounded-md opacity-90"
+                  />
+                ) : (
+                  <img
+                    src="/cards/secret_back.png"
+                    alt={`Secreto ${secret.position}`}
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-[#B49150]/60 text-center">
+              No hay secretos disponibles para seleccionar
+            </p>
+          )}
         </div>
 
         {/* BOTONES */}
@@ -170,30 +193,3 @@ const HideRevealStealSecretsModal = ({
 };
 
 export default HideRevealStealSecretsModal;
-
-
-
-/*
-seleccionar jugador -> POST detective-action 
-{
-    "actionId": "action_abc123",
-    "targetPlayerId": "player_id",  // requerido para selección de jugador
-                            
-}
-
-response
-{
-    "success": true,
-    "completed": true,
-    "nextAction": {
-        "type": "selectPlayer",
-        "allowedPlayers": ["player_id2"]
-    }
-}
-
-
-
-DETECTIVE_INCOMING_REQUEST -> showChooseOwnSecret: true
-                              incomingRequest {payload...}
-
-*/

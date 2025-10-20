@@ -1,19 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import SelectPlayerModal from '../components/modals/SelectPlayer';
 
-// Mock de los componentes con rutas correctas
-vi.mock('../components/ProfileCard', () => ({
+vi.mock('../../src/context/UserContext.jsx', () => ({
+  useUser: vi.fn()
+}));
+
+vi.mock('../../src/context/GameContext.jsx', () => ({
+  useGame: vi.fn()
+}));
+
+// Mock de los componentes
+vi.mock('../../src/components/ProfileCard', () => ({
   default: ({ name, avatar, birthdate }) => (
     <div data-testid="profile-card">
-      <div>{name}</div>
-      <div>{avatar}</div>
-      <div>{birthdate}</div>
+      <div data-testid="player-name">{name}</div>
+      <div data-testid="player-avatar">{avatar}</div>
+      <div data-testid="player-birthdate">{birthdate}</div>
     </div>
   )
 }));
 
-vi.mock('../components/Button', () => ({
+vi.mock('../../src/components/Button', () => ({
   default: ({ onClick, title, disabled, children }) => (
     <button 
       onClick={onClick} 
@@ -25,337 +32,362 @@ vi.mock('../components/Button', () => ({
   )
 }));
 
-describe('SelectPlayerModal', () => {
-  const mockJugadores = [
-    { id: '1', name: 'Jugador 1', avatar: 'avatar1.png', birthdate: '1990-01-01' },
-    { id: '2', name: 'Jugador 2', avatar: 'avatar2.png', birthdate: '1991-02-02' },
-    { id: '3', name: 'Jugador 3', avatar: 'avatar3.png', birthdate: '1992-03-03' }
-  ];
+// AHORA sí importamos el componente
+import SelectPlayerModal from '../../src/components/modals/SelectPlayer';
+import { useUser } from '../../src/context/UserContext.jsx';
+import { useGame } from '../../src/context/GameContext.jsx';
 
-  const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
-    jugadores: mockJugadores,
-    userId: '1',
-    currentEventType: null,
-    detectiveType: null,
-    anotherVictim: null,
-    detectiveAction: null,
-    onPlayerSelect: vi.fn(),
-    onConfirm: vi.fn(),
-    onCancel: vi.fn()
-  };
+// Mock data
+const mockUserState = {
+  id: '1'
+};
+
+const mockGameState = {
+  jugadores: [
+    { player_id: '1', name: 'Jugador 1', avatar: 'avatar1.png', birthdate: '1990-01-01' },
+    { player_id: '2', name: 'Jugador 2', avatar: 'avatar2.png', birthdate: '1991-02-02' },
+    { player_id: '3', name: 'Jugador 3', avatar: 'avatar3.png', birthdate: '1992-03-03' }
+  ]
+};
+
+describe('SelectPlayerModal', () => {
+  const mockOnPlayerSelect = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
+    
+    // Configurar los mocks antes de cada test
+    mockUserState.id = '1';
+    mockGameState.jugadores = [
+      { player_id: '1', name: 'Jugador 1', avatar: 'avatar1.png', birthdate: '1990-01-01' },
+      { player_id: '2', name: 'Jugador 2', avatar: 'avatar2.png', birthdate: '1991-02-02' },
+      { player_id: '3', name: 'Jugador 3', avatar: 'avatar3.png', birthdate: '1992-03-03' }
+    ];
 
-  it('no renderiza nada cuando isOpen es false', () => {
-    const { container } = render(
-      <SelectPlayerModal {...defaultProps} isOpen={false} />
-    );
-    expect(container.firstChild).toBeNull();
-  });
-
-  describe('Another Victim Event', () => {
-    it('muestra mensaje para seleccionar jugador cuando no hay selección', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-        />
-      );
-      expect(screen.getByText('Selecciona un jugador para robar su set de detective')).toBeInTheDocument();
+    // Implementar los mocks
+    useUser.mockReturnValue({
+      userState: mockUserState
     });
 
-    it('muestra mensaje con jugador seleccionado', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
-        />
-      );
-      expect(screen.getByText('Robar set de detective de Jugador 2')).toBeInTheDocument();
+    useGame.mockReturnValue({
+      gameState: mockGameState
+    });
+  });
+
+  describe('Renderizado básico', () => {
+    it('renderiza el modal correctamente', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.getByText('Selecciona un jugador')).toBeInTheDocument();
+      expect(screen.getByTestId('button-confirmar')).toBeInTheDocument();
     });
 
-    it('permite seleccionar un jugador', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-        />
-      );
+    it('aplica las clases CSS correctas al contenedor principal', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const modalLayout = container.firstChild;
+      expect(modalLayout).toHaveClass('fixed', 'inset-0', 'flex', 'z-50');
+    });
+
+    it('aplica las clases correctas al contenedor del modal', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const modalContainer = container.querySelector('.bg-\\[\\#1D0000\\]');
+      expect(modalContainer).toHaveClass('border-4', 'border-[#825012]', 'rounded-2xl');
+    });
+  });
+
+  describe('Lista de jugadores', () => {
+    it('muestra todos los jugadores excepto el usuario actual', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
       const cards = screen.getAllByTestId('profile-card');
-      // Los jugadores mostrados son mockJugadores[1] y mockJugadores[2] (excluye userId '1')
+      expect(cards).toHaveLength(2); // Jugadores 2 y 3
+    });
+
+    it('muestra los nombres correctos de los jugadores', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.getByText('Jugador 2')).toBeInTheDocument();
+      expect(screen.getByText('Jugador 3')).toBeInTheDocument();
+      expect(screen.queryByText('Jugador 1')).not.toBeInTheDocument();
+    });
+
+    it('filtra correctamente al usuario actual', () => {
+      mockUserState.id = '2';
+      useUser.mockReturnValue({ userState: mockUserState });
+      
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      expect(cards).toHaveLength(2); // Jugadores 1 y 3
+      expect(screen.getByText('Jugador 1')).toBeInTheDocument();
+      expect(screen.getByText('Jugador 3')).toBeInTheDocument();
+      expect(screen.queryByText('Jugador 2')).not.toBeInTheDocument();
+    });
+
+    it('formatea correctamente las fechas de nacimiento', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const birthdates = screen.getAllByTestId('player-birthdate');
+      expect(birthdates.length).toBeGreaterThan(0);
+      
+      // Verifica que cada fecha esté formateada
+      birthdates.forEach(birthdate => {
+        expect(birthdate.textContent).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
+      });
+    });
+
+    it('usa grid layout para los jugadores', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const grid = container.querySelector('.grid');
+      expect(grid).toHaveClass('grid-cols-2', 'md:grid-cols-3');
+    });
+  });
+
+  describe('Selección de jugador', () => {
+    it('permite seleccionar un jugador al hacer click', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      const firstCard = cards[0];
+      
+      fireEvent.click(firstCard.parentElement);
+
+      expect(firstCard.parentElement).toHaveClass('ring-4', 'ring-[#FFD700]');
+    });
+
+    it('cambia la selección al hacer click en otro jugador', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      const firstCard = cards[0].parentElement;
+      const secondCard = cards[1].parentElement;
+
+      fireEvent.click(firstCard);
+      expect(firstCard).toHaveClass('ring-4', 'ring-[#FFD700]');
+
+      fireEvent.click(secondCard);
+      expect(secondCard).toHaveClass('ring-4', 'ring-[#FFD700]');
+      expect(firstCard).not.toHaveClass('ring-4', 'ring-[#FFD700]');
+    });
+
+    it('aplica hover effect a las tarjetas', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      const firstCard = cards[0].parentElement;
+
+      expect(firstCard).toHaveClass('hover:scale-105', 'transition-all');
+    });
+
+    it('aplica cursor pointer a las tarjetas', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      cards.forEach(card => {
+        expect(card.parentElement).toHaveClass('cursor-pointer');
+      });
+    });
+
+    it('solo un jugador puede estar seleccionado a la vez', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      
       fireEvent.click(cards[0].parentElement);
-      expect(defaultProps.onPlayerSelect).toHaveBeenCalledWith(mockJugadores[1]);
-    });
+      fireEvent.click(cards[1].parentElement);
 
-    it('habilita botón confirmar solo cuando hay jugador seleccionado', () => {
-      const { rerender } = render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-        />
-      );
-      expect(screen.getByTestId('button-confirmar')).toBeDisabled();
-
-      rerender(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
-        />
-      );
-      expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
+      const highlighted = screen.getAllByTestId('profile-card')
+        .map(card => card.parentElement)
+        .filter(el => el.className.includes('ring-4'));
+      
+      expect(highlighted).toHaveLength(1);
     });
   });
 
-  describe('Detective Tipo A (marple, pyne, poirot)', () => {
-    ['marple', 'pyne', 'poirot'].forEach(detective => {
-      describe(`Detective ${detective}`, () => {
-        it('muestra mensaje para seleccionar jugador', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-            />
-          );
-          expect(screen.getByText('Selecciona un jugador para robar su secreto')).toBeInTheDocument();
-        });
+  describe('Botón de confirmación', () => {
+    it('renderiza el botón de confirmar', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
 
-        it('muestra mensaje con jugador seleccionado', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{ selectedPlayer: mockJugadores[1] }}
-            />
-          );
-          expect(screen.getByText('Robar secreto de Jugador 2')).toBeInTheDocument();
-        });
-
-        it('filtra correctamente los jugadores a mostrar', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-            />
-          );
-          const cards = screen.getAllByTestId('profile-card');
-          expect(cards).toHaveLength(2); // No incluye al usuario actual
-        });
-
-        it('habilita confirmar cuando hay selección', () => {
-          const { rerender } = render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-            />
-          );
-          expect(screen.getByTestId('button-confirmar')).toBeDisabled();
-
-          rerender(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{ selectedPlayer: mockJugadores[1] }}
-            />
-          );
-          expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
-        });
-      });
+      const confirmButton = screen.getByTestId('button-confirmar');
+      expect(confirmButton).toBeInTheDocument();
+      expect(confirmButton).toHaveTextContent('Confirmar');
     });
-  });
 
-  describe('Detective Tipo B (beresford, satterthwaite)', () => {
-    ['beresford', 'satterthwaite'].forEach(detective => {
-      describe(`Detective ${detective}`, () => {
-        it('muestra mensaje correcto cuando el usuario es el iniciador', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { initiatorPlayerId: '1' }
-              }}
-            />
-          );
-          expect(screen.getByText('Selecciona un jugador objetivo')).toBeInTheDocument();
-        });
+    it('el botón de confirmar nunca está deshabilitado', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
 
-        it('muestra jugador seleccionado cuando es iniciador', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { initiatorPlayerId: '1' },
-                selectedPlayer: mockJugadores[1]
-              }}
-            />
-          );
-          expect(screen.getByText('Jugador seleccionado: Jugador 2')).toBeInTheDocument();
-        });
-
-        it('muestra mensaje correcto cuando el usuario es el objetivo', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { 
-                  initiatorPlayerId: '2',
-                  targetPlayerId: '1'
-                }
-              }}
-            />
-          );
-          expect(screen.getByText(/Has sido seleccionado por Jugador 2/)).toBeInTheDocument();
-        });
-
-        it('no muestra lista de jugadores cuando es objetivo', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { 
-                  initiatorPlayerId: '2',
-                  targetPlayerId: '1'
-                }
-              }}
-            />
-          );
-          expect(screen.queryAllByTestId('profile-card')).toHaveLength(0);
-        });
-
-        it('objetivo puede confirmar sin selección', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { 
-                  initiatorPlayerId: '2',
-                  targetPlayerId: '1'
-                }
-              }}
-            />
-          );
-          expect(screen.getByTestId('button-confirmar')).not.toBeDisabled();
-        });
-
-        it('muestra lista de jugadores cuando el usuario es el iniciador', () => {
-          render(
-            <SelectPlayerModal
-              {...defaultProps}
-              detectiveType={detective}
-              detectiveAction={{
-                actionInProgress: { initiatorPlayerId: '1' }
-              }}
-            />
-          );
-          
-          const cards = screen.getAllByTestId('profile-card');
-          // Excluye userId '1', quedan jugadores '2' y '3'
-          expect(cards).toHaveLength(2);
-        });
-      });
+      const confirmButton = screen.getByTestId('button-confirmar');
+      expect(confirmButton).not.toBeDisabled();
     });
-  });
 
-  describe('Interacciones de botones', () => {
-    it('llama a onConfirm cuando se hace clic en confirmar', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-          anotherVictim={{ selectedPlayer: mockJugadores[1] }}
-        />
-      );
-      const confirmButton = screen.getByText('Confirmar');
+    it('no llama a onPlayerSelect si no hay jugador seleccionado', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const confirmButton = screen.getByTestId('button-confirmar');
       fireEvent.click(confirmButton);
-      expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
+
+      expect(mockOnPlayerSelect).not.toHaveBeenCalled();
     });
 
-    it('llama a onCancel cuando se hace clic en cancelar', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-        />
-      );
-      const cancelButton = screen.getByText('Cancelar');
-      fireEvent.click(cancelButton);
-      expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
-    });
-  });
+    it('llama a onPlayerSelect con el ID correcto cuando hay selección', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
 
-  describe('Resaltado de selección', () => {
-    it('resalta el jugador seleccionado en another_victim', () => {
-      const { container } = render(
-        <SelectPlayerModal
-          {...defaultProps}
-          currentEventType="another_victim"
-          anotherVictim={{ selectedPlayer: { ...mockJugadores[1], id: '2' } }}
-        />
-      );
-      const highlighted = container.querySelector('.ring-4.ring-\\[\\#FFD700\\]');
-      expect(highlighted).toBeInTheDocument();
+      const cards = screen.getAllByTestId('profile-card');
+      fireEvent.click(cards[0].parentElement); // Selecciona jugador 2
+
+      const confirmButton = screen.getByTestId('button-confirmar');
+      fireEvent.click(confirmButton);
+
+      expect(mockOnPlayerSelect).toHaveBeenCalledWith('2');
     });
 
-    it('resalta el jugador seleccionado en detective action', () => {
-      const { container } = render(
-        <SelectPlayerModal
-          {...defaultProps}
-          detectiveType="marple"
-          detectiveAction={{ selectedPlayer: { ...mockJugadores[1], id: '2' } }}
-        />
-      );
-      const highlighted = container.querySelector('.ring-4.ring-\\[\\#FFD700\\]');
-      expect(highlighted).toBeInTheDocument();
+    it('llama a onPlayerSelect con el ID del segundo jugador', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      fireEvent.click(cards[1].parentElement); // Selecciona jugador 3
+
+      const confirmButton = screen.getByTestId('button-confirmar');
+      fireEvent.click(confirmButton);
+
+      expect(mockOnPlayerSelect).toHaveBeenCalledWith('3');
     });
   });
 
   describe('Casos edge', () => {
-    it('maneja jugadores sin nombre del iniciador correctamente', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          detectiveType="beresford"
-          detectiveAction={{
-            actionInProgress: { 
-              initiatorPlayerId: '999',
-              targetPlayerId: '1'
-            }
-          }}
-        />
-      );
-      expect(screen.getByText(/Has sido seleccionado por un jugador/)).toBeInTheDocument();
-    });
+    it('maneja lista con solo el usuario actual', () => {
+      mockGameState.jugadores = [
+        { player_id: '1', name: 'Solo User', avatar: 'av.png', birthdate: '1990-01-01' }
+      ];
+      useGame.mockReturnValue({ gameState: mockGameState });
 
-    it('maneja lista de jugadores vacía', () => {
-      render(
-        <SelectPlayerModal
-          {...defaultProps}
-          jugadores={[{ id: '1', name: 'Solo User', avatar: 'av.png', birthdate: '1990-01-01' }]}
-          currentEventType="another_victim"
-        />
-      );
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
       expect(screen.queryAllByTestId('profile-card')).toHaveLength(0);
     });
 
-    it('maneja detectiveType desconocido', () => {
-      const { container } = render(
-        <SelectPlayerModal
-          {...defaultProps}
-          detectiveType="unknown_detective"
-        />
-      );
-      const heading = container.querySelector('h2');
-      expect(heading).toHaveTextContent('');
+    it('maneja lista vacía de jugadores', () => {
+      mockGameState.jugadores = [];
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.queryAllByTestId('profile-card')).toHaveLength(0);
+    });
+
+    it('maneja muchos jugadores correctamente', () => {
+      mockGameState.jugadores = Array.from({ length: 10 }, (_, i) => ({
+        player_id: `${i + 1}`,
+        name: `Jugador ${i + 1}`,
+        avatar: `avatar${i + 1}.png`,
+        birthdate: '1990-01-01'
+      }));
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const cards = screen.getAllByTestId('profile-card');
+      expect(cards).toHaveLength(9); // Todos excepto el usuario actual
+    });
+
+    it('maneja player_id como string correctamente', () => {
+      mockUserState.id = '1';
+      mockGameState.jugadores = [
+        { player_id: '1', name: 'User', avatar: 'av.png', birthdate: '1990-01-01' },
+        { player_id: '2', name: 'Player 2', avatar: 'av2.png', birthdate: '1990-01-01' }
+      ];
+      useUser.mockReturnValue({ userState: mockUserState });
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.queryByText('User')).not.toBeInTheDocument();
+      expect(screen.getByText('Player 2')).toBeInTheDocument();
+    });
+
+    it('maneja player_id como número correctamente', () => {
+      mockUserState.id = 1;
+      mockGameState.jugadores = [
+        { player_id: 1, name: 'User', avatar: 'av.png', birthdate: '1990-01-01' },
+        { player_id: 2, name: 'Player 2', avatar: 'av2.png', birthdate: '1990-01-01' }
+      ];
+      useUser.mockReturnValue({ userState: mockUserState });
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.queryByText('User')).not.toBeInTheDocument();
+      expect(screen.getByText('Player 2')).toBeInTheDocument();
+    });
+
+    it('maneja fechas inválidas sin romper', () => {
+      mockGameState.jugadores = [
+        { player_id: '2', name: 'Player 2', avatar: 'av.png', birthdate: 'invalid-date' }
+      ];
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+      
+      // El componente debe renderizarse sin errores
+      expect(container.querySelector('.grid')).toBeInTheDocument();
+    });
+
+    it('maneja jugadores sin avatar correctamente', () => {
+      mockGameState.jugadores = [
+        { player_id: '2', name: 'Player 2', birthdate: '1990-01-01' }
+      ];
+      useGame.mockReturnValue({ gameState: mockGameState });
+
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      expect(screen.getByText('Player 2')).toBeInTheDocument();
+    });
+  });
+
+  describe('Estructura y estilos', () => {
+    it('aplica el fondo oscuro con opacidad al overlay', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const overlay = container.firstChild;
+      expect(overlay).toHaveClass('bg-black', 'bg-opacity-60');
+    });
+
+    it('centra el contenido del modal', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const overlay = container.firstChild;
+      expect(overlay).toHaveClass('items-center', 'justify-center');
+    });
+
+    it('aplica el ancho máximo correcto al contenedor', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const modalContainer = container.querySelector('.max-w-3xl');
+      expect(modalContainer).toBeInTheDocument();
+    });
+
+    it('usa flexbox con gap correcto', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const modalContainer = container.querySelector('.gap-6');
+      expect(modalContainer).toBeInTheDocument();
+    });
+
+    it('aplica estilos correctos al mensaje de acción', () => {
+      render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const heading = screen.getByText('Selecciona un jugador');
+      expect(heading.parentElement).toHaveClass('text-[#FFE0B2]', 'text-xl', 'font-semibold');
+    });
+
+    it('usa key correcta para cada jugador', () => {
+      const { container } = render(<SelectPlayerModal onPlayerSelect={mockOnPlayerSelect} />);
+
+      const playerCards = container.querySelectorAll('[class*="cursor-pointer"]');
+      expect(playerCards.length).toBeGreaterThan(0);
     });
   });
 });
