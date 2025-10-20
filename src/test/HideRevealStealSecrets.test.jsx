@@ -5,16 +5,20 @@ import { GameProvider, useGame } from '../context/GameContext.jsx'
 import HideRevealStealSecrets from "../components/modals/HideRevealStealSecrets.jsx"
 
 // Mock del ButtonGame
+let __capturedConfirmHandler = null
 vi.mock('../components/ButtonGame.jsx', () => ({
-  default: ({ onClick, disabled, children }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      data-testid="button-confirm"
-    >
-      {children}
-    </button>
-  ),
+  default: ({ onClick, disabled, children }) => {
+    __capturedConfirmHandler = onClick
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        data-testid="button-confirm"
+      >
+        {children}
+      </button>
+    )
+  },
 }))
 
 // Mock de socket.io-client para evitar conexiones reales
@@ -180,18 +184,14 @@ describe('HideRevealStealSecrets', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('confirmSelection muestra error cuando no hay secreto seleccionado', () => {
-    const mockSetError = vi.fn()
-    const selectedSecret = null
-    
-    if (!selectedSecret) {
-      mockSetError("Seleccioná un secreto válido antes de confirmar.")
-      expect(mockOnConfirm).not.toHaveBeenCalled()
-    }
-    
-    expect(mockSetError).toHaveBeenCalledWith(
-      "Seleccioná un secreto válido antes de confirmar."
-    )
+  it('confirmSelection muestra error cuando no hay secreto seleccionado', async () => {
+    renderModal()
+    expect(typeof __capturedConfirmHandler).toBe('function')
+    act(() => {
+      __capturedConfirmHandler()
+    })
+    expect(mockOnConfirm).not.toHaveBeenCalled()
+    expect(await screen.findByText('Seleccioná un secreto válido antes de confirmar.')).toBeInTheDocument()
   })
 
   it('maneja detective desconocido', () => {
@@ -203,6 +203,12 @@ describe('HideRevealStealSecrets', () => {
       },
     }
     renderModal({ detective: unknown })
+    expect(screen.getByText('Detective desconocido')).toBeInTheDocument()
+    expect(screen.getByText('Sin efecto')).toBeInTheDocument()
+  })
+
+  it('muestra fallback cuando detective es undefined', () => {
+    renderModal({ detective: undefined })
     expect(screen.getByText('Detective desconocido')).toBeInTheDocument()
     expect(screen.getByText('Sin efecto')).toBeInTheDocument()
   })

@@ -377,6 +377,42 @@ describe('GamesScreen', () => {
     })
   })
 
+  it('registra error cuando el backend responde ok:false al cargar partidas', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    global.fetch = vi.fn(url => {
+      if (url.includes('/api/game_list')) {
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({ message: 'server error' }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockFetchData }) })
+    })
+
+    useUser.mockReturnValue({
+      userState: {
+        name: 'Juan',
+        avatarPath: '/avatar.png',
+        birthdate: '2000-01-01',
+        isHost: true,
+      },
+      userDispatch: mockUserDispatch,
+    })
+
+    renderWithProviders(<GamesScreen />)
+
+    await waitFor(() => {
+      expect(errorSpy).toHaveBeenCalled()
+    })
+
+    errorSpy.mockRestore()
+
+    global.fetch = vi.fn(url => {
+      if (url.includes('/join')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockJoinResponse) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: mockFetchData }) })
+    })
+  })
+
   it('botón Volver navega a /lobby', async () => {
     useUser.mockReturnValue({
       userState: {
