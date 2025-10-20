@@ -133,7 +133,7 @@ describe('GameJoin', () => {
           players: [],
         }),
       })
-
+  
       useGame.mockReturnValue({
         gameState: {
           jugadores: [],
@@ -145,12 +145,12 @@ describe('GameJoin', () => {
       useUser.mockReturnValue({
         userState: { isHost: true, id: 1 },
       })
-
+  
       renderWithRouter(<GameJoin />)
       const button = screen.getByText('Iniciar partida')
-
+  
       fireEvent.click(button)
-
+  
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
           'http://localhost:8000/game/123/start',
@@ -162,7 +162,7 @@ describe('GameJoin', () => {
         )
       })
     })
-
+  
     it('navega a la pantalla de juego después de iniciar', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
@@ -172,29 +172,49 @@ describe('GameJoin', () => {
           players: [],
         }),
       })
-
-      useGame.mockReturnValue({
-        gameState: {
-          jugadores: [],
-          gameId: 'TEST123',
-          roomId: 123,
-        },
+  
+      // Crear estado mutable
+      let currentGameState = {
+        jugadores: [],
+        gameId: 'TEST123',
+        roomId: 123,
+      }
+  
+      // Mock que devuelve el estado actual
+      useGame.mockImplementation(() => ({
+        gameState: currentGameState,
         gameDispatch: mockGameDispatch,
-      })
+      }))
+      
       useUser.mockReturnValue({
         userState: { isHost: true, id: 1 },
       })
-
-      renderWithRouter(<GameJoin />)
+  
+      // Capturar rerender
+      const { rerender } = renderWithRouter(<GameJoin />)
       const button = screen.getByText('Iniciar partida')
-
+  
       fireEvent.click(button)
-
+  
+      // Esperar a que el fetch se complete
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled()
+      })
+  
+      // Simular actualizacion de estado
+      currentGameState = {
+        ...currentGameState,
+        status: 'INGAME',
+      }
+  
+      // Re-renderizar
+      rerender(<GameJoin />)
+  
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/game/123')
       })
     })
-
+  
     it('no hace nada si el usuario NO es host', async () => {
       useGame.mockReturnValue({
         gameState: {
@@ -207,10 +227,9 @@ describe('GameJoin', () => {
       useUser.mockReturnValue({
         userState: { isHost: false, id: 1 },
       })
-
+  
       renderWithRouter(<GameJoin />)
-
-      // El botón de iniciar no debería existir
+  
       expect(screen.queryByText('Iniciar partida')).not.toBeInTheDocument()
     })
   })
