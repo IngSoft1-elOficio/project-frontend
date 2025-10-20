@@ -25,11 +25,39 @@ function LoginBox() {
   const [error, setError] = useState('');
   const [usuarios, setUsuarios] = useState([]); // You might want to move this to a separate context
 
+  //Validación del nombre
+  const validarNombre = (nombre) => {
+    //Verificar longitud
+    if (nombre.length > 20) {
+      return 'El nombre no puede tener más de 20 caracteres';
+    }
+    
+    //Verificar caracteres especiales (solo permite letras, números, espacios y tildes)
+    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]*$/;
+    if (!regex.test(nombre)) {
+      return 'El nombre solo puede contener letras, números y espacios';
+    }
+    
+    //Verificar que no esté vacío o solo espacios
+    if (nombre.trim().length === 0 && nombre.length > 0) {
+      return 'El nombre no puede estar vacío';
+    }
+    
+    return '';
+  }
+
   const handleSubmit = (event) => {
     event.preventDefault();
     
     if (!formData.nombre || !formData.fechaNacimiento || !formData.avatar) {
       setError('todos los campos son obligatorios');
+      return;
+    }
+
+    //Validar nombre antes de enviar
+    const errorNombre = validarNombre(formData.nombre);
+    if (errorNombre) {
+      setError(errorNombre);
       return;
     }
 
@@ -112,11 +140,12 @@ function LoginBox() {
               selected={formData.avatar}
               onChange={(value) => handleInputChange('avatar', value)}
               options={[
-                { value: './public/avatar1.jpg' },
-                { value: './public/avatar2.jpg' },
-                { value: './public/avatar3.jpg' },
-                { value: './public/avatar4.jpg' },
-                { value: './public/avatar5.jpg' },
+                { value: './avatar1.jpg' },
+                { value: './avatar2.jpg' },
+                { value: './avatar3.jpg' },
+                { value: './avatar4.jpg' },
+                { value: './avatar5.jpg' },
+                { value: './avatar6.jpg' },
               ]}
             />
           </div>

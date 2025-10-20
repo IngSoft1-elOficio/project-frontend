@@ -1,46 +1,76 @@
-import { useNavigate } from "react-router-dom";
-import { useGame } from "../context/GameContext.jsx";
-import { useUser } from "../context/UserContext.jsx";
-import PlayersList from "../components/PlayersList";
-import Card from "../components/Card";
-import Button from "../components/Button";
-import LobbyError from "../components/LobbyError.jsx";
-import { useEffect } from "react";
+import { useNavigate } from 'react-router-dom'
+import { useGame } from '../context/GameContext.jsx'
+import { useUser } from '../context/UserContext.jsx'
+import PlayersList from '../components/PlayersList'
+import Card from '../components/Card'
+import Button from '../components/Button'
+import LobbyError from '../components/LobbyError.jsx'
+import { useEffect, useState } from 'react'
+import ExitGameButton from '../components/lobby/ExitGameButton'
 
 export default function GameJoin() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const [error, setErrorMessage] = useState(null)
+  const [notification, setNotification] = useState(null)
 
   // Contexts
-  const { gameState, gameDispatch } = useGame();
-  const { userState } = useUser();
+  const { gameState, gameDispatch } = useGame()
+  const { userState } = useUser()
 
   useEffect(() => {
-      console.log("Game state at waiting: ", gameState);
-      console.log("User state at waiting: ", userState);
+    console.log('Game state at waiting: ', gameState)
+    console.log('User state at waiting: ', userState)
 
       // Navigate only if user is not the host and roomId is set
-      if (!userState.isHost && gameState.roomId && gameState.started == 'INGAME') {
+      if (gameState.roomId && gameState.status == 'INGAME') {
         navigate(`/game/${gameState.roomId}`);
       }
   }, [gameState, userState])
 
-  const { gameId, jugadores } = gameState;
+  // Redirigir jugadores cuando el host cancela la partida y mostrar notificacion
+  useEffect(() => {
+    if (gameState.gameCancelled) {
+      console.log('El host cancelo la partida, redirigiendo al lobby')
+      setNotification('El host cancelo la partida')
+
+      // Esperar un momento para que se vea la notificación antes de redirigir
+      setTimeout(() => {
+        navigate('/lobby')
+      }, 3000)
+    }
+  }, [gameState.gameCancelled, navigate])
+
+  // Mostrar notificacion cuando un jugador abandona
+  useEffect(() => {
+    if (gameState.playerLeftNotification) {
+      const playerName = gameState.playerLeftNotification.playerName
+      setNotification(`${playerName} abandono la partida`)
+
+      // Limpiar notificacion despues de 3 segundos
+      setTimeout(() => {
+        setNotification(null)
+        gameDispatch({ type: 'CLEAR_PLAYER_LEFT_NOTIFICATION' })
+      }, 3000)
+    }
+  }, [gameState.playerLeftNotification, gameDispatch])
+
+  const { gameId, jugadores, roomInfo } = gameState
 
   const handleStart = async () => {
-    if (!userState.isHost) return;
+    if (!userState.isHost) return
 
-    console.log('🚀 Starting game, socket connected?', gameState.connected);
-    console.log('🎮 Current gameId:', gameState.gameId);
-    
+    console.log('🚀 Starting game, socket connected?', gameState.connected)
+    console.log('🎮 Current gameId:', gameState.gameId)
+
     try {
-      const payload = { user_id: userState.id }; 
-      console.log("Sending payload:", payload);
-      
+      const payload = { user_id: userState.id }
+      console.log('Sending payload:', payload)
+
       const response = await fetch(
         `http://localhost:8000/game/${gameState.roomId}/start`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
       );
@@ -54,59 +84,72 @@ export default function GameJoin() {
       }
       
       const data = await response.json();
-      console.log("Partida iniciada:", data);
-
-      gameDispatch({
-        type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          room_id: gameState.roomId,
-          game_id: gameState.gameId,
-          status: 'STARTING',
-          turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-          jugadores: data.game?.players || gameState.jugadores,
-          mazos: data.game?.mazos || gameState.mazos || { deck: data.game?.deck_count || 0, discard: 0 },
-          timestamp: new Date().toISOString()
-        }
-      });
-
-      navigate(`/game/${gameState.room_id}`)
-
+      console.log("Partida iniciada: la respuesta del post es:", data);
+      
     } catch (error) {
-      console.error("Fallo en handleStart:", error);
+      console.error('Fallo en handleStart:', error)
     }
-  };  
+  }
+
+  const handleExitError = error => {
+    setErrorMessage(error)
+    setTimeout(() => setErrorMessage(null), 3000)
+  }
 
   return (
     <main className="relative min-h-dvh overflow-x-hidden">
-      
       <div
         className="fixed inset-0 bg-[url('/background.png')] bg-cover bg-center"
         aria-hidden
       />
 
-      { // userState.name && gameState.gameId ? 
+      {/* Error display */}
+      {error && (
+        <div
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl"
+          style={{ zIndex: 9999, maxWidth: '500px' }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Notification display */}
+      {notification && (
+        <div
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-2xl font-limelight"
+          style={{ zIndex: 9999, maxWidth: '500px' }}
+        >
+          {notification}
+        </div>
+      )}
+
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
         <h1 className="mb-6 text-3xl font-bold text-[#F4CC6F] font-limelight">
-          Partida:{" "}
-          <span className="font-black">{gameId || "Sin nombre"}</span>
+          Partida:{' '}
+          <span className="font-black">
+            {roomInfo?.name || gameId || 'Sin nombre'}
+          </span>
         </h1>
 
         <Card title="Jugadores" className="mb-8 font-limelight">
           <PlayersList players={jugadores} />
         </Card>
 
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
-          <Button
-            onClick={handleStart}
-            disabled={!userState.isHost}
-            className="font-limelight"
-          >
-            Iniciar partida
-          </Button>
-        </div>
-      </div> // : <LobbyError navigate={navigate} />  Descomentar para no mostrar si no esta logeado
-      }
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-row gap-4 items-center">
+          <ExitGameButton
+            isHost={userState?.isHost}
+            roomId={gameState.roomId}
+            userId={userState.id}
+            onError={handleExitError}
+          />
 
+          {userState?.isHost && (
+            <Button onClick={handleStart} className="font-limelight">
+              Iniciar partida
+            </Button>
+          )}
+        </div>
+      </div>
     </main>
-  );
+  )
 }

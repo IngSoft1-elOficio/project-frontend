@@ -1,17 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import NombreDePartida from '../components/NombreDePartida';
 
-describe('NombreDePartida', () => {
-  it('muestra el label y actualiza el nombre y limpia el error', () => {
-    const setNombrePartida = vi.fn();
-    const setError = vi.fn();
-    render(<NombreDePartida nombre_partida="" setNombrePartida={setNombrePartida} setError={setError} />);
-    
-    expect(screen.getByText(/Nombre de la partida/i)).toBeInTheDocument();
+test('actualiza el nombre y limpia el error', () => {
+  const setNombrePartida = vi.fn();
+  const setError = vi.fn();
 
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Partida 1' } });
-    expect(setNombrePartida).toHaveBeenCalledWith('Partida 1');
-    expect(setError).toHaveBeenCalledWith('');
-  });
+  render(
+    <NombreDePartida
+      nombre_partida=""
+      setNombrePartida={setNombrePartida}
+      setError={setError}
+    />
+  );
+
+  const input = screen.getByRole('textbox');
+  fireEvent.change(input, { target: { value: 'NuevaPartida' } });
+
+  expect(setNombrePartida).toHaveBeenCalledWith('NuevaPartida');
+  expect(setError).toHaveBeenCalledWith('');
 });

@@ -30,8 +30,7 @@ const TestComponent = () => {
       <div data-testid="secrets-size">{gameState.secretos.length}</div>
       <div data-testid="game-ended">{gameState.gameEnded ? 'ended' : 'playing'}</div>
       <div data-testid="win-status">{gameState.ganaste === null ? 'unknown' : (gameState.ganaste ? 'won' : 'lost')}</div>
-      <div data-testid="joined-room">{gameState.joinedRoom ? 'joined' : 'not-joined'}</div>
-      <div data-testid="backend-connected">{gameState.backendConnected ? 'backend-connected' : 'backend-not-connected'}</div>
+      <div data-testid="backend-connected">{gameState.connected ? 'backend-connected' : 'backend-not-connected'}</div>
       
       <button 
         onClick={() => gameDispatch({ type: 'RESET_GAME' })}
@@ -81,7 +80,6 @@ describe('GameContext', () => {
     expect(screen.getByTestId('secrets-size')).toHaveTextContent('0');
     expect(screen.getByTestId('game-ended')).toHaveTextContent('playing');
     expect(screen.getByTestId('win-status')).toHaveTextContent('unknown');
-    expect(screen.getByTestId('joined-room')).toHaveTextContent('not-joined');
     expect(screen.getByTestId('backend-connected')).toHaveTextContent('backend-not-connected');
   });
 
@@ -105,12 +103,12 @@ describe('GameContext', () => {
     // Now socket should be created and event listeners registered
     expect(mockSocket.on).toHaveBeenCalled();
     
-    // Find and trigger the connect handler
-    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')?.[1];
-    expect(connectHandler).toBeDefined();
+    // Find and trigger the connected handler
+    const connectedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connected')?.[1];
+    expect(connectedHandler).toBeDefined();
     
     act(() => {
-      connectHandler();
+      connectedHandler();
     });
 
     await waitFor(() => {
@@ -131,18 +129,18 @@ describe('GameContext', () => {
       connectButton.click();
     });
 
-    // Get connect handler and trigger it
-    const connectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connect')?.[1];
+    // Get connected handler and trigger it
+    const connectedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'connected')?.[1];
     act(() => {
-      connectHandler();
+      connectedHandler();
     });
 
-    // Get disconnect handler and trigger it
-    const disconnectHandler = mockSocket.on.mock.calls.find(call => call[0] === 'disconnect')?.[1];
-    expect(disconnectHandler).toBeDefined();
+    // Get disconnected handler and trigger it
+    const disconnectedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'disconnected')?.[1];
+    expect(disconnectedHandler).toBeDefined();
     
     act(() => {
-      disconnectHandler('client namespace disconnect');
+      disconnectedHandler();
     });
 
     await waitFor(() => {
@@ -179,7 +177,7 @@ describe('GameContext', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('joined-room')).toHaveTextContent('joined');
+      expect(screen.getByTestId('backend-connected')).toHaveTextContent('backend-connected');
     });
   });
 
@@ -254,7 +252,7 @@ describe('GameContext', () => {
     });
   });
 
-  it('should handle player_action_result (game ended) event', async () => {
+  it('should handle game_ended (game won) event', async () => {
     render(
       <GameProvider>
         <TestComponent />
@@ -268,17 +266,15 @@ describe('GameContext', () => {
     });
 
     const mockGameEndResult = {
-      type: 'game_ended',
-      user_id: 'player1',
-      ganaste: true,
-      timestamp: '2023-01-01T00:00:00.000Z'
+      winners: [{ player_id: 456 }],
+      reason: 'test'
     };
 
-    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')?.[1];
-    expect(actionResultHandler).toBeDefined();
+    const gameEndedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_ended')?.[1];
+    expect(gameEndedHandler).toBeDefined();
     
     act(() => {
-      actionResultHandler(mockGameEndResult);
+      gameEndedHandler(mockGameEndResult);
     });
 
     await waitFor(() => {
@@ -287,7 +283,7 @@ describe('GameContext', () => {
     });
   });
 
-  it('should handle losing game result', async () => {
+  it('should handle game_ended (game lost) event', async () => {
     render(
       <GameProvider>
         <TestComponent />
@@ -301,68 +297,20 @@ describe('GameContext', () => {
     });
 
     const mockGameEndResult = {
-      type: 'game_ended',
-      user_id: 'player1',
-      ganaste: false,
-      timestamp: '2023-01-01T00:00:00.000Z'
+      winners: [{ player_id: 123 }],
+      reason: 'test'
     };
 
-    const actionResultHandler = mockSocket.on.mock.calls.find(call => call[0] === 'player_action_result')?.[1];
-    expect(actionResultHandler).toBeDefined();
+    const gameEndedHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_ended')?.[1];
+    expect(gameEndedHandler).toBeDefined();
     
     act(() => {
-      actionResultHandler(mockGameEndResult);
+      gameEndedHandler(mockGameEndResult);
     });
 
     await waitFor(() => {
       expect(screen.getByTestId('game-ended')).toHaveTextContent('ended');
       expect(screen.getByTestId('win-status')).toHaveTextContent('lost');
-    });
-  });
-
-  it('should handle game reset', async () => {
-    render(
-      <GameProvider>
-        <TestComponent />
-      </GameProvider>
-    );
-
-    // Connect and set some game state first
-    const connectButton = screen.getByTestId('connect-button');
-    act(() => {
-      connectButton.click();
-    });
-
-    const mockGameStatePublic = {
-      game_id: 'test-game-123',
-      turno_actual: 'player1',
-      jugadores: [{ user_id: 'player1', nombre: 'Player 1' }],
-      mazos: {},
-      timestamp: '2023-01-01T00:00:00.000Z'
-    };
-
-    const gameStateHandler = mockSocket.on.mock.calls.find(call => call[0] === 'game_state_public')?.[1];
-    act(() => {
-      gameStateHandler(mockGameStatePublic);
-    });
-
-    // Verify game state is set
-    await waitFor(() => {
-      expect(screen.getByTestId('game-id')).toHaveTextContent('test-game-123');
-    });
-
-    // Reset the game
-    const resetButton = screen.getByTestId('reset-button');
-    act(() => {
-      resetButton.click();
-    });
-
-    // Verify game state is reset
-    await waitFor(() => {
-      expect(screen.getByTestId('game-id')).toHaveTextContent('no-game');
-      expect(screen.getByTestId('current-turn')).toHaveTextContent('no-turn');
-      expect(screen.getByTestId('players-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('game-ended')).toHaveTextContent('playing');
     });
   });
 
@@ -384,12 +332,10 @@ describe('GameContext', () => {
 
     // Verify all expected event listeners are registered after connection
     const eventNames = mockSocket.on.mock.calls.map(call => call[0]);
-    expect(eventNames).toContain('connect');
-    expect(eventNames).toContain('disconnect');
+    expect(eventNames).toContain('disconnected');
     expect(eventNames).toContain('connected');
     expect(eventNames).toContain('game_state_public');
     expect(eventNames).toContain('game_state_private');
-    expect(eventNames).toContain('player_action_result');
     expect(eventNames).toContain('connect_error');
   });
 

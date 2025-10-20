@@ -11,23 +11,23 @@ import ProfileCard from "../components/ProfileCard.jsx";
 export default function PantallaDeCreacion() {
   const navigate = useNavigate();
   const { userState, userDispatch } = useUser();
-  const { gameState, gameDispatch, connectToGame  } = useGame();
+  const { gameDispatch, connectToGame  } = useGame();
   
-  // Local state for game creation form
   const [gameForm, setGameForm] = useState({
     nombre_partida: "",
-    jugadores: 2
+    jugadoresMin: 2,
+    jugadoresMax: 6
   });
 
   const [error, setError] = useState("");
 
   const handleContinue = async () => {
     try {
-      // Prepare the request data with user info
       const requestData = {
           room: {
               nombre_partida: gameForm.nombre_partida,
-              jugadores: gameForm.jugadores
+              jugadoresMin: gameForm.jugadoresMin,
+              jugadoresMax: gameForm.jugadoresMax
           },
           player: {
               nombre: userState.name,
@@ -54,20 +54,18 @@ export default function PantallaDeCreacion() {
       const data = await response.json();
       console.log("Response data:", data);
     
-      // Update user context with the host player data
       const hostPlayer = data.players.find(player => player.is_host) || data.players[0];
       userDispatch({ 
         type: 'SET_USER', 
         payload: {
           id: hostPlayer.id,
           name: hostPlayer.name,
-          avatarPath: hostPlayer.avatar, // Map avatar to avatarPath
+          avatarPath: hostPlayer.avatar,
           birthdate: hostPlayer.birthdate,
           isHost: hostPlayer.is_host
         }
       });
       
-      // Initialize game with room and players data
       gameDispatch({ 
         type: 'INITIALIZE_GAME', 
         payload: {
@@ -76,7 +74,6 @@ export default function PantallaDeCreacion() {
         }
       });
       
-      // Conectar con el websocket
       console.log('Connecting with gameId:', data.room.id, 'userId:', hostPlayer.id);
       connectToGame(data.room.id, hostPlayer.id);
 
@@ -86,29 +83,33 @@ export default function PantallaDeCreacion() {
     }
   };
 
-  // Update form data handlers
   const setNombrePartida = (value) => {
     setGameForm(prev => ({
       ...prev,
       nombre_partida: value
     }));
-    setError(""); // Clear error when user types
+    setError("");
   };
 
-  const setJugadores = (value) => {
+  const setJugadoresMin = (value) => {
     setGameForm(prev => ({
       ...prev,
-      jugadores: value
+      jugadoresMin: value
+    }));
+  };
+
+  const setJugadoresMax = (value) => {
+    setGameForm(prev => ({
+      ...prev,
+      jugadoresMax: value
     }));
   };
 
   return (
     <div className="pantalla-creacion">
-      { // userState.name ? 
       <div className="form-container">
         <ProfileCard
                 name={userState.name}
-                host={userState.isHost}
                 avatar={userState.avatarPath}
                 birthdate={userState.birthdate}
               />
@@ -120,20 +121,20 @@ export default function PantallaDeCreacion() {
         />
         
         <CantidadDeJugadores 
-          jugadores={gameForm.jugadores} 
-          setJugadores={setJugadores}
+          jugadoresMin={gameForm.jugadoresMin}
+          setJugadoresMin={setJugadoresMin}
+          jugadoresMax={gameForm.jugadoresMax}
+          setJugadoresMax={setJugadoresMax}
         />
         
         <Continuar
           nombre={gameForm.nombre_partida}
-          jugadores={gameForm.jugadores}
           onContinue={handleContinue}
           setError={setError}
         />
         
         {error && <p className="error-message">{error}</p>}
-      </div> // : <LobbyError navigate={navigate}/> 
-      }
+      </div>
     </div>
   );
 }

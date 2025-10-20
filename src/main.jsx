@@ -9,12 +9,11 @@ import GameScreen from './containers/gameScreen/GameScreen.jsx'
 import GamesScreen from './containers/GamesScreen/GamesScreen.jsx'
 import { UserProvider } from './context/UserContext.jsx'
 import { GameProvider } from './context/GameContext.jsx'
-import ConnectionBeacon from './components/ConnectionBeacon.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <UserProvider>
-      <GameProvider>
+      <GameProvider autoReconnect={true}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<App />} />
@@ -24,7 +23,6 @@ createRoot(document.getElementById('root')).render(
             <Route path = "/game/:gameId" element={<GameScreen />} />
             <Route path="games" element={<GamesScreen />} />
           </Routes>
-          <ConnectionBeacon />
         </BrowserRouter>
       </GameProvider>
     </UserProvider>
