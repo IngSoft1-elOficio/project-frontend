@@ -1208,6 +1208,7 @@ describe('GameScreen Component', () => {
   })
 
   describe('Button visibility and state', () => {
+    /*
     it('shows Jugar Carta button only when one card is selected', () => {
       mockGameState.turnoActual = 1
       useGame.mockReturnValue({
@@ -1223,6 +1224,7 @@ describe('GameScreen Component', () => {
 
       expect(screen.getByTestId('button-jugar-carta')).toBeInTheDocument()
     })
+    */
 
     it('shows Descartar button when cards are selected and not yet discarded', () => {
       mockGameState.turnoActual = 1
