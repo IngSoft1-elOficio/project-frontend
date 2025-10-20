@@ -32,12 +32,14 @@ const gameInitialState = {
   secretsFromAllPlayers: [],
   secretos: [],
   gameEnded: false,
+  gameCancelled: false,
   winners: [],
   ganaste: null,
   finish_reason: null,
   lastUpdate: null,
   connected: false,
   logs: [], // { id, message, type, timestamp, playerId }
+  playerLeftNotification: null,
 
   // Detective Actions
   detectiveAction: {
@@ -150,6 +152,7 @@ const gameInitialState = {
           roomId: action.payload.room.id,
           roomInfo: action.payload.room,
           jugadores: action.payload.players,
+          gameCancelled: false,
           logs: [...state.logs, initLog].slice(-50)
         }
 
@@ -230,6 +233,29 @@ const gameInitialState = {
 
           lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
           logs: [...state.logs, endLog].slice(-50)
+        }
+
+      case 'GAME_CANCELLED':
+        return {
+          ...state,
+          gameCancelled: true,
+          lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+        }
+
+      case 'PLAYER_LEFT_NOTIFICATION':
+        return {
+          ...state,
+          playerLeftNotification: {
+            playerName: action.payload.playerName,
+            timestamp: action.payload.timestamp,
+          },
+          lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
+        }
+
+      case 'CLEAR_PLAYER_LEFT_NOTIFICATION':
+        return {
+          ...state,
+          playerLeftNotification: null,
         }
 
       // ----------------------
@@ -1034,6 +1060,50 @@ export const GameProvider = ({ children }) => {
       gameDispatch({ 
         type: 'FINISH_TURN',
         payload: data,
+      })
+    })
+
+    // ------------------------
+    // | CANCEL - EXIT GAME LISTENERS |
+    // ------------------------
+
+    // Caso abandonar sala
+    socket.on('player_left', data => {
+      console.log('Un Jugador abandono la sala:', data)
+      if (data.player_id === userId) {
+        // Yo abandono la sala
+        console.log('Abandonando sala')
+        gameDispatch({
+          type: 'PLAYER_REMOVED_FROM_LOBBY',
+          payload: { timestamp: new Date().toISOString() },
+        })
+      } else {
+        // Otro abandona la sala => actualizar lista de jugadores
+        gameDispatch({
+          type: 'UPDATE_GAME_STATE_PUBLIC',
+          payload: {
+            jugadores: data.players,
+            timestamp: new Date().toISOString(),
+          },
+        })
+
+        // Notificar que un jugador salio
+        gameDispatch({
+          type: 'PLAYER_LEFT_NOTIFICATION',
+          payload: {
+            playerName: 'Un jugador',
+            timestamp: new Date().toISOString(),
+          },
+        })
+      }
+    })
+
+    // Caso cancelar partida
+    socket.on('game_cancelled', data => {
+      console.log('Partida cancelada por el host:', data)
+      gameDispatch({
+        type: 'GAME_CANCELLED',
+        payload: { timestamp: new Date().toISOString() },
       })
     })
   }, [])
