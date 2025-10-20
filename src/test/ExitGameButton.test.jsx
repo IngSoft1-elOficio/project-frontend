@@ -228,4 +228,44 @@ describe('ExitGameButton', () => {
       expect(mockOnError).toHaveBeenCalledWith('Error al abandonar la partida')
     })
   })
+
+  it('loggea "Jugador abandonó la partida" cuando no es host', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} isHost={false} />)
+    const button = screen.getByText('Abandonar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith('Jugador abandonó la partida')
+    })
+
+    logSpy.mockRestore()
+  })
+
+  it('loggea "Partida cancelada" cuando es host', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    renderWithRouter(<ExitGameButton {...defaultProps} isHost={true} />)
+    const button = screen.getByText('Cancelar partida')
+
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith('Partida cancelada')
+    })
+
+    logSpy.mockRestore()
+  })
 })
