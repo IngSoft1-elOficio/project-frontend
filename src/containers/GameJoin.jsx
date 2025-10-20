@@ -21,17 +21,10 @@ export default function GameJoin() {
     console.log('Game state at waiting: ', gameState)
     console.log('User state at waiting: ', userState)
 
-<<<<<<< HEAD
       // Navigate only if user is not the host and roomId is set
       if (gameState.roomId && gameState.status == 'INGAME') {
         navigate(`/game/${gameState.roomId}`);
       }
-=======
-    // Navigate only if user is not the host and roomId is set
-    if (!userState.isHost && gameState.roomId && gameState.status == 'INGAME') {
-      navigate(`/game/${gameState.roomId}`)
-    }
->>>>>>> develop
   }, [gameState, userState])
 
   // Redirigir jugadores cuando el host cancela la partida y mostrar notificacion
@@ -80,7 +73,6 @@ export default function GameJoin() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
-<<<<<<< HEAD
       );
       
       console.log("Response status:", response.status);
@@ -94,32 +86,6 @@ export default function GameJoin() {
       const data = await response.json();
       console.log("Partida iniciada: la respuesta del post es:", data);
       
-=======
-      )
-
-      console.log('Response status:', response.status)
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Error response:', errorData)
-        throw new Error(errorData.detail || 'Error al iniciar partida')
-      }
-
-      const data = await response.json()
-      console.log('Partida iniciada: la respuesta del post es:', data)
-
-      gameDispatch({
-        type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: {
-          turno_actual: data.turn?.current_player_id || gameState.turnoActual,
-          status: data.game?.status || 'INGAME',
-          jugadores: data.players || gameState.jugadores,
-          timestamp: new Date().toISOString(),
-        },
-      })
-
-      navigate(`/game/${gameState.roomId}`)
->>>>>>> develop
     } catch (error) {
       console.error('Fallo en handleStart:', error)
     }
