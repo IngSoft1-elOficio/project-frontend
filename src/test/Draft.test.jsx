@@ -1,21 +1,31 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react"; 
 import { vi } from "vitest";
 import Draft from "../components/game/Draft";
 
+// Mock principal del contexto
 vi.mock("../context/GameContext", () => ({
-  useGame: () => ({
+  useGame: vi.fn(() => ({
     gameState: {
       mazos: {
         deck: {
           draft: [
-            { id: 1, name: "Hercule Poirot" }, // tiene imagen
-            { id: 2, name: "Carta desconocida" }, // no tiene imagen
+            { id: 1, name: "Hercule Poirot" },
+            { id: 2, name: "Carta desconocida" },
             { id: 3, name: "" }
           ]
         }
       }
     }
-  })
+  }))
+}));
+
+// Mock del helper de imágenes
+vi.mock("../components/HelperImageCards", () => ({
+  __esModule: true,
+  default: (card) => {
+    if (card.name === "Hercule Poirot") return "/cards/detective_poirot.png";
+    return null;
+  }
 }));
 
 describe("Draft component", () => {
@@ -57,5 +67,11 @@ describe("Draft component", () => {
     fireEvent.click(thirdButton);
     expect(handleDraft).toHaveBeenCalledWith(3);
   });
-});
 
+  it("maneja correctamente cuando el draft está vacío o indefinido", () => {
+    const handleDraft = vi.fn();
+    const { container } = render(<Draft handleDraft={handleDraft} />);
+    expect(container).toBeInTheDocument();
+    expect(container.querySelectorAll("button").length).toBe(3);
+  });
+});
