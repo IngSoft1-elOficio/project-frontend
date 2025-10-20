@@ -41,7 +41,10 @@ describe('LoginBox', () => {
 
   it('muestra error si se envía el formulario con campos vacíos', async () => {
     renderWithProvider();
-    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
+    const submitButton = screen.getByRole('button', { name: /ingresar/i });
+    const form = submitButton.closest('form');
+    fireEvent.submit(form);
+    expect(await screen.findByText(/todos los campos son obligatorios/i)).toBeInTheDocument();
   });
 
   it('muestra error si la fecha de nacimiento es futura', async () => {
@@ -117,6 +120,17 @@ describe('LoginBox', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /ingresar/i }));
     expect(await screen.findByText(/no puede estar vacío/i)).toBeInTheDocument();
+  });
+
+  it('borra el error cuando el usuario comienza a escribir', async () => {
+    renderWithProvider();
+    const submitButton = screen.getByRole('button', { name: /ingresar/i });
+    const form = submitButton.closest('form');
+    fireEvent.submit(form);
+    expect(await screen.findByText(/todos los campos son obligatorios/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/nombre/i), { target: { value: 'A' } });
+    expect(screen.queryByText(/todos los campos son obligatorios/i)).toBeNull();
   });
 });
 
