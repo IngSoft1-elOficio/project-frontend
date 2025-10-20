@@ -24,6 +24,8 @@ import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 export default function GameScreen() {
   const { userState } = useUser()
   const { gameState, gameDispatch } = useGame()
+  const [hasPlayedSet, setHasPLayedSet] = useState(false)
+  const [hasPlayedEvent, setHasPLayedEvent] = useState(false)
 
   useEffect(() => {
     console.log('Game state at play game: ', gameState)
@@ -78,6 +80,8 @@ export default function GameScreen() {
   const handlePLayEventCard = async () => {
     console.log("Played Card Name: " + selectedCards[0]?.name)
     console.log("Played Card ID: " + selectedCards[0]?.id)
+
+    if (hasPlayedEvent) return;
     
     if (selectedCards[0]?.name === "Look into the ashes") {
       console.log("Attempting to play Look Into The Ashes with ID: " + selectedCards[0]?.id)
@@ -136,6 +140,7 @@ export default function GameScreen() {
         })
         
         setSelectedCards([])
+        setHasPLayedEvent(true);
       } catch (err) {
         console.error("Error playing Look Into The Ashes:", err)
         setError(err.message)
@@ -239,6 +244,9 @@ export default function GameScreen() {
 
       const data = await response.json()
       console.log('finish turn successful:', data)
+
+      setHasPLayedEvent(false);
+      setHasPLayedSet(false);
     } catch (err) {
       setError(err.message)
     } finally {
@@ -433,6 +441,8 @@ export default function GameScreen() {
   const handlePlayDetective = async (cardsFromExistingSet = null) => {
     console.log("cardsFromExistingSet:", cardsFromExistingSet);
     let cardsToUse = [];
+
+    if (hasPlayedSet) return;
     
     // Determine which cards to use
     if (cardsFromExistingSet) {
@@ -544,6 +554,8 @@ export default function GameScreen() {
       if (!cardsFromExistingSet) {
         setSelectedCards([]);
       }
+
+      setHasPLayedSet(true);
 
     } catch (err) {
       console.error("❌ Error al crear set:", err);
@@ -1021,7 +1033,7 @@ const getErrorMessage = (status, errorData) => {
           {/* Botones */}
           <div className="flex flex-col space-y-3">
             
-            {(selectedCards.length === 1 ) && (
+            {(selectedCards.length === 1 || !hasPlayedEvent ) && (
                 <ButtonGame
                   onClick={handlePLayEventCard}
                   disabled={
