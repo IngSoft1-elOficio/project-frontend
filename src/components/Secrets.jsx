@@ -46,6 +46,7 @@ export default function Secrets() {
             padding: 0
           }}
         >
+          <p>{secret.revealed ? "revelado" : "oculto"}</p>
           <img
             src={getSecretImage(secret, hoveredIndex === index)}
             alt={`secret-${secret.id}`}
