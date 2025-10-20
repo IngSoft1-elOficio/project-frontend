@@ -10,6 +10,7 @@ const HideRevealStealSecretsModal = ({
   const { gameState } = useGame()
 
   if (!isOpen) return null;
+  console.log("El detective que llego es", detective);
 
   const setType = detective?.actionInProgress?.setType || "Detective";
   
@@ -64,6 +65,11 @@ const HideRevealStealSecretsModal = ({
     },
     tuppenceberesford: {
       name: "Tuppence Beresford",
+      effect: "Elegí un secreto propio para revelar",
+      requiresHidden: true,
+    },
+    beresford: {
+      name: "Hermanos Beresford",
       effect: "Elegí un secreto propio para revelar",
       requiresHidden: true,
     },
