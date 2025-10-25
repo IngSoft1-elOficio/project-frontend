@@ -4,12 +4,14 @@ import ButtonGame from '../common/ButtonGame.jsx'
 import { FiArchive } from 'react-icons/fi'
 
 const PlayerSetsModal = ({
-  isOpen, //bool → indica si el modal está visible
-  onClose, //función → cierra el modal
-  sets = [], //array → lista de sets jugados
+  isOpen,             //bool → indica si el modal está visible
+  onClose,            //función → cierra el modal
+  sets = [],          //array → lista de sets jugados
   selectedCards = [], //array → cartas actualmente seleccionadas
-  onCardSelect, //función → callback al seleccionar/deseleccionar una carta
-  onCreateSet, //función → callback para crear un nuevo set
+  onCardSelect,       //función → callback al seleccionar/deseleccionar una carta
+  onCreateSet,        //función → callback para crear un nuevo set
+  hasPlayedSet,       //bool → indica si este turno ya se jugo un set
+  hasPlayedEvent,     //bool → insica si este turno ya se jugo una carta de evento
 }) => {
   if (!isOpen) return null //no renderizar nada si el modal esta cerrado
 
@@ -148,7 +150,7 @@ const PlayerSetsModal = ({
             <ButtonGame onClick={onClose}>Volver</ButtonGame>
             <ButtonGame
               onClick={onCreateSet}
-              disabled={selectedCards.length === 0}
+              disabled={selectedCards.length < 2 || hasPlayedSet || hasPlayedEvent}
             >
               Crear Set
             </ButtonGame>
