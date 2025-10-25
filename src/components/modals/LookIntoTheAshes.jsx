@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import getCardsImage from '../HelperImageCards'
+import getCardsImage from '../../helpers/HelperImageCards'
 
 export default function LookIntoTheAshes({
   isOpen,

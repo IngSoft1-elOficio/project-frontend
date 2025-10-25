@@ -1,5 +1,5 @@
 import { useGame } from "../../context/GameContext";
-import getCardsImage from "../HelperImageCards";
+import getCardsImage from "../../helpers/HelperImageCards";
 
 export default function HandCards({ selectedCards, onSelect }) {
   const { gameState } = useGame()
