@@ -1,4 +1,4 @@
-import Button from "../Button";
+import Button from "../common/Button.jsx";
 import { useState } from "react";
 import { useUser } from '../../context/UserContext.jsx';
 import { useGame } from '../../context/GameContext.jsx';

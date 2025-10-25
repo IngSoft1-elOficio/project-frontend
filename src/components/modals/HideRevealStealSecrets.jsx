@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ButtonGame from "../ButtonGame.jsx";
+import ButtonGame from "../common/ButtonGame.jsx";
 import { useGame } from '../../context/GameContext.jsx'
 
 const HideRevealStealSecretsModal = ({

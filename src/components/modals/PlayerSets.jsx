@@ -1,6 +1,6 @@
 import React from 'react'
-import HandCards from '../HandCards.jsx'
-import ButtonGame from '../ButtonGame.jsx'
+import HandCards from '../game/HandCards.jsx'
+import ButtonGame from '../common/ButtonGame.jsx'
 import { FiArchive } from 'react-icons/fi'
 
 const PlayerSetsModal = ({

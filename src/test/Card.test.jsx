@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import Card from '../components/Card'
+import Card from '../components/game/Card'
 
 describe('Card component', () => {
   it('renders title when provided', () => {
