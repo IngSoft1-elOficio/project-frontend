@@ -2,12 +2,12 @@ import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
 import { useState, useEffect } from 'react'
-import Deck from '../../components/Deck.jsx'
-import Discard from '../../components/Discard.jsx'
-import GameEndModal from '../../components/GameEndModal'
-import HandCards from '../../components/HandCards.jsx'
-import Secrets from '../../components/Secrets.jsx'
-import ButtonGame from '../../components/ButtonGame.jsx'
+import Deck from '../../components/game/Deck.jsx'
+import Discard from '../../components/game/Discard.jsx'
+import GameEndModal from '../../components/modals/GameEndModal'
+import HandCards from '../../components/game/HandCards.jsx'
+import Secrets from '../../components/game/Secrets.jsx'
+import ButtonGame from '../../components/common/ButtonGame.jsx'
 import Draft from '../../components/game/Draft.jsx'
 import Tabs from '../../components/game/Tabs.jsx'
 import TabPanel from '../../components/game/TabPanel.jsx'
@@ -26,11 +26,6 @@ export default function GameScreen() {
   const { gameState, gameDispatch } = useGame()
   const [hasPlayedSet, setHasPLayedSet] = useState(false)
   const [hasPlayedEvent, setHasPLayedEvent] = useState(false)
-
-  useEffect(() => {
-    console.log('Game state at play game: ', gameState)
-    console.log('User state at playgame: ', userState)
-  }, [gameState, userState])
 
   useEffect(() => {
     if (!gameState.eventCards?.lookAshes?.showSelectCard) {

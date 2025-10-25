@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import getCardsImage from '../components/HelperImageCards';
+import getCardsImage from '../helpers/HelperImageCards';
 
 const TEST_CASES = [
   { name: 'Hercule Poirot', expected: '/cards/detective_poirot.png' },
