@@ -40,6 +40,20 @@ export default function GameScreen() {
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
   const roomId = gameState?.roomId
+  const hasPlayedMainAction = gameState.drawAction.skipDiscard;
+  const has6Cards = gameState.mano.length === 6;
+
+  console.log('🎨 RENDER - hasPlayedMainAction:', hasPlayedMainAction);
+  console.log('🎨 RENDER - skipDiscard:', gameState.drawAction.skipDiscard);
+
+  console.log('🔍 DEBUG drawAction completo:', {
+    cardsToDrawRemaining: gameState.drawAction.cardsToDrawRemaining,
+    hasDiscarded: gameState.drawAction.hasDiscarded,
+    hasDrawn: gameState.drawAction.hasDrawn,
+    skipDiscard: gameState.drawAction.skipDiscard,
+    handSize: gameState.mano.length,
+  });
+
 
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
@@ -133,6 +147,11 @@ export default function GameScreen() {
             available_cards: data.available_cards,
           },
         })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        });
         
         setSelectedCards([])
         setHasPLayedEvent(true);
@@ -155,6 +174,11 @@ export default function GameScreen() {
         type: 'EVENT_ANOTHER_VICTIM_START',
         payload: { playerId: userState.id },
       })
+
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
 
     } else {
       console.log("Card not implemented yet:", selectedCards[0]?.name)
@@ -545,6 +569,11 @@ export default function GameScreen() {
         },
       });
 
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
+
       // Only clear selected cards if using manual selection
       if (!cardsFromExistingSet) {
         setSelectedCards([]);
@@ -910,7 +939,7 @@ const getErrorMessage = (status, errorData) => {
                       disabled={
                         gameState.turnoActual !== userState.id ||
                         gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !gameState.drawAction.hasDiscarded
+                        !(gameState.drawAction.hasDiscarded || hasPlayedMainAction)
                       }
                     />
                   </div>
@@ -925,7 +954,7 @@ const getErrorMessage = (status, errorData) => {
                       disabled={
                         gameState.turnoActual !== userState.id ||
                         gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !gameState.drawAction.hasDiscarded
+                        !(gameState.drawAction.hasDiscarded || hasPlayedMainAction)
                       }
                     />
                   </div>
@@ -1052,8 +1081,8 @@ const getErrorMessage = (status, errorData) => {
                 </ButtonGame>
             )}
          
-            {gameState.drawAction.hasDiscarded &&
-              gameState.drawAction.hasDrawn &&
+            {(gameState.drawAction.hasDiscarded || hasPlayedMainAction) &&
+              has6Cards &&
               selectedCards.length === 0 && (
                 <ButtonGame onClick={handleFinishTurn} disabled={loading}>
                   Finalizar Turno
