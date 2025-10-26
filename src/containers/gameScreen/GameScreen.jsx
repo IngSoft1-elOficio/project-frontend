@@ -1032,7 +1032,7 @@ const getErrorMessage = (status, errorData) => {
                 <ButtonGame
                   onClick={handlePLayEventCard}
                   disabled={
-                    loading
+                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded
                   }
                 >
                   Jugar Carta
@@ -1082,6 +1082,8 @@ const getErrorMessage = (status, errorData) => {
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
         onCreateSet={() => handlePlayDetective()}
+        hasPlayedSet={hasPlayedSet}
+        hasPlayedEvent={hasPlayedEvent}
       />
 
       {gameState.eventCards?.anotherVictim?.showSelectSets && (
