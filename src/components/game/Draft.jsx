@@ -1,5 +1,5 @@
 import { useGame } from "../../context/GameContext"
-import getCardsImage from "../HelperImageCards"
+import getCardsImage from "../../helpers/HelperImageCards"
 
 export default function Draft({ handleDraft, disabled }) {
     const { gameState } = useGame()

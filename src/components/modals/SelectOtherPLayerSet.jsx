@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import ButtonGame from '../ButtonGame.jsx'
+import ButtonGame from '../common/ButtonGame'
 import { FiArchive } from 'react-icons/fi'
 
 const SelectOtherPlayerSet = ({
