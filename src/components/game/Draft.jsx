@@ -13,7 +13,8 @@ export default function Draft({ handleDraft, disabled }) {
             <button
               key={card.id}
               type="button"
-              onClick={() => handleDraft(card.id)}
+              onClick={() => !disabled && handleDraft(card.id)}
+              disabled={disabled}
               className="bg-transparent border-none p-0 cursor-pointer"
             >
             {src ? (

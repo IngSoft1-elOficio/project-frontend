@@ -40,20 +40,6 @@ export default function GameScreen() {
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
   const roomId = gameState?.roomId
-  const hasPlayedMainAction = gameState.drawAction.skipDiscard;
-  const has6Cards = gameState.mano.length === 6;
-
-  console.log('🎨 RENDER - hasPlayedMainAction:', hasPlayedMainAction);
-  console.log('🎨 RENDER - skipDiscard:', gameState.drawAction.skipDiscard);
-
-  console.log('🔍 DEBUG drawAction completo:', {
-    cardsToDrawRemaining: gameState.drawAction.cardsToDrawRemaining,
-    hasDiscarded: gameState.drawAction.hasDiscarded,
-    hasDrawn: gameState.drawAction.hasDrawn,
-    skipDiscard: gameState.drawAction.skipDiscard,
-    handSize: gameState.mano.length,
-  });
-
 
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
@@ -938,8 +924,8 @@ const getErrorMessage = (status, errorData) => {
                       onClick={handlePickFromDeck}
                       disabled={
                         gameState.turnoActual !== userState.id ||
-                        gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !(gameState.drawAction.hasDiscarded || hasPlayedMainAction)
+                        gameState.mano.length === 6 ||
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
                       }
                     />
                   </div>
@@ -953,8 +939,8 @@ const getErrorMessage = (status, errorData) => {
                       handleDraft={handleDraft}
                       disabled={
                         gameState.turnoActual !== userState.id ||
-                        gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !(gameState.drawAction.hasDiscarded || hasPlayedMainAction)
+                        gameState.mano.length === 6 ||
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
                       }
                     />
                   </div>
@@ -1068,21 +1054,20 @@ const getErrorMessage = (status, errorData) => {
                 </ButtonGame>
             )}
 
-            {( !gameState.drawAction.hasDiscarded || selectedCards.length > 0 ) && (
+            {( !gameState.drawAction.hasDiscarded && selectedCards.length > 0 ) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={
                     selectedCards.length === 0 ||
-                    loading ||
-                    gameState.drawAction.hasDiscarded
+                    loading
                   }
                 >
                   Descartar
                 </ButtonGame>
             )}
          
-            {(gameState.drawAction.hasDiscarded || hasPlayedMainAction) &&
-              has6Cards &&
+            {(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard) &&
+              gameState.mano.length === 6 &&
               selectedCards.length === 0 && (
                 <ButtonGame onClick={handleFinishTurn} disabled={loading}>
                   Finalizar Turno
