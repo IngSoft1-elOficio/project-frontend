@@ -133,6 +133,11 @@ export default function GameScreen() {
             available_cards: data.available_cards,
           },
         })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        });
         
         setSelectedCards([])
         setHasPLayedEvent(true);
@@ -155,6 +160,11 @@ export default function GameScreen() {
         type: 'EVENT_ANOTHER_VICTIM_START',
         payload: { playerId: userState.id },
       })
+
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
 
     } else {
       console.log("Card not implemented yet:", selectedCards[0]?.name)
@@ -545,6 +555,11 @@ export default function GameScreen() {
         },
       });
 
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
+
       // Only clear selected cards if using manual selection
       if (!cardsFromExistingSet) {
         setSelectedCards([]);
@@ -909,8 +924,8 @@ const getErrorMessage = (status, errorData) => {
                       onClick={handlePickFromDeck}
                       disabled={
                         gameState.turnoActual !== userState.id ||
-                        gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !gameState.drawAction.hasDiscarded
+                        gameState.mano.length === 6 ||
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
                       }
                     />
                   </div>
@@ -924,8 +939,8 @@ const getErrorMessage = (status, errorData) => {
                       handleDraft={handleDraft}
                       disabled={
                         gameState.turnoActual !== userState.id ||
-                        gameState.drawAction.cardsToDrawRemaining === 0 ||
-                        !gameState.drawAction.hasDiscarded
+                        gameState.mano.length === 6 ||
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
                       }
                     />
                   </div>
@@ -1039,21 +1054,20 @@ const getErrorMessage = (status, errorData) => {
                 </ButtonGame>
             )}
 
-            {( !gameState.drawAction.hasDiscarded || selectedCards.length > 0 ) && (
+            {( !gameState.drawAction.hasDiscarded && selectedCards.length > 0 ) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={
                     selectedCards.length === 0 ||
-                    loading ||
-                    gameState.drawAction.hasDiscarded
+                    loading
                   }
                 >
                   Descartar
                 </ButtonGame>
             )}
          
-            {gameState.drawAction.hasDiscarded &&
-              gameState.drawAction.hasDrawn &&
+            {(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard) &&
+              gameState.mano.length === 6 &&
               selectedCards.length === 0 && (
                 <ButtonGame onClick={handleFinishTurn} disabled={loading}>
                   Finalizar Turno

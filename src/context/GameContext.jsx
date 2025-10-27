@@ -111,6 +111,7 @@ const gameInitialState = {
     otherPlayerDrawing: null, // { playerId, cardsRemaining, message }
     hasDiscarded: false,
     hasDrawn: false,
+    skipDiscard: false,
   },
 }
 
@@ -279,6 +280,7 @@ const gameInitialState = {
         return {
           ...state,
           drawAction: {
+            ...state.drawAction,
             cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
             otherPlayerDrawing: !isMe
               ? {
@@ -308,6 +310,7 @@ const gameInitialState = {
         return {
           ...state,
           drawAction: {
+            ...state.drawAction,
             cardsToDrawRemaining: isMeDrawing
               ? cardsRemaining
               : state.drawAction.cardsToDrawRemaining,
@@ -324,6 +327,27 @@ const gameInitialState = {
           },
           logs: [...state.logs, drawLog].slice(-50)
         }
+
+      case 'UPDATE_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            ...action.payload,
+          },
+        };
+
+      case 'RESET_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+            skipDiscard: false,
+          },
+        };
 
       case 'DRAW_ACTION_COMPLETE':
         console.log('DRAW_ACTION_COMPLETE')
@@ -365,6 +389,7 @@ const gameInitialState = {
             otherPlayerDrawing: null,
             hasDiscarded: false,
             hasDrawn: false,
+            skipDiscard: false,
           },
           logs: [...state.logs, finishTurnLog].slice(-50)
         }
