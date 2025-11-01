@@ -43,10 +43,19 @@ export default function Log() {
 
   const getPlayerName = (playerId) => {
     if (!playerId) return '';
-    if (playerId === gameState.userId) return 'Tú';
     
-    const player = gameState.jugadores.find(j => j.id === playerId);
+    const player = gameState.jugadores.find(j => j.player_id == playerId);
+
     return player ? player.name : `Jugador ${playerId}`;
+  };
+
+  const formatMessage = (message) => {
+    // Match patterns like "Player 30" or "Jugador 30"
+    return message.replace(/Player (\d+)/gi, (match, playerId) => {
+      return getPlayerName(parseInt(playerId));
+    }).replace(/Jugador (\d+)/gi, (match, playerId) => {
+      return getPlayerName(parseInt(playerId));
+    });
   };
 
   return (
@@ -81,7 +90,7 @@ export default function Log() {
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5">{log.message}</p>
+                <p className="mt-0.5">{formatMessage(log.message)}</p>
               </div>
             </div>
           ))
