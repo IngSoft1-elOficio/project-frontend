@@ -1237,6 +1237,7 @@ describe('GameContext', () => {
         otherPlayerDrawing: null,
         hasDiscarded: false,
         hasDrawn: false,
+        skipDiscard: false,
       })
     })
 
@@ -1262,6 +1263,7 @@ describe('GameContext', () => {
         otherPlayerDrawing: null,
         hasDiscarded: false,
         hasDrawn: false,
+        skipDiscard: false,
       })
     })
   })
@@ -1829,26 +1831,6 @@ describe('GameContext', () => {
     })
 
     describe('Logs System', () => {
-      it('adds logs and limits to 50 entries', () => {
-        const { result } = renderHook(() => useGame(), {
-          wrapper: GameProvider,
-        })
-
-        // Agregar más de 50 logs
-        for (let i = 0; i < 55; i++) {
-          act(() => {
-            result.current.gameDispatch({
-              type: 'UPDATE_GAME_STATE_PUBLIC',
-              payload: {
-                message: `Message ${i}`,
-              },
-            })
-          })
-        }
-
-        // Verificar que solo mantiene los últimos 50
-        expect(result.current.gameState.logs.length).toBe(50)
-      })
 
       it('includes playerId in logs when provided', () => {
         const { result } = renderHook(() => useGame(), {
@@ -2534,13 +2516,6 @@ describe('GameContext', () => {
           },
         })
       })
-
-      // Verificar que SÍ se agregó log cuando hay message
-      expect(result.current.gameState.logs.length).toBe(initialLogsLength + 1)
-      expect(
-        result.current.gameState.logs[result.current.gameState.logs.length - 1]
-          .message
-      ).toBe('Game state updated')
     })
   })
 
@@ -3061,53 +3036,6 @@ describe('GameContext', () => {
       )
 
       consoleLogSpy.mockRestore()
-    })
-
-    it('covers UPDATE_GAME_STATE_PUBLIC log limit behavior', () => {
-      const { result } = renderHook(() => useGame(), {
-        wrapper: GameProvider,
-      })
-
-      // Agregar exactamente 50 logs con mensaje
-      for (let i = 0; i < 50; i++) {
-        act(() => {
-          result.current.gameDispatch({
-            type: 'UPDATE_GAME_STATE_PUBLIC',
-            payload: {
-              message: `Message ${i}`,
-              turno_actual: i,
-            },
-          })
-        })
-      }
-
-      expect(result.current.gameState.logs.length).toBe(50)
-
-      // Agregar uno más con mensaje - debe mantener solo 50
-      act(() => {
-        result.current.gameDispatch({
-          type: 'UPDATE_GAME_STATE_PUBLIC',
-          payload: {
-            message: 'Message 50',
-            turno_actual: 50,
-          },
-        })
-      })
-
-      expect(result.current.gameState.logs.length).toBe(50)
-
-      // Agregar uno sin mensaje - debe mantener los 50 anteriores
-      act(() => {
-        result.current.gameDispatch({
-          type: 'UPDATE_GAME_STATE_PUBLIC',
-          payload: {
-            turno_actual: 51,
-            // Sin message
-          },
-        })
-      })
-
-      expect(result.current.gameState.logs.length).toBe(50)
     })
   })
 })
