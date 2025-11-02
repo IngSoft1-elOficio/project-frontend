@@ -50,7 +50,6 @@ export default function Log() {
   };
 
   const formatMessage = (message) => {
-    // Match patterns like "Player 30" or "Jugador 30"
     return message.replace(/Player (\d+)/gi, (match, playerId) => {
       return getPlayerName(parseInt(playerId));
     }).replace(/Jugador (\d+)/gi, (match, playerId) => {
@@ -78,17 +77,12 @@ export default function Log() {
               key={log.id}
               className={`${getLogColor(log.type)} flex gap-2 items-start py-1 border-b border-white/5 last:border-0`}
             >
-              <span className="text-lg">{getLogIcon(log.type)}</span>
+              <span className="text-sm">{getLogIcon(log.type)}</span>
               <div className="flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="text-gray-500 text-xs">
                     {formatTime(log.timestamp)}
                   </span>
-                  {log.playerId && (
-                    <span className="text-xs font-semibold text-white/70">
-                      {getPlayerName(log.playerId)}
-                    </span>
-                  )}
                 </div>
                 <p className="mt-0.5">{formatMessage(log.message)}</p>
               </div>
