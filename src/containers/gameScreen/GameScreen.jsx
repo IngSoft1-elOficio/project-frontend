@@ -681,7 +681,7 @@ export default function GameScreen() {
       }
       
       // Detectives de dos pasos (target entrega secreto)
-      if (["beresford", "satterthwaite", "eileenbrent"].includes(detectiveType)) { // ✅ Fixed string separation
+      if (["beresford", "satterthwaite", "eileenbrent"].includes(detectiveType)) { 
         body = {
           actionId,
           executorId,
@@ -689,7 +689,7 @@ export default function GameScreen() {
         };
       }
       
-      console.log('Sending detective action:', body); // ✅ Added debug log
+      console.log('Sending detective action:', body); 
       
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
@@ -881,6 +881,10 @@ const getErrorMessage = (status, errorData) => {
     }
   }
 
+  const currentPlayerIndex = gameState.jugadores.findIndex(
+    player => player.player_id === userState.id
+  );
+
   return (
     <main
       className="relative min-h-screen overflow-x-hidden flex"
@@ -904,7 +908,7 @@ const getErrorMessage = (status, errorData) => {
     {/* MAIN CONTENT AREA (Tabs) */}
     <div className="relative flex-1 min-h-screen px-4 py-3">
       {/** TAB NAVIGATE */}
-      <Tabs className="w-full h-full">
+      <Tabs className="w-full h-full" defaultTab={currentPlayerIndex >= 0 ? currentPlayerIndex : 0}>
 
         {gameState.jugadores.map((player) => (
           
