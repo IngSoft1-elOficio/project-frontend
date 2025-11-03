@@ -41,7 +41,15 @@ export default function GameScreen() {
 
   const roomId = gameState?.roomId
 
-  const isWaitingForOtherPlayer = (gameState.detectiveAction.current !== null && gameState.detectiveAction.current.stage !== 'completed') || (gameState.eventCards.actionInProgress !== null && gameState.eventCards.actionInProgress.step !== 'completed')
+  const isWaitingForOtherPlayer = 
+  gameState.turnoActual === userState.id && 
+  (
+    (gameState.detectiveAction.current !== null && 
+     gameState.detectiveAction.current.stage !== 'completed') ||
+    (gameState.eventCards.actionInProgress !== null && 
+     gameState.eventCards.actionInProgress.step !== 'completed' &&
+     gameState.eventCards.actionInProgress.playerId === userState.id)
+  );
 
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
@@ -1037,7 +1045,7 @@ const getErrorMessage = (status, errorData) => {
           <div className="text-white text-sm mb-3 bg-black/50 px-3 py-2 rounded">
             {/* CASO 1: Esperando accion de otro jugador */}
             {isWaitingForOtherPlayer && 
-              'Esperando que otro jugador complete su accion...'}
+              'Esperando que un jugador complete su accion...'}
             
             {/* CASO 2: Jugo accion principal, no repuso cartas y no descarto */}
             {!isWaitingForOtherPlayer && 
