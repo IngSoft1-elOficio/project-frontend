@@ -41,6 +41,16 @@ export default function GameScreen() {
 
   const roomId = gameState?.roomId
 
+  const isWaitingForOtherPlayer = 
+  gameState.turnoActual === userState.id && 
+  (
+    (gameState.detectiveAction.current !== null && 
+     gameState.detectiveAction.current.stage !== 'completed') ||
+    (gameState.eventCards.actionInProgress !== null && 
+     gameState.eventCards.actionInProgress.step !== 'completed' &&
+     gameState.eventCards.actionInProgress.playerId === userState.id)
+  );
+
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
     .filter(set => set.owner_id === userState.id)
@@ -925,7 +935,8 @@ const getErrorMessage = (status, errorData) => {
                       disabled={
                         gameState.turnoActual !== userState.id ||
                         gameState.mano.length === 6 ||
-                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard) ||
+                        isWaitingForOtherPlayer
                       }
                     />
                   </div>
@@ -940,7 +951,8 @@ const getErrorMessage = (status, errorData) => {
                       disabled={
                         gameState.turnoActual !== userState.id ||
                         gameState.mano.length === 6 ||
-                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard)
+                        !(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard) ||
+                        isWaitingForOtherPlayer
                       }
                     />
                   </div>
@@ -1031,13 +1043,41 @@ const getErrorMessage = (status, errorData) => {
 
           {/* Estado */}
           <div className="text-white text-sm mb-3 bg-black/50 px-3 py-2 rounded">
-            {!gameState.drawAction.hasDiscarded && 'Descarta cartas primero'}
-            {gameState.drawAction.hasDiscarded &&
-              !gameState.drawAction.hasDrawn &&
+            {/* CASO 1: Esperando accion de otro jugador */}
+            {isWaitingForOtherPlayer && 
+              'Esperando que un jugador complete su accion...'}
+            
+            {/* CASO 2: Jugo accion principal, no repuso cartas y no descarto */}
+            {!isWaitingForOtherPlayer && 
+            gameState.drawAction.skipDiscard && 
+            !gameState.drawAction.hasDiscarded &&
+            gameState.mano.length < 6 &&
+              `Podes descartar (opcional) o robar ${6 - gameState.mano.length} carta(s)`}
+            
+            {/* CASO 3: Jugo accion principal, repuso cartas sin descartar */}
+            {!isWaitingForOtherPlayer && 
+            gameState.drawAction.skipDiscard && 
+            !gameState.drawAction.hasDiscarded &&
+            gameState.mano.length === 6 &&
+              'Podes descartar (opcional) o finalizar turno'}
+
+            {/* CASO 4: Turno normal (no jugo accion principal, no descarto) */}
+            {!isWaitingForOtherPlayer && 
+            !gameState.drawAction.skipDiscard && 
+            !gameState.drawAction.hasDiscarded && 
+              'Podes bajar un set, jugar una carta o descartar'}
+            
+            {/* CASO 5: Ya descarto, debe robar */}
+            {!isWaitingForOtherPlayer && 
+            gameState.drawAction.hasDiscarded &&
+            !gameState.drawAction.hasDrawn &&
               `Roba ${gameState.drawAction.cardsToDrawRemaining} carta(s)`}
-            {gameState.drawAction.hasDiscarded &&
-              gameState.drawAction.hasDrawn &&
-              'Puedes finalizar turno'}
+            
+            {/* CASO 6: Ya descarto y robo, puede finalizar */}
+            {!isWaitingForOtherPlayer &&
+            gameState.drawAction.hasDiscarded &&
+            gameState.drawAction.hasDrawn &&
+              'Podes finalizar turno'}
           </div>
 
           {/* Botones */}
@@ -1047,14 +1087,15 @@ const getErrorMessage = (status, errorData) => {
                 <ButtonGame
                   onClick={handlePLayEventCard}
                   disabled={
-                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded
+                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded || isWaitingForOtherPlayer
                   }
                 >
                   Jugar Carta
                 </ButtonGame>
             )}
 
-            {( !gameState.drawAction.hasDiscarded && selectedCards.length > 0 ) && (
+            {( !gameState.drawAction.hasDiscarded && selectedCards.length > 0 &&
+              !isWaitingForOtherPlayer) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={
@@ -1068,7 +1109,8 @@ const getErrorMessage = (status, errorData) => {
          
             {(gameState.drawAction.hasDiscarded || gameState.drawAction.skipDiscard) &&
               gameState.mano.length === 6 &&
-              selectedCards.length === 0 && (
+              selectedCards.length === 0 &&
+              !isWaitingForOtherPlayer && (
                 <ButtonGame onClick={handleFinishTurn} disabled={loading}>
                   Finalizar Turno
                 </ButtonGame>
