@@ -176,8 +176,8 @@ export default function GameScreen() {
 
       setLoading(false)
 
-    } else if (selectedCards[0]?.name === "Cards Off the Table") {
-      console.log("Attempting to play Cards Off the Table")
+    } else if (selectedCards[0]?.name === "Cards off the table") {
+      console.log("Attempting to play Cards off the Table")
       
       setLoading(true)
       setError(null)
@@ -380,12 +380,12 @@ export default function GameScreen() {
 
       try {
         const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/event/cards-off-table`,
+          `http://localhost:8000/api/game/${gameState.roomId}/cards_off_the_table`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'HTTP_USER_ID': userState.id.toString(),
+              HTTP_USER_ID: userState.id.toString(),
             },
             body: JSON.stringify({
               targetPlayerId: jugadorId,
