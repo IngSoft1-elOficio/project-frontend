@@ -158,12 +158,6 @@ const gameInitialState = {
         }
 
       case 'UPDATE_GAME_STATE_PUBLIC':
-        const updateLog = {
-          id: `update-${Date.now()}`,
-          message: action.payload.message || 'Estado del juego actualizado',
-          type: 'system',
-          timestamp: new Date().toISOString(),
-        };
 
         return {
           ...state,
@@ -195,7 +189,6 @@ const gameInitialState = {
 
           gameEnded: action.payload.game_ended ?? state.gameEnded,
           lastUpdate: action.payload.timestamp ?? new Date().toISOString(),
-          logs: action.payload.message ? [...state.logs, updateLog].slice(-50) : state.logs
         }
 
       case 'UPDATE_GAME_STATE_PRIVATE':
@@ -263,10 +256,6 @@ const gameInitialState = {
       // | CARDS DRAW-DISCARD |
       // ----------------------
       case 'PLAYER_MUST_DRAW':
-        console.log(
-          'PLAYER_MUST_DRAW, cardsToDrawRemaining = ',
-          action.payload.cards_to_draw
-        )
         const isMe = action.payload.player_id === state.userId
 
         const discardLog = {
@@ -350,7 +339,6 @@ const gameInitialState = {
         };
 
       case 'DRAW_ACTION_COMPLETE':
-        console.log('DRAW_ACTION_COMPLETE')
         
         const drawCompleteLog = {
           id: `draw-complete-${Date.now()}`,
@@ -372,7 +360,6 @@ const gameInitialState = {
         }
 
       case 'FINISH_TURN':
-        console.log('FINISH_TURN')
 
         const finishTurnLog = {
           id: `turn-${Date.now()}`,

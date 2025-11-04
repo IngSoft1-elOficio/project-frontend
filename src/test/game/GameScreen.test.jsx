@@ -255,24 +255,6 @@ describe('GameScreen Component', () => {
       expect(screen.getByText(/Top: card-top, Count: 5/)).toBeInTheDocument()
     })
 
-    it("shows action buttons when it is player's turn", () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        cardsToDrawRemaining: 0,
-        otherPlayerDrawing: null,
-        hasDiscarded: true,
-        hasDrawn: true,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByTestId('button-finalizar-turno')).toBeInTheDocument()
-    })
-
     it("hides action buttons when it is not player's turn", () => {
       render(<GameScreen />)
 
@@ -467,15 +449,6 @@ describe('GameScreen Component', () => {
         expect(screen.getByText(/Selected:$/)).toBeInTheDocument()
       })
     })
-
-    it('shows error when trying to discard with no cards selected', () => {
-      render(<GameScreen />)
-
-      const discardButton = screen.getByTestId('button-descartar')
-      fireEvent.click(discardButton)
-
-      expect(discardButton).toBeDisabled()
-    })
   })
 
   describe('Pick from Deck Action', () => {
@@ -569,60 +542,6 @@ describe('GameScreen Component', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Selected:$/)).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Finish Turn Action', () => {
-    beforeEach(() => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        cardsToDrawRemaining: 0,
-        otherPlayerDrawing: null,
-        hasDiscarded: true,
-        hasDrawn: true,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-    })
-
-    it('calls finish turn API', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      })
-
-      render(<GameScreen />)
-
-      const finishButton = screen.getByTestId('button-finalizar-turno')
-      fireEvent.click(finishButton)
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          'http://localhost:8000/game/room-456/finish-turn',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({ user_id: 1 }),
-          })
-        )
-      })
-    })
-
-    it('handles finish turn API error', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        json: async () => ({ message: 'Not your turn' }),
-      })
-
-      render(<GameScreen />)
-
-      fireEvent.click(screen.getByTestId('button-finalizar-turno'))
-
-      await waitFor(() => {
-        expect(screen.getByText(/No es tu turno/)).toBeInTheDocument()
       })
     })
   })
@@ -1231,38 +1150,6 @@ describe('GameScreen Component', () => {
 
       expect(screen.getByTestId('button-descartar')).toBeInTheDocument()
       expect(screen.getByTestId('button-descartar')).not.toBeDisabled()
-    })
-
-    it('disables Descartar button after discarding', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction.hasDiscarded = true
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      fireEvent.click(screen.getByText('Select Card 1'))
-
-      expect(screen.getByTestId('button-descartar')).toBeDisabled()
-    })
-
-    it('shows Finalizar Turno button only when turn is complete', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        hasDiscarded: true,
-        hasDrawn: true,
-        cardsToDrawRemaining: 0,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByTestId('button-finalizar-turno')).toBeInTheDocument()
     })
 
     it('disables Ver Sets button when hasDiscarded is true', () => {

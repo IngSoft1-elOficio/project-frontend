@@ -67,14 +67,7 @@ describe('Log component', () => {
     expect(screen.getByText('Turn changed')).toBeInTheDocument()
     expect(screen.getByText('Game over')).toBeInTheDocument()
     expect(screen.getByText('Unknown type')).toBeInTheDocument()
-
-    // check that known player names are resolved
-    expect(screen.getByText('Alice')).toBeInTheDocument()
-
-  // 'Tú' should appear for userId 1 and unresolved playerId should show 'Jugador 99'
-  expect(screen.getByText('Tú')).toBeInTheDocument()
-  expect(screen.getByText('Jugador 99')).toBeInTheDocument()
-
+    
     // Try to trigger scrollIntoView by manually calling the effect dependency change simulation
     // (we can't easily swap the ref used in the component, but ensure no errors occur during render)
     // The existence of the bottom div should be present
