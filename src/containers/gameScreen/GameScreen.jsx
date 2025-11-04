@@ -197,6 +197,70 @@ export default function GameScreen() {
 
       setLoading(false)
 
+    } else if(selectedCards[0]?.name === "Early train to paddington") {
+      console.log("Attempting to play Early train to paddington")
+
+      setLoading(true)
+      setError(null)
+
+      try {
+
+        const cardId = Number(selectedCards[0]?.id)
+
+        if (isNaN(cardId)){
+          throw new Error("Invalid card ID")
+        }
+
+        const requestBody = {
+          card_id: cardId
+        }
+
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/event/early_train_to_paddington`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'http-user-id': userState.id.toString(),
+            },
+            body: JSON.stringify(requestBody)
+          }
+        )
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Backend error response:", errorData)
+          console.error("Response status:", response.status)
+          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
+          throw new Error(getErrorMessage(response.status, errorData))
+        }
+
+        const data = await response.json()
+        console.log('Early train to paddington played succesfully', data)
+        
+        gameDispatch({
+          type: 'EVENT_EARLY_TRAIN_PLAYED',
+          payload: {
+            player_id: userState.id,
+            message: 'Moviendo 6 cartas al mazo de descarte'
+          },
+        })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        })
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
+      } catch (err) {
+        console.error("Error playing early train to paddington", err)
+        setError(err.message)
+        setTimeout(() => setError(null), 5000)
+      } finally {
+        setLoading(false)
+      }
+      
     } else {
       console.log("Card not implemented yet:", selectedCards[0]?.name)
       setError("Esta carta aún no está implementada")

@@ -772,6 +772,45 @@ const gameInitialState = {
           logs: [...state.logs, victimCompleteLog].slice(-50)
         }
 
+      case 'EVENT_EARLY_TRAIN_PLAYED':
+        const earlyTrainLog = {
+          id: `event-early-train-${Date.now()}`,
+          message: action.payload.message || 'Early Train to Paddington jugada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            actionInProgress: {
+              playerId: action.payload.player_id,
+              eventType: 'early_train_to_paddington',
+              step: 'moving_cards',
+              message: action.payload.message || 'Moviendo cartas del mazo al descarte...',
+            },
+          },
+          logs: [...state.logs, earlyTrainLog].slice(-50)
+        };
+
+      case 'EVENT_EARLY_TRAIN_COMPLETE':
+        const earlyTrainCompleteLog = {
+          id: `event-early-train-complete-${Date.now()}`,
+          message: action.payload?.message || 'Early Train to Paddington completada',
+          type: 'event',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            actionInProgress: null,
+          },
+          logs: [...state.logs, earlyTrainCompleteLog].slice(-50)
+        };
       case 'EVENT_LOOK_ASHES_COMPLETE':
         const ashesCompleteLog = {
           id: `event-ashes-complete-${Date.now()}`,
