@@ -450,7 +450,7 @@ export default function GameScreen() {
 
       console.log(detectiveSetType)
 
-      // si es marple --> seleccionar secreto tamb
+      // si es marple, poirot o pyne --> seleccionar secreto tamb
       if (detectiveSetType == "marple" || detectiveSetType == "poirot" || detectiveSetType == "pyne") {
         // seleccionar secreto
 
@@ -1289,7 +1289,7 @@ const getErrorMessage = (status, errorData) => {
                 </ButtonGame>
             )}
 
-            {(selectedCards.length > 0 ) && (
+            {(selectedCards.length > 0 || !gameState.drawAction.hasDiscarded ) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={

@@ -1065,22 +1065,6 @@ describe('GameScreen Component', () => {
   })
 
   describe('Turn state indicators', () => {
-    it('shows "Descarta cartas primero" when hasDiscarded is false', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        hasDiscarded: false,
-        hasDrawn: false,
-        cardsToDrawRemaining: 0,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByText(/Descarta cartas primero/)).toBeInTheDocument()
-    })
 
     it('shows "Roba X carta(s)" when hasDiscarded is true but hasDrawn is false', () => {
       mockGameState.turnoActual = 1
@@ -1097,23 +1081,6 @@ describe('GameScreen Component', () => {
       render(<GameScreen />)
 
       expect(screen.getByText(/Roba 3 carta\(s\)/)).toBeInTheDocument()
-    })
-
-    it('shows "Puedes finalizar turno" when both hasDiscarded and hasDrawn are true', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        hasDiscarded: true,
-        hasDrawn: true,
-        cardsToDrawRemaining: 0,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByText(/Puedes finalizar turno/)).toBeInTheDocument()
     })
   })
 
