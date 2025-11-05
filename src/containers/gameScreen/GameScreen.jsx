@@ -155,6 +155,29 @@ export default function GameScreen() {
         payload: { skipDiscard: true },
       });
 
+      setLoading(false)
+
+    } else if (selectedCards[0]?.name === "Cards off the table") {
+      console.log("Attempting to play Cards off the Table")
+      
+      setLoading(true)
+      setError(null)
+
+      gameDispatch({
+        type: 'EVENT_CARDS_OFF_TABLE_START',
+        payload: { 
+          playerId: userState.id,
+          message: 'Selecciona un jugador para descartar sus cartas NSF'
+        },
+      })
+
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
+
+      setLoading(false)
+
     } else {
       setError("Esta carta aún no está implementada")
       setTimeout(() => setError(null), 3000)
@@ -309,7 +332,58 @@ export default function GameScreen() {
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
     
-    // Caso 1: Another Victim (seleccionar jugador objetivo al que robar secreto)
+    // Caso 0: Cards Off the Table
+    if (currentEventType === 'cards_off_table') {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/cards_off_the_table`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              HTTP_USER_ID: userState.id.toString(),
+            },
+            body: JSON.stringify({
+              targetPlayerId: jugadorId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Backend error:", errorData);
+          throw new Error(getErrorMessage(response.status, errorData));
+        }
+
+        const data = await response.json();
+        console.log("Cards Off the Table played successfully:", data);
+
+        gameDispatch({
+          type: 'EVENT_CARDS_OFF_TABLE_COMPLETE',
+          payload: {
+            message: `Se descartaron ${data.nsf_cards_discarded} cartas NSF`
+          }
+        });
+
+        setSelectedCards([]);
+        setHasPLayedEvent(true);
+
+      } catch (err) {
+        console.error("❌ Error playing Cards Off the Table:", err);
+        setError(err.message);
+        setTimeout(() => setError(null), 5000);
+        
+        gameDispatch({ type: 'EVENT_CARDS_OFF_TABLE_COMPLETE' });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Caso 1: Another Victim (selecting target player for set steal)
     if (currentEventType === 'another_victim') {
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
@@ -1068,12 +1142,14 @@ const getErrorMessage = (status, errorData) => {
           <SelectOtherPLayerSet
             player={gameState.eventCards.anotherVictim.selectedPlayer}
             sets ={gameState.sets}
-            onSelectSet={handleSelectSet} // agregar funcion cuando este implementada en GameScreen 
+            onSelectSet={handleSelectSet}
           />
         )}
 
       {/* Modal de seleccionar jugador */}
-      { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || gameState.detectiveAction?.showSelectPlayer ) && 
+      { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || 
+          gameState.detectiveAction?.showSelectPlayer ||
+          gameState.eventCards?.cardsOffTable?.showSelectPlayer ) && 
         (<SelectPlayerModal
           onPlayerSelect={handlePlayerSelect}
         />)
@@ -1082,8 +1158,8 @@ const getErrorMessage = (status, errorData) => {
       {/*Modal acción sobre secretos*/ }
       {(gameState.detectiveAction.showChooseOwnSecret || gameState.detectiveAction.showSelectSecret) && (
           <HideRevealStealSecretsModal
-          isOpen={gameState.detectiveAction.showSelectSecret || gameState.detectiveAction.showChooseOwnSecret} // || gameStatedetectiveAction.showChooseOwnSecret
-          detective={gameState.detectiveAction} //cambiar a gameState.detectiveAction
+          isOpen={gameState.detectiveAction.showSelectSecret || gameState.detectiveAction.showChooseOwnSecret}
+          detective={gameState.detectiveAction}
           onConfirm = {handleActionOnSecret}
         />
       )}

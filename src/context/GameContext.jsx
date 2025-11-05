@@ -641,7 +641,7 @@ const gameInitialState = {
           message: action.payload?.message || 'Cards Off the Table jugada',
           type: 'event',
           timestamp: new Date().toISOString(),
-          playerId: action.payload?.player_id,
+          playerId: action.payload?.playerId || action.payload?.player_id,
         };
 
         return {
@@ -649,6 +649,12 @@ const gameInitialState = {
           eventCards: {
             ...state.eventCards,
             cardsOffTable: { showSelectPlayer: true },
+            actionInProgress: {
+              playerId: action.payload?.playerId || action.payload?.player_id,
+              eventType: 'cards_off_table',
+              step: 'select_player',
+              message: action.payload?.message || 'Selecciona un jugador',
+            },
           },
           logs: [...state.logs, cardsOffTableLog].slice(-50)
         }
