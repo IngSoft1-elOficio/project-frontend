@@ -660,11 +660,6 @@ export default function GameScreen() {
   };
 
   const handleAddToSet = async (set, detectiveToAdd) => {
-    console.log(`Selected SetPosition: ${set?.position} and detective to add: ${detectiveToAdd?.id} on handle add to set`);
-    console.log(set)
-    set.cards.map(card => console.log(card))
-
-    console.log(`tipo de set: ${set.setType} y carta ${detectiveToAdd.name}`)
     
     if (!set || !set.position) {
         setError("Debes seleccionar un set válido");
