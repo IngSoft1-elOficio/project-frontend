@@ -1215,37 +1215,6 @@ describe('GameScreen Component', () => {
     })
   })
 
-  describe('Console logging', () => {
-    it('logs card play attempts', async () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {})
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ action_id: 'a1', available_cards: [] }),
-      })
-
-      mockGameState.turnoActual = 1
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      fireEvent.click(screen.getByText('Select Look Ashes'))
-      fireEvent.click(screen.getByTestId('button-jugar-carta'))
-
-      await waitFor(() => {
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Attempting to play Look Into The Ashes')
-        )
-      })
-
-      consoleLogSpy.mockRestore()
-    })
-  })
   describe('Additional Coverage', () => {
     it('handles getNombreTurnoActual for unknown player', () => {
       mockGameState.jugadores = [
@@ -1856,37 +1825,6 @@ describe('GameScreen Component', () => {
       fireEvent.click(screen.getByTestId('button-ver-sets'))
 
       expect(screen.getByTestId('player-sets-modal')).toBeInTheDocument()
-    })
-
-    it('handles Another Victim when movedSet is null', async () => {
-      mockGameState.eventCards.anotherVictim = {
-        showSelectPlayer: false,
-        selectedPlayer: { player_id: 2 },
-        showSelectSets: true,
-      }
-      mockGameState.sets = [
-        { owner_id: 2, position: 1, set_type: 'marple', cards: [] },
-      ]
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          movedSet: null, // Sin set movido
-        }),
-      })
-
-      render(<GameScreen />)
-      fireEvent.click(screen.getByText('Select Set'))
-
-      await waitFor(() => {
-        expect(mockGameDispatch).toHaveBeenCalledWith({
-          type: 'EVENT_ANOTHER_VICTIM_COMPLETE',
-        })
-      })
     })
 
     it('handles getNombreTurnoActual with player without name', () => {

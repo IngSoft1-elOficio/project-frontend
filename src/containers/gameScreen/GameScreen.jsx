@@ -27,12 +27,6 @@ export default function GameScreen() {
   const [hasPlayedSet, setHasPLayedSet] = useState(false)
   const [hasPlayedEvent, setHasPLayedEvent] = useState(false)
 
-  useEffect(() => {
-    if (!gameState.eventCards?.lookAshes?.showSelectCard) {
-      setSelectedCardLookAshes(null);
-    }
-  }, [gameState.eventCards?.lookAshes?.showSelectCard]);
-
   const [selectedCards, setSelectedCards] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -84,19 +78,14 @@ export default function GameScreen() {
   }
 
   const handlePLayEventCard = async () => {
-    console.log("Played Card Name: " + selectedCards[0]?.name)
-    console.log("Played Card ID: " + selectedCards[0]?.id)
 
     if (hasPlayedEvent) return;
     
-    if (selectedCards[0]?.name === "Look into the ashes") {
-      console.log("Attempting to play Look Into The Ashes with ID: " + selectedCards[0]?.id)
-      
+    if (selectedCards[0]?.name === "Look into the ashes") {      
       setLoading(true)
       setError(null)
       
       try {
-        // Ensure card_id is a number (Pydantic expects int)
         const cardId = Number(selectedCards[0]?.id)
         
         if (isNaN(cardId)) {
@@ -106,9 +95,6 @@ export default function GameScreen() {
         const requestBody = {
           card_id: cardId
         }
-        
-        console.log("Request body:", JSON.stringify(requestBody))
-        console.log("card_id type:", typeof cardId, "value:", cardId)
         
         const response = await fetch(
           `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/play`,
@@ -131,11 +117,6 @@ export default function GameScreen() {
         }
         
         const data = await response.json()
-        console.log('Played card successfully:', data)
-        
-        if (data.available_cards) {
-          console.log("Available cards from discard:", data.available_cards)
-        }
 
         gameDispatch({
           type: 'EVENT_LOOK_ASHES_PLAYED',
@@ -160,11 +141,11 @@ export default function GameScreen() {
       }
       
     } else if (selectedCards[0]?.name === "Another Victim") {
-      console.log("Attempting to play Another Victim")
       
       setLoading(true)
       setError(null)
 
+      // Jugar la carta y seleccionar el jugador objetivo y el set objetivo
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_START',
         payload: { playerId: userState.id },
@@ -199,13 +180,13 @@ export default function GameScreen() {
       setLoading(false)
 
     } else {
-      console.log("Card not implemented yet:", selectedCards[0]?.name)
       setError("Esta carta aún no está implementada")
       setTimeout(() => setError(null), 3000)
     }
   }
 
   const handleDiscard = async () => {
+
     if (selectedCards.length === 0) {
       setError('Debes seleccionar al menos una carta para descartar')
       return
@@ -219,7 +200,6 @@ export default function GameScreen() {
         order: index + 1,
         card_id: card.id,
       }))
-      console.log('Orden de descarte:', cardsWithOrder)
 
       const response = await fetch(
         `http://localhost:8000/game/${gameState.roomId}/discard`,
@@ -241,7 +221,6 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('Discard successful:', data)
       setSelectedCards([])
     } catch (err) {
       setError(err.message)
@@ -253,13 +232,6 @@ export default function GameScreen() {
   const handleFinishTurn = async () => {
     setLoading(true)
     setError(null)
-
-    console.log('Attempting finish turn:', {
-      turnoActual: gameState.turnoActual,
-      userId: userState.id,
-      isMyTurn: gameState.turnoActual === userState.id,
-    })
-
     try {
       const response = await fetch(
         `http://localhost:8000/game/${gameState.roomId}/finish-turn`,
@@ -280,7 +252,6 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('finish turn successful:', data)
 
       setHasPLayedEvent(false);
       setHasPLayedSet(false);
@@ -294,13 +265,6 @@ export default function GameScreen() {
   const handlePickFromDeck = async () => {
     setLoading(true)
     setError(null)
-
-    console.log('Attempting to pick from deck:', {
-      turnoActual: gameState.turnoActual,
-      userId: userState.id,
-      isMyTurn: gameState.turnoActual === userState.id,
-    })
-
     try {
       const response = await fetch(
         `http://localhost:8000/game/${gameState.roomId}/take-deck`,
@@ -322,7 +286,6 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('Pick from deck successful:', data)
 
       setSelectedCards([])
     } catch (err) {
@@ -355,7 +318,6 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('Draft successful:', data)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -363,9 +325,7 @@ export default function GameScreen() {
     }
   }
 
-  // handlers de selectPlayerModal
   const handlePlayerSelect = async (jugadorId) => {
-    console.log("SELECTED PLAYER = ", jugadorId);
     
     const { actionInProgress } = gameState.eventCards;
     const currentEventType = actionInProgress?.eventType;
@@ -434,12 +394,8 @@ export default function GameScreen() {
       return;
     }
     
-    // Caso 2: Detective Action - Player Selection
+    // Caso 2: Detective Action - seleccion de jugador objetivo para accion de detective
     if (detectiveAction && actionId) {
-     
-      console.log(`Selecting player ${jugadorId} for detective action ${actionId}`);
-        
-      // Update local state to show we're waiting
       gameDispatch({
         type: 'DETECTIVE_TARGET_CONFIRMED',
         payload: {
@@ -448,12 +404,9 @@ export default function GameScreen() {
         },
       });
 
-      console.log(detectiveSetType)
-
-      // si es marple, poirot o pyne --> seleccionar secreto tamb
+      // si es marple --> seleccionar secreto tamb
       if (detectiveSetType == "marple" || detectiveSetType == "poirot" || detectiveSetType == "pyne") {
         // seleccionar secreto
-
         gameDispatch({
           type: 'DETECTIVE_PLAYER_SELECTED',
           payload: {
@@ -466,7 +419,6 @@ export default function GameScreen() {
       } else {
         // si es otro no seleccionar secreto
         try {
-          // Call backend - Step 1: Select target player
           const response = await fetch(
             `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
             {
@@ -479,7 +431,7 @@ export default function GameScreen() {
                 actionId: actionId,
                 executorId: userState.id,
                 targetPlayerId: jugadorId,
-                secretId: null, // null for player selection step
+                secretId: null,
               }),
             }
           );
@@ -491,7 +443,6 @@ export default function GameScreen() {
           }
           
           const data = await response.json();
-          console.log("Target player selected successfully:", data);
 
           gameDispatch({
             type: 'DETECTIVE_PLAYER_SELECTED',
@@ -501,14 +452,10 @@ export default function GameScreen() {
               needsSecret: false,
             },
           })
-          
-          // Backend will emit WebSocket events:
-          // - detective_target_selected (to all players)
-          // - select_own_secret (to target player only)
-          
         } catch (error) {
           console.error('Error selecting target player:', error);
-          // Reset to player selection state on error
+
+          // Reset seleccion del jugador si hay error
           gameDispatch({
             type: 'DETECTIVE_SET_SUBMITTED',
             payload: {
@@ -524,31 +471,8 @@ export default function GameScreen() {
     }  
   };
 
-  // selectedCards [...prev, { id: cardId, name: card?.name || '' }]
-  // cardsFromExistingSet [...prev, { id: cardId, name: card?.name || '' }]
-  const handlePlayDetective = async (cardsFromExistingSet = null) => {
-    console.log("cardsFromExistingSet:", cardsFromExistingSet);
-    let cardsToUse = [];
-
-    if (hasPlayedSet) return;
-    
-    // Determine which cards to use
-    if (cardsFromExistingSet) {
-      // Use cards passed as argument (from Another Victim)
-      if (Array.isArray(cardsFromExistingSet)) {
-        cardsToUse = cardsFromExistingSet; // Already has { id, name } format
-      } else {
-        console.error("cardsFromExistingSet is not an array:", cardsFromExistingSet);
-        setError("Error: formato de cartas inválido");
-        setTimeout(() => setError(null), 3000);
-        return;
-      }
-    } else {
-      // Use cards from state (from manual selection)
-      cardsToUse = selectedCards; // Already has { id, name } format
-    }
-
-    console.log("Cartas seleccionadas para el set:", cardsToUse);
+  const handlePlayDetective = async () => {
+    const cardsToUse = selectedCards; // [{ id, name }]
 
     const minCards = {
       poirot: 3,
@@ -565,7 +489,7 @@ export default function GameScreen() {
       return;
     }
 
-    const setType = detectSetType(cardsToUse); // Pass full objects
+    const setType = detectSetType(cardsToUse); 
     if (!setType) {
       setError("Las cartas seleccionadas no forman un set válido");
       setTimeout(() => setError(null), 3000);
@@ -578,7 +502,6 @@ export default function GameScreen() {
       return;
     }
 
-    // Check if Pyne can be played (need revealed secrets from other players)
     if (setType === 'pyne') {
       const hasOtherPlayersWithRevealedSecrets = gameState.secretsFromAllPlayers?.some(
         secret => secret.player_id !== userState.id && !secret.hidden
@@ -608,7 +531,7 @@ export default function GameScreen() {
           body: JSON.stringify({
             owner: userState.id,
             setType,
-            cards: cardsToUse.map(card => card.id), // Send only IDs to backend
+            cards: cardsToUse.map(card => card.id), 
             hasWildcard,
           }),
         }
@@ -620,16 +543,13 @@ export default function GameScreen() {
       }
 
       const data = await response.json();
-      console.log("Set creado exitosamente!");
-      console.log("Action ID:", data.actionId);
-      console.log("Next Action:", data.nextAction);
 
       // Dispatch the action that prepares for player selection
       gameDispatch({
         type: 'DETECTIVE_SET_SUBMITTED',
         payload: {
           actionId: data.actionId,
-          setType: setType, // Use the detected setType
+          setType: setType, 
           stage: 'awaiting_player_selection',
           cards: cardsToUse,
           hasWildcard: hasWildcard,
@@ -643,11 +563,8 @@ export default function GameScreen() {
         payload: { skipDiscard: true },
       });
 
-      // Only clear selected cards if using manual selection
-      if (!cardsFromExistingSet) {
-        setSelectedCards([]);
-      }
-
+    
+      setSelectedCards([]);
       setHasPLayedSet(true);
 
     } catch (err) {
@@ -778,12 +695,10 @@ export default function GameScreen() {
       console.warn("No set selected");
       return;
     }
-
-    console.log("Selected Set:", selectedSet);
-
+    
     setLoading(true);
     setError(null);
-
+    
     try {
       // POST to the Another Victim event endpoint
       const response = await fetch(
@@ -800,41 +715,56 @@ export default function GameScreen() {
           }),
         }
       );
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Backend error:", errorData);
         throw new Error(getErrorMessage(response.status, errorData));
       }
-
-      const data = await response.json();
-      console.log("Played Another Victim successfully:", data);
-
-      // {
-      //   success: true,
-      //   transferredSet: {
-      //     position: 1,
-      //     cards: [...],
-      //     newOwnerId: 45,
-      //     originalOwnerId: 89
-      //   }
-      // }
-
-      // si se movio el set, jugar el efecto del set 
-      // en GameState.sets[] --> set:  { owner_id: int, position: int, set_type: string , … }
-      // selectedSet --> { owner_id , position }
-      // where selected set == set para jugar
-      if (data.movedSet) {
-        const cardsFromMovedSet = data.movedSet.cards.map(card => ({
-          id: card.id,
-          name: card.name || ''
-        }));
-        // cardsFromExistingSet [...prev, { id: cardId, name: card?.name || '' }]
-        handlePlayDetective(cardsFromMovedSet);
-        }
-
-      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });      
       
+      const data = await response.json();
+      
+      if (!data.success || !data.transferredSet || !data.nextAction) {
+        throw new Error("Respuesta incompleta del servidor");
+      }
+      
+      const cardsFromTransferredSet = data.transferredSet.cards.map(card => ({
+        id: card.cardId,
+        name: card.name || ''
+      }));
+      
+      const setType = detectSetType(cardsFromTransferredSet);
+      
+      if (!setType) {
+        console.error("Could not detect set type from transferred cards:", cardsFromTransferredSet);
+        throw new Error("Error al detectar el tipo de set transferido");
+      }
+      
+      gameDispatch({
+        type: 'DETECTIVE_SET_SUBMITTED',
+        payload: {
+          actionId: data.actionId,  
+          setType: setType,
+          stage: 'awaiting_player_selection',
+          cards: cardsFromTransferredSet,
+          hasWildcard: data.nextAction.metadata?.hasWildcard || false,
+          allowedPlayers: data.nextAction.allowedPlayers || [],
+          secretsPool: data.nextAction.metadata?.secretsPool || [],
+          fromAnotherVictim: true,
+          transferredSetPosition: data.transferredSet.position,
+        },
+      });
+      
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
+      
+      // Complete the Another Victim event
+      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });
+      
+      setSelectedCards([]);
+      setHasPLayedEvent(true);
     } catch (err) {
       console.error("❌ Error playing Another Victim:", err);
       setError(err.message);
@@ -849,11 +779,9 @@ export default function GameScreen() {
     try {
       const actionId = gameState.detectiveAction.current?.actionId || gameState.detectiveAction?.incomingRequest?.actionId;
       const executorId = userState.id; // jugador que ejecuta
-      const secretId = selectedSecret.id; // ✅ Changed from cardId to id
+      const secretId = selectedSecret.id; 
       const detectiveType = gameState.detectiveAction?.actionInProgress?.setType;
-      const targetPlayerId = gameState.detectiveAction.actionInProgress?.targetPlayerId; // ✅ Fixed path
-      
-      console.log(secretId)
+      const targetPlayerId = gameState.detectiveAction.actionInProgress?.targetPlayerId; 
 
       let body = {};
       
@@ -876,8 +804,6 @@ export default function GameScreen() {
         };
       }
       
-      console.log('Sending detective action:', body); 
-      
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
         {
@@ -896,7 +822,6 @@ export default function GameScreen() {
       }
       
       const data = await response.json();
-      console.log("Acción detective completada", data);
       
     } catch (error) {
       console.error("Error al ejecutar acción de detective", error);
@@ -907,7 +832,6 @@ export default function GameScreen() {
   const detectSetType = selectedCards => {
     if (selectedCards.length === 0) return null;
 
-    // Pull real card data from gameState to validate `type` (if needed)
     const selectedCardData = gameState.mano.filter(card =>
       selectedCards.some(sel => sel.id === card.id)
     );
@@ -977,8 +901,6 @@ export default function GameScreen() {
       return
     }
 
-    console.log("Attempting to send card id = " + selectedCardId)
-
     setLoading(true)
     setError(null)
 
@@ -1005,7 +927,6 @@ export default function GameScreen() {
       }
 
       const data = await response.json()
-      console.log('Card selected successfully:', data)
 
       // Close the modal and reset the state
       gameDispatch({
@@ -1020,7 +941,7 @@ export default function GameScreen() {
     }
   }
 
-const getErrorMessage = (status, errorData) => {
+  const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
         return 'Error de validación: cartas inválidas o lista vacía'
