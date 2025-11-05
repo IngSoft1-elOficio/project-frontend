@@ -185,6 +185,7 @@ export default function GameScreen() {
   }
 
   const handleDiscard = async () => {
+
     if (selectedCards.length === 0) {
       setError('Debes seleccionar al menos una carta para descartar')
       return
@@ -612,7 +613,6 @@ export default function GameScreen() {
         throw new Error("Respuesta incompleta del servidor");
       }
       
-      // Detect the set type from the transferred cards
       const cardsFromTransferredSet = data.transferredSet.cards.map(card => ({
         id: card.cardId,
         name: card.name || ''
@@ -648,6 +648,7 @@ export default function GameScreen() {
       // Complete the Another Victim event
       gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });
       
+      setSelectedCards([]);
       setHasPLayedEvent(true);
     } catch (err) {
       console.error("❌ Error playing Another Victim:", err);
@@ -826,7 +827,7 @@ export default function GameScreen() {
     }
   }
 
-const getErrorMessage = (status, errorData) => {
+  const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
         return 'Error de validación: cartas inválidas o lista vacía'
