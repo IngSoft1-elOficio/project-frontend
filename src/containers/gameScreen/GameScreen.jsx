@@ -64,6 +64,7 @@ export default function GameScreen() {
         setName: firstCard?.name || `Detective Set`,
         cards: set.cards || [],
         hasWildcard: set.hasWildcard || false,
+        position: set.position,
       }
 
       return mappedSet
@@ -658,6 +659,125 @@ export default function GameScreen() {
     }
   };
 
+  const handleAddToSet = async (set, detectiveToAdd) => {
+    console.log(`Selected SetPosition: ${set?.position} and detective to add: ${detectiveToAdd?.id} on handle add to set`);
+    console.log(set)
+    set.cards.map(card => console.log(card))
+
+    console.log(`tipo de set: ${set.setType} y carta ${detectiveToAdd.name}`)
+    
+    if (!set || !set.position) {
+        setError("Debes seleccionar un set válido");
+        setTimeout(() => setError(null), 3000);
+        return;
+    }
+    
+    if (!detectiveToAdd || !detectiveToAdd.id) {
+        setError("Debes seleccionar un detective para agregar");
+        setTimeout(() => setError(null), 3000);
+        return;
+    }
+
+
+    const nameToSetType = {
+      "Hercule Poirot": "poirot",
+      "Miss Marple": "marple",
+      "Mr Satterthwaite": "satterthwaite",
+      "Parker Pyne": "pyne",
+      'Lady Eileen "Bundle" Brent': "eileenbrent",
+      "Tommy Beresford": "beresford",
+      "Tuppence Beresford": "beresford",
+      "Harley Quin Wildcard": "wildcard",
+    };
+
+    // 1. validar que el set es del tipo del detective 
+    const setType = detectSetType(set.cards)
+
+    console.log("tipo de set: " + setType)
+
+    // 2. validar que el detective no es una wildcard
+    const hasWildcard = checkForWildcard([detectiveToAdd]);
+
+    if (hasWildcard) {
+      setError(`No se puede agregar wildcard a otro set`);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // 3. Check if Pyne can be played (need revealed secrets from other players)
+    if (setType === 'pyne') {
+      const hasOtherPlayersWithRevealedSecrets = gameState.secretsFromAllPlayers?.some(
+        secret => secret.player_id !== userState.id && !secret.hidden
+      );
+      
+      if (!hasOtherPlayersWithRevealedSecrets) {
+        setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+    } 
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/add-to-set`,
+        {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            HTTP_USER_ID: userState.id.toString(),
+          },
+          body: JSON.stringify({
+            owner: userState.id,
+            setType,
+            card: detectiveToAdd.id, 
+            setPosition: set.position
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al agregar al set");
+      }
+
+      const data = await response.json();
+      console.log("detective agregado exitosamente!");
+      console.log("Action ID:", data.actionId);
+      console.log("Next Action:", data.nextAction);
+
+      // Dispatch the action that prepares for player selection
+      gameDispatch({
+        type: 'DETECTIVE_SET_SUBMITTED',
+        payload: {
+          actionId: data.actionId,
+          setType: setType, // Use the detected setType
+          stage: 'awaiting_player_selection',
+          cards: [detectiveToAdd, ...set.cards],
+          hasWildcard: checkForWildcard(set.cards),
+          allowedPlayers: data.nextAction.allowedPlayers || [],
+          secretsPool: data.nextAction.metadata?.secretsPool || [],
+        },
+      });
+
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });
+
+      setSelectedCards([]);
+      setHasPLayedSet(true);
+    } catch (err) {
+      console.error("❌ Error al crear set:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelectSet = async (selectedSet) => {
     if (!selectedSet) {
       console.warn("No set selected");
@@ -848,7 +968,6 @@ export default function GameScreen() {
 
     return uniqueTypes[0];
   };
-
 
   // Helper: Verificar si hay un comodín (Harley Quin) en las cartas seleccionadas
   const checkForWildcard = selectedCards => {
@@ -1170,13 +1289,14 @@ const getErrorMessage = (status, errorData) => {
                 </ButtonGame>
             )}
 
-            {( !gameState.drawAction.hasDiscarded && selectedCards.length > 0 &&
-              !isWaitingForOtherPlayer) && (
+            {(selectedCards.length > 0 ) && (
                 <ButtonGame
                   onClick={handleDiscard}
                   disabled={
                     selectedCards.length === 0 ||
-                    loading
+                    loading || 
+                    isWaitingForOtherPlayer ||
+                    gameState.drawAction.hasDiscarded
                   }
                 >
                   Descartar
@@ -1214,6 +1334,7 @@ const getErrorMessage = (status, errorData) => {
         selectedCards={selectedCards}
         onCardSelect={handleCardSelect}
         onCreateSet={() => handlePlayDetective()}
+        onAddToset={handleAddToSet}
         hasPlayedSet={hasPlayedSet}
         hasPlayedEvent={hasPlayedEvent}
       />
