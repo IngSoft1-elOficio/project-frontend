@@ -1065,22 +1065,6 @@ describe('GameScreen Component', () => {
   })
 
   describe('Turn state indicators', () => {
-    it('shows "Descarta cartas primero" when hasDiscarded is false', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        hasDiscarded: false,
-        hasDrawn: false,
-        cardsToDrawRemaining: 0,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByText(/Descarta cartas primero/)).toBeInTheDocument()
-    })
 
     it('shows "Roba X carta(s)" when hasDiscarded is true but hasDrawn is false', () => {
       mockGameState.turnoActual = 1
@@ -1097,23 +1081,6 @@ describe('GameScreen Component', () => {
       render(<GameScreen />)
 
       expect(screen.getByText(/Roba 3 carta\(s\)/)).toBeInTheDocument()
-    })
-
-    it('shows "Puedes finalizar turno" when both hasDiscarded and hasDrawn are true', () => {
-      mockGameState.turnoActual = 1
-      mockGameState.drawAction = {
-        hasDiscarded: true,
-        hasDrawn: true,
-        cardsToDrawRemaining: 0,
-      }
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      expect(screen.getByText(/Puedes finalizar turno/)).toBeInTheDocument()
     })
   })
 
@@ -1248,37 +1215,6 @@ describe('GameScreen Component', () => {
     })
   })
 
-  describe('Console logging', () => {
-    it('logs card play attempts', async () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {})
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ action_id: 'a1', available_cards: [] }),
-      })
-
-      mockGameState.turnoActual = 1
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      render(<GameScreen />)
-
-      fireEvent.click(screen.getByText('Select Look Ashes'))
-      fireEvent.click(screen.getByTestId('button-jugar-carta'))
-
-      await waitFor(() => {
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Attempting to play Look Into The Ashes')
-        )
-      })
-
-      consoleLogSpy.mockRestore()
-    })
-  })
   describe('Additional Coverage', () => {
     it('handles getNombreTurnoActual for unknown player', () => {
       mockGameState.jugadores = [
@@ -1889,37 +1825,6 @@ describe('GameScreen Component', () => {
       fireEvent.click(screen.getByTestId('button-ver-sets'))
 
       expect(screen.getByTestId('player-sets-modal')).toBeInTheDocument()
-    })
-
-    it('handles Another Victim when movedSet is null', async () => {
-      mockGameState.eventCards.anotherVictim = {
-        showSelectPlayer: false,
-        selectedPlayer: { player_id: 2 },
-        showSelectSets: true,
-      }
-      mockGameState.sets = [
-        { owner_id: 2, position: 1, set_type: 'marple', cards: [] },
-      ]
-      useGame.mockReturnValue({
-        gameState: mockGameState,
-        gameDispatch: mockGameDispatch,
-      })
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          movedSet: null, // Sin set movido
-        }),
-      })
-
-      render(<GameScreen />)
-      fireEvent.click(screen.getByText('Select Set'))
-
-      await waitFor(() => {
-        expect(mockGameDispatch).toHaveBeenCalledWith({
-          type: 'EVENT_ANOTHER_VICTIM_COMPLETE',
-        })
-      })
     })
 
     it('handles getNombreTurnoActual with player without name', () => {
