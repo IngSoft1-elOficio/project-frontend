@@ -216,7 +216,7 @@ export default function GameScreen() {
         }
 
         const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/event/early_train_to_paddington`,
+          `http://localhost:8000/api/game/${gameState.roomId}/early_train_to_paddington`,
           {
             method: 'POST',
             headers: {
@@ -249,6 +249,13 @@ export default function GameScreen() {
         gameDispatch({
           type: 'UPDATE_DRAW_ACTION',
           payload: { skipDiscard: true },
+        })
+
+        gameDispatch({
+          type: 'EVENT_EARLY_TRAIN_COMPLETE',
+          payload: {
+            message: 'Se movieron cartas al mazo de descarte'
+          },
         })
 
         setSelectedCards([])
