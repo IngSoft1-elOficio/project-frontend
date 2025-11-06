@@ -237,25 +237,10 @@ export default function GameScreen() {
 
         const data = await response.json()
         console.log('Early train to paddington played succesfully', data)
-        
-        gameDispatch({
-          type: 'EVENT_EARLY_TRAIN_PLAYED',
-          payload: {
-            player_id: userState.id,
-            message: 'Moviendo 6 cartas al mazo de descarte'
-          },
-        })
 
         gameDispatch({
           type: 'UPDATE_DRAW_ACTION',
           payload: { skipDiscard: true },
-        })
-
-        gameDispatch({
-          type: 'EVENT_EARLY_TRAIN_COMPLETE',
-          payload: {
-            message: 'Se movieron cartas al mazo de descarte'
-          },
         })
 
         setSelectedCards([])
