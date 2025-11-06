@@ -19,6 +19,7 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
+import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 
 
 export default function GameScreen() {
@@ -177,6 +178,55 @@ export default function GameScreen() {
       });
 
       setLoading(false)
+
+    /*Delay the murderer's scape*/
+     } else if (selectedCards[0]?.name === "Delay the murderers escape!") {
+          console.log("Attempting to play delay the murderers escape")
+      
+      setLoading(true)
+      setError(null)
+
+      gameDispatch({
+        type: 'EVENT_DELAY_ESCAPE_PLAYED',
+        payload: { 
+          playerId: userState.id,
+          showQty: true,  
+          message: 'Delay the Murderer’s Escape jugada'
+        },
+        })
+
+ 
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      })
+
+      setLoading(false)
+
+    /*One more
+     } else if (selectedCards[0]?.name === "And then there was one more...") {
+          console.log("Attempting to play and then was one more")
+      
+      setLoading(true)
+      setError(null)
+
+      // SELECCIONAR N CARTAS DEL MAZO DE DESCARTE
+
+      gameDispatch({
+        type: 'EVENT_DELAY_ESCAPE_PLAYED',
+        payload: { 
+          playerId: userState.id,
+          message: 'Selecciona un jugador para descartar sus cartas NSF'
+        },
+      })
+
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      });*/
+
+
+
 
     } else {
       setError("Esta carta aún no está implementada")
@@ -827,6 +877,43 @@ export default function GameScreen() {
     }
   }
 
+  /*Handler de delay murder escape*/ 
+  const handleConfirmDelayEscape = async (quantity) => {
+  try {
+    const cardId = selectedCards[0]?.id
+
+    const response = await fetch(
+      `http://localhost:8000/api/game/${gameState.roomId}/event/delay-murderer-escape`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString(),
+        },
+        body: JSON.stringify({
+          card_id: cardId,
+          quantity: quantity, 
+        }),
+      }
+    )
+
+    const data = await response.json()
+    console.log('✅ Delay escape completado:', data)
+
+    // Cerrar modal y actualizar estado global
+    gameDispatch({
+      type: 'EVENT_DELAY_ESCAPE_COMPLETE',
+      payload: data,
+    })
+    setHasPLayedEvent(true)
+
+  } catch (err) {
+    console.error('❌ Error en delay escape:', err)
+    setError(err.message)
+  }
+}
+
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -1171,6 +1258,14 @@ export default function GameScreen() {
           isOpen={gameState.eventCards?.lookAshes?.showSelectCard}
           availableCards={gameState.eventCards.lookAshes.availableCards}
           onSelectCard={handleSelectCardFromAshes}
+        />
+      </div>
+
+      {/* Modal qty Delay the murderer's scape */}
+      <div>
+        <SelectQtyModal 
+          isOpen={gameState.eventCards?.delayEscape?.showQty}
+          onConfirm={handleConfirmDelayEscape}
         />
       </div>
 

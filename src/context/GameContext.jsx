@@ -97,8 +97,7 @@ const gameInitialState = {
     // Delay The Murderer Escape
     delayEscape: {
       actionId: null,
-      availableCards: [],
-      showOrderCards: false,
+      showQty: false,
     },
 
     // Transparency for all events
@@ -880,8 +879,7 @@ const gameInitialState = {
             ...state.eventCards,
             delayEscape: {
               actionId: action.payload.action_id,
-              availableCards: action.payload.available_cards,
-              showOrderCards: true,
+              showQty: true,
             },
           },
           logs: [...state.logs, delayEscapeLog].slice(-50)
@@ -901,8 +899,7 @@ const gameInitialState = {
             ...state.eventCards,
             delayEscape: {
               actionId: null,
-              availableCards: [],
-              showOrderCards: false,
+              showQty: false,
             },
             actionInProgress: null,
           },
