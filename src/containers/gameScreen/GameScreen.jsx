@@ -401,6 +401,48 @@ export default function GameScreen() {
     const { current: detectiveAction } = gameState.detectiveAction;
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
+
+  // Caso One More - seleccionar jugador destino
+  if (currentEventType === 'one_more') {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/select-player`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP_USER_ID': userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: gameState.eventCards.oneMore.actionId,
+            target_player_id: jugadorId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response One More select-player:', errorData);
+        throw new Error(getErrorMessage(response.status, errorData));
+      }
+
+      const data = await response.json();
+  
+      gameDispatch({
+        type: 'EVENT_ONE_MORE_COMPLETE',
+        payload: { message: 'One More completada' },
+      });
+    } catch (err) {
+      console.error('Error en One More select-player:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+    return;
+  }
     
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
@@ -944,7 +986,7 @@ export default function GameScreen() {
       }
 
       const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/secret`,
+        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/select-secret`,
         {
           method: "POST",
           headers: {
@@ -1304,7 +1346,8 @@ export default function GameScreen() {
       {/* Modal de seleccionar jugador */}
       { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || 
           gameState.detectiveAction?.showSelectPlayer ||
-          gameState.eventCards?.cardsOffTable?.showSelectPlayer ) && 
+          gameState.eventCards?.cardsOffTable?.showSelectPlayer ||
+          gameState.eventCards?.oneMore?.showSelectPlayer) && 
         (<SelectPlayerModal
           onPlayerSelect={handlePlayerSelect}
         />)
