@@ -20,6 +20,7 @@ import HideRevealStealSecretsModal from '../../components/modals/HideRevealSteal
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
+import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
 
 
 export default function GameScreen() {
@@ -203,30 +204,48 @@ export default function GameScreen() {
 
       setLoading(false)
 
-    /*One more
+    /*One more*/
      } else if (selectedCards[0]?.name === "And then there was one more...") {
-          console.log("Attempting to play and then was one more")
       
       setLoading(true)
       setError(null)
+      const cardId = Number(selectedCards[0]?.id)
 
-      // SELECCIONAR N CARTAS DEL MAZO DE DESCARTE
+      const requestBody = {
+        card_id: cardId
+      }
 
-      gameDispatch({
-        type: 'EVENT_DELAY_ESCAPE_PLAYED',
-        payload: { 
-          playerId: userState.id,
-          message: 'Selecciona un jugador para descartar sus cartas NSF'
-        },
-      })
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });*/
-
-
-
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/event/one-more`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP_USER_ID': userState.id.toString(), 
+            },
+            body: JSON.stringify(requestBody),
+          }
+        )
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Backend error response:", errorData)
+          console.error("Response status:", response.status)
+          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
+          throw new Error(getErrorMessage(response.status, errorData))
+        }
+        
+        const data = await response.json()
+        console.log("La data de onemore es: ", data)
+        gameDispatch({
+          type: 'EVENT_ONE_MORE_PLAYED',
+          payload: {
+            action_id: data.action_id,
+            available_secrets: data.available_secrets,
+          },
+        })
+        
+        setLoading(false)
 
     } else {
       setError("Esta carta aún no está implementada")
@@ -913,7 +932,55 @@ export default function GameScreen() {
   }
 }
 
+  /*Handler OneMoreSecret, hace el 2 post*/
+  const handleOneMoreSecret = async (selectedSecret) => {
+    try {
+      setLoading(true)
+      setError(null)
 
+      const requestBody = {
+        action_id : gameState.eventCards.oneMore.actionId,
+        selected_secret_id: selectedSecret.id,  // el secreto elegido
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/secret`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "HTTP_USER_ID": userState.id.toString(),
+          },
+          body: JSON.stringify(requestBody),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+
+      gameDispatch({
+        type: "EVENT_ONE_MORE_SECRET_SELECTED",
+        payload: {
+          secret_id: selectedSecret.id,
+          allowed_players: data.allowed_players, 
+          message: data.message || 'Secreto seleccionado para One More',
+        },
+      })
+
+
+    } catch (err) {
+      console.error("Error selecting secret:", err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -1266,6 +1333,14 @@ export default function GameScreen() {
         <SelectQtyModal 
           isOpen={gameState.eventCards?.delayEscape?.showQty}
           onConfirm={handleConfirmDelayEscape}
+        />
+      </div>
+
+            {/* Modal secretos One more*/}
+      <div>
+        <OneMoreSecretsModal 
+          isOpen={gameState.eventCards?.oneMore?.showSecrets}
+          onConfirm={handleOneMoreSecret}
         />
       </div>
 
