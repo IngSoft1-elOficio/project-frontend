@@ -559,11 +559,8 @@ export default function GameScreen() {
     }
 
     if (setType === 'pyne') {
-      const hasOtherPlayersWithRevealedSecrets = gameState.secretsFromAllPlayers?.some(
-        secret => secret.player_id !== userState.id && !secret.hidden
-      );
-      
-      if (!hasOtherPlayersWithRevealedSecrets) {
+      const hasRevealedSecret = gameState.secretsFromAllPlayers.some(s => !s.hidden);
+      if (!hasRevealedSecret) {
         setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
         setTimeout(() => setError(null), 3000);
         return;
@@ -754,6 +751,15 @@ export default function GameScreen() {
     
     setLoading(true);
     setError(null);
+
+    if (selectedSet.setType === 'pyne') {
+      const hasRevealedSecret = gameState.secretsFromAllPlayers.some(s => !s.hidden);
+      if (!hasRevealedSecret) {
+        setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+    }
     
     try {
       // POST to the Another Victim event endpoint
@@ -841,7 +847,6 @@ export default function GameScreen() {
 
       let body = {};
       
-      // Detectives de un solo paso (owner roba secreto)
       if (["marple", "pyne", "poirot"].includes(detectiveType)) {
         body = {
           actionId,
@@ -876,8 +881,10 @@ export default function GameScreen() {
         const errorData = await response.json();
         throw new Error(errorData?.detail || "Error al ejecutar acción");
       }
-      
+
       const data = await response.json();
+
+      console.log(`data: ${data}`)
       
     } catch (error) {
       console.error("Error al ejecutar acción de detective", error);

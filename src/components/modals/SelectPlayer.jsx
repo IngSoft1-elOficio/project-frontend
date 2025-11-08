@@ -26,9 +26,25 @@ const SelectPlayerModal = ({ onPlayerSelect }) => {
 
   const nameStyle = 'text-lg font-bold text-[#B49150]';
 
-  const playersToShow = gameState.jugadores.filter((j) => { 
-    return j.player_id != userState.id;
-  });
+  let playersToShow;
+
+  if (gameState.detectiveAction?.actionInProgress?.setType === "pyne") {
+    const playerIdsWithRevealedSecrets = new Set(
+      gameState.secretsFromAllPlayers
+        .filter(s => !s.hidden)          
+        .map(s => s.player_id)            
+    );
+
+    playersToShow = gameState.jugadores.filter(j => {
+      return playerIdsWithRevealedSecrets.has(j.player_id);
+    });
+
+  } else {
+    playersToShow = gameState.jugadores.filter(j => {
+      return j.player_id !== userState.id;
+    });
+  }
+  
   
   const confirmSelection = () => {
     if (selectedPlayerId) onPlayerSelect(selectedPlayerId);

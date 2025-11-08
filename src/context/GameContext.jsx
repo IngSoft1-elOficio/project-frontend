@@ -1025,7 +1025,7 @@ export const GameProvider = ({ children }) => {
 
     socket.on('detective_action_complete', data => {
       console.log('✅ Detective action complete:', data)
-      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE', payload: data })
     })
 
     // ------------------------
