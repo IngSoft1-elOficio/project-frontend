@@ -244,8 +244,16 @@ export default function GameScreen() {
             available_secrets: data.available_secrets,
           },
         })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        });
         
-        setLoading(false)
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
+        //setLoading(false)
 
     } else {
       setError("Esta carta aún no está implementada")
