@@ -27,15 +27,8 @@ const SelectPlayerModal = ({ onPlayerSelect }) => {
   const nameStyle = 'text-lg font-bold text-[#B49150]';
 
   const playersToShow = gameState.jugadores.filter((j) => { 
-    // si el evento actual es One More, no filtramos a nadie
-    if (gameState.eventCards?.actionInProgress?.eventType === "one_more") {
-      return true;
-    } else {
-      // en otros eventos, excluir al propio jugador
-      return j.player_id !== userState.id;
-    }
+    return j.player_id != userState.id;
   });
-
   
   const confirmSelection = () => {
     if (selectedPlayerId) onPlayerSelect(selectedPlayerId);

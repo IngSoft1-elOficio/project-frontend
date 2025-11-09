@@ -91,7 +91,7 @@ const gameInitialState = {
       allowedPlayers: [],
       selectedSecretId: null,
       showSecrets: false,
-      showSelectPlayer: false,
+      showPlayers: false,
     },
 
     // Delay The Murderer Escape
@@ -833,7 +833,7 @@ const gameInitialState = {
               selectedSecretId: action.payload.secret_id,
               allowedPlayers: action.payload.allowed_players,
               showSecrets: false,
-              showSelectPlayer: true,
+              showPlayers: true,
             },
           },
           logs: action.payload?.message ? [...state.logs, oneMoreSecretLog].slice(-50) : state.logs
@@ -857,7 +857,7 @@ const gameInitialState = {
               allowedPlayers: [],
               selectedSecretId: null,
               showSecrets: false,
-              showSelectPlayer: false,
+              showPlayers: false,
             },
             actionInProgress: null,
           },

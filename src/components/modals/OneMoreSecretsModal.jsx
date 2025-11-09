@@ -46,35 +46,41 @@ const OneMoreSecretsModal = ({ isOpen, onConfirm }) => {
           <h2 className={headerTitle}>Secretos Revelados</h2>
         </div>
 
-        {/* CONTENIDO */}
-        {Object.keys(secretsByPlayer).length > 0 ? (
-          Object.values(secretsByPlayer).map((playerData) => (
-            <div key={playerData.playerName} className={playerSection}>
-              <p className={playerName}>{playerData.playerName}</p>
-              <div className={secretsContainer}>
-                {playerData.secrets.map((secret) => (
-                  <div
-                    key={secret.id}
-                    className={`${secretCard} ${
-                      selectedSecret?.id === secret.id ? selectedCard : ""
-                    }`}
-                    onClick={() => setSelectedSecret(secret)}
-                  >
-                    <img
-                      src="/cards/secret_back.png"
-                      alt={`Secreto revelado ${secret.id}`}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                ))}
+    {/* CONTENIDO */}
+    {Object.keys(secretsByPlayer).length > 0 ? (
+      Object.values(secretsByPlayer).map((playerData) => (
+        <div key={playerData.playerName} className={playerSection}>
+          <p className={playerName}>{playerData.playerName}</p>
+          <div className={secretsContainer}>
+            {playerData.secrets.map((secret) => (
+              <div
+                key={secret.id}
+                className={`${secretCard} ${
+                  selectedSecret?.id === secret.id ? selectedCard : ""
+                }`}
+                onClick={() => setSelectedSecret(secret)}
+              >
+                <img
+                  src="/cards/secret_back.png"
+                  alt={`Secreto revelado ${secret.id}`}
+                  className="w-full h-full object-cover rounded-md"
+                />
               </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-[#B49150]/70 text-center mt-8">
-            No hay secretos revelados disponibles.
-          </p>
-        )}
+            ))}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="flex flex-col items-center justify-center mt-8 gap-4">
+        <p className="text-[#B49150]/70 text-center">
+          No hay secretos revelados disponibles.
+        </p>
+        <ButtonGame onClick={() => onConfirm(null)}>
+          Cerrar
+        </ButtonGame>
+      </div>
+    )}
+
 
         {/* BOTÓN CONFIRMAR */}
         <div className="flex justify-center mt-4">

@@ -21,6 +21,7 @@ import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
+import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
 
 
 export default function GameScreen() {
@@ -202,7 +203,7 @@ export default function GameScreen() {
         payload: { skipDiscard: true },
       })
 
-      setLoading(false)
+        setLoading(false)
 
     /*One more*/
      } else if (selectedCards[0]?.name === "And then there was one more...") {
@@ -410,48 +411,6 @@ export default function GameScreen() {
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
 
-  // Caso One More - seleccionar jugador destino
-  if (currentEventType === 'one_more') {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/select-player`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'HTTP_USER_ID': userState.id.toString(),
-          },
-          body: JSON.stringify({
-            action_id: gameState.eventCards.oneMore.actionId,
-            target_player_id: jugadorId,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error response One More select-player:', errorData);
-        throw new Error(getErrorMessage(response.status, errorData));
-      }
-
-      const data = await response.json();
-  
-      gameDispatch({
-        type: 'EVENT_ONE_MORE_COMPLETE',
-        payload: { message: 'One More completada' },
-      });
-    } catch (err) {
-      console.error('Error en One More select-player:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-    return;
-  }
-    
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
       setLoading(true);
@@ -967,7 +926,7 @@ export default function GameScreen() {
     )
 
     const data = await response.json()
-    console.log('✅ Delay escape completado:', data)
+    console.log(' Delay escape completado:', data)
 
     // Cerrar modal y actualizar estado global
     gameDispatch({
@@ -990,7 +949,7 @@ export default function GameScreen() {
 
       const requestBody = {
         action_id : gameState.eventCards.oneMore.actionId,
-        selected_secret_id: selectedSecret.id,  // el secreto elegido
+        selected_secret_id: selectedSecret.id,  
       }
 
       const response = await fetch(
@@ -1030,7 +989,59 @@ export default function GameScreen() {
     }
   }
 
-  
+    //handler seleccionar jugador de one more
+  const handleOneMoreSelectPlayer = async (jugadorId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const actionId = gameState.eventCards?.oneMore?.actionId;
+      const roomId = gameState.roomId;
+
+      if (!actionId || !jugadorId) {
+        throw new Error("Faltan datos: actionId o playerId no válidos");
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/event/one-more/select-player`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "HTTP_USER_ID": userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: actionId,
+            target_player_id: jugadorId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("One More select-player completado:", data);
+
+      gameDispatch({
+        type: "EVENT_ONE_MORE_COMPLETE",
+        payload: {
+          message: data.message || "One More completada",
+        },
+      });
+
+    } catch (err) {
+      console.error("Error en One More select-player:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -1354,8 +1365,7 @@ export default function GameScreen() {
       {/* Modal de seleccionar jugador */}
       { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || 
           gameState.detectiveAction?.showSelectPlayer ||
-          gameState.eventCards?.cardsOffTable?.showSelectPlayer ||
-          gameState.eventCards?.oneMore?.showSelectPlayer) && 
+          gameState.eventCards?.cardsOffTable?.showSelectPlayer) && 
         (<SelectPlayerModal
           onPlayerSelect={handlePlayerSelect}
         />)
@@ -1392,6 +1402,11 @@ export default function GameScreen() {
         <OneMoreSecretsModal 
           isOpen={gameState.eventCards?.oneMore?.showSecrets}
           onConfirm={handleOneMoreSecret}
+        />
+
+        <SelectPlayerOneMoreModal 
+          isOpen={gameState.eventCards?.oneMore?.showPlayers}
+          onConfirm={handleOneMoreSelectPlayer}
         />
       </div>
 
