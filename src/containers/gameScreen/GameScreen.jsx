@@ -202,7 +202,8 @@ export default function GameScreen() {
         type: 'UPDATE_DRAW_ACTION',
         payload: { skipDiscard: true },
       })
-
+        setHasPLayedEvent(true)
+        //setSelectedCards([]) no funciona
         setLoading(false)
 
     /*One more*/
@@ -928,15 +929,19 @@ export default function GameScreen() {
     const data = await response.json()
     console.log(' Delay escape completado:', data)
 
-    // Cerrar modal y actualizar estado global
     gameDispatch({
       type: 'EVENT_DELAY_ESCAPE_COMPLETE',
       payload: data,
     })
-    setHasPLayedEvent(true)
+      
+      //    gameDispatch({
+      //  type: 'UPDATE_DRAW_ACTION',
+      //  payload: { skipDiscard: true },
+      //})
+
 
   } catch (err) {
-    console.error('❌ Error en delay escape:', err)
+    console.error('Error en delay escape:', err)
     setError(err.message)
   }
 }
