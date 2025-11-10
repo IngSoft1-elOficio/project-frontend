@@ -41,6 +41,24 @@ const gameInitialState = {
   logs: [], // { id, message, type, timestamp, playerId }
   playerLeftNotification: null,
 
+  nsfCounter: {
+    active: false,
+    actionId: null,
+    initiatorPlayerId: null,
+    actionType: null,
+    actionName: null,
+    cardIds: [],           // las cartas jugadas como intención
+    cancellable: null,
+    timeRemaining: null,
+    originalActionData: {  // lo que se enviaría si se ejecuta
+      endpoint: "/api/game/{game_id}/play-<tipo>",
+      body: {}
+    },
+    nsfChain: [],           // array de { playerId, cardId, timestamp }
+    finalResolution: null,   // “continue” | “cancelled”
+    showNsfBanner: false
+  },
+
   // Detective Actions
   detectiveAction: {
     // Active action
@@ -252,133 +270,13 @@ const gameInitialState = {
           playerLeftNotification: null,
         }
 
-      // ----------------------
-      // | CARDS DRAW-DISCARD |
-      // ----------------------
-      case 'PLAYER_MUST_DRAW':
-        const isMe = action.payload.player_id === state.userId
+      // --------------------
+      // | ACTION - COUNTER |
+      // --------------------
 
-        const discardLog = {
-          id: `discard-${Date.now()}`,
-          message: action.payload.message,
-          type: 'discard',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload.player_id,
-        };
-
+      case 'VALID_ACTION':
         return {
           ...state,
-          drawAction: {
-            ...state.drawAction,
-            cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
-            otherPlayerDrawing: !isMe
-              ? {
-                  playerId: action.payload.player_id,
-                  cardsRemaining: action.payload.cards_to_draw,
-                  message: action.payload.message,
-                }
-              : null,
-            hasDiscarded: true,
-            hasDrawn: false,
-          },
-          logs: [...state.logs, discardLog].slice(-50)
-        }
-
-      case 'CARD_DRAWN_SIMPLE':
-        const isMeDrawing = action.payload.player_id === state.userId
-        const cardsRemaining = action.payload.cards_remaining
-
-        const drawLog = {
-          id: `draw-${Date.now()}`,
-          message: action.payload.message,
-          type: 'draw',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            ...state.drawAction,
-            cardsToDrawRemaining: isMeDrawing
-              ? cardsRemaining
-              : state.drawAction.cardsToDrawRemaining,
-            otherPlayerDrawing:
-              !isMeDrawing && cardsRemaining > 0
-                ? {
-                    playerId: action.payload.player_id,
-                    cardsRemaining: cardsRemaining,
-                    message: action.payload.message,
-                  }
-                : null,
-            hasDiscarded: state.drawAction.hasDiscarded,
-            hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
-          },
-          logs: [...state.logs, drawLog].slice(-50)
-        }
-
-      case 'UPDATE_DRAW_ACTION':
-        return {
-          ...state,
-          drawAction: {
-            ...state.drawAction,
-            ...action.payload,
-          },
-        };
-
-      case 'RESET_DRAW_ACTION':
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: false,
-            hasDrawn: false,
-            skipDiscard: false,
-          },
-        };
-
-      case 'DRAW_ACTION_COMPLETE':
-        
-        const drawCompleteLog = {
-          id: `draw-complete-${Date.now()}`,
-          message: action.payload?.message || 'Robo de cartas completado',
-          type: 'draw',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload?.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: true,
-            hasDrawn: true,
-          },
-          logs: [...state.logs, drawCompleteLog].slice(-50)
-        }
-
-      case 'FINISH_TURN':
-
-        const finishTurnLog = {
-          id: `turn-${Date.now()}`,
-          message: action.payload.message,
-          type: 'turn',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: false,
-            hasDrawn: false,
-            skipDiscard: false,
-          },
-          logs: [...state.logs, finishTurnLog].slice(-50)
         }
 
       // ---------------------
@@ -907,6 +805,135 @@ const gameInitialState = {
             actionInProgress: null,
           },
           logs: [...state.logs, delayCompleteLog].slice(-50)
+        }
+      
+        // ----------------------
+      // | CARDS DRAW-DISCARD |
+      // ----------------------
+      case 'PLAYER_MUST_DRAW':
+        const isMe = action.payload.player_id === state.userId
+
+        const discardLog = {
+          id: `discard-${Date.now()}`,
+          message: action.payload.message,
+          type: 'discard',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
+            otherPlayerDrawing: !isMe
+              ? {
+                  playerId: action.payload.player_id,
+                  cardsRemaining: action.payload.cards_to_draw,
+                  message: action.payload.message,
+                }
+              : null,
+            hasDiscarded: true,
+            hasDrawn: false,
+          },
+          logs: [...state.logs, discardLog].slice(-50)
+        }
+
+      case 'CARD_DRAWN_SIMPLE':
+        const isMeDrawing = action.payload.player_id === state.userId
+        const cardsRemaining = action.payload.cards_remaining
+
+        const drawLog = {
+          id: `draw-${Date.now()}`,
+          message: action.payload.message,
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            cardsToDrawRemaining: isMeDrawing
+              ? cardsRemaining
+              : state.drawAction.cardsToDrawRemaining,
+            otherPlayerDrawing:
+              !isMeDrawing && cardsRemaining > 0
+                ? {
+                    playerId: action.payload.player_id,
+                    cardsRemaining: cardsRemaining,
+                    message: action.payload.message,
+                  }
+                : null,
+            hasDiscarded: state.drawAction.hasDiscarded,
+            hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
+          },
+          logs: [...state.logs, drawLog].slice(-50)
+        }
+
+      case 'UPDATE_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            ...action.payload,
+          },
+        };
+
+      case 'RESET_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+            skipDiscard: false,
+          },
+        };
+
+      case 'DRAW_ACTION_COMPLETE':
+        
+        const drawCompleteLog = {
+          id: `draw-complete-${Date.now()}`,
+          message: action.payload?.message || 'Robo de cartas completado',
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload?.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: true,
+            hasDrawn: true,
+          },
+          logs: [...state.logs, drawCompleteLog].slice(-50)
+        }
+
+      case 'FINISH_TURN':
+
+        const finishTurnLog = {
+          id: `turn-${Date.now()}`,
+          message: action.payload.message,
+          type: 'turn',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+            skipDiscard: false,
+          },
+          logs: [...state.logs, finishTurnLog].slice(-50)
         }
 
       default:

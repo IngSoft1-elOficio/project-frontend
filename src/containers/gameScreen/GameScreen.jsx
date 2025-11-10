@@ -19,7 +19,7 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
-
+import { startActionWithCounterCheck } from '../../helpers/NFS.js'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -80,90 +80,76 @@ export default function GameScreen() {
   const handlePLayEventCard = async () => {
 
     if (hasPlayedEvent) return;
+
+    const card = selectedCards[0];  // Carta de evento a jugar
+    const payload = { card_id: Number(card.id) };
     
-    if (selectedCards[0]?.name === "Look into the ashes") {      
-      setLoading(true)
-      setError(null)
-      
-      try {
-        const cardId = Number(selectedCards[0]?.id)
-        
-        if (isNaN(cardId)) {
-          throw new Error("Invalid card ID")
+    // ----------  Look Into The Ashes ----------
+    if (card.name === "Look into the ashes") {
+      // Jugar la carta iniciando la accion
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        endpoint: "/look-into-ashes/play",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        successDispatch: (data) => {
+          gameDispatch({ type: "EVENT_LOOK_ASHES_PLAYED", payload: {action_id: data.action_id,
+            available_cards: data.available_cards,} });
+          gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+          setSelectedCards([]);
+          setHasPLayedEvent(true);
         }
-        
-        const requestBody = {
-          card_id: cardId
+      });
+      return;
+    }
+
+    // ----------  Early train to paddington ----------
+    if (card.name === "Early train to paddington") {
+      // Jugar la carta iniciando la accion
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        endpoint: "/early_train_to_paddington",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        successDispatch: (data) => {
+          gameDispatch({
+            type: 'UPDATE_DRAW_ACTION',
+            payload: { skipDiscard: true },
+          })
+          setSelectedCards([])
+          setHasPLayedEvent(true)
         }
-        
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/play`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'http-user-id': userState.id.toString(), 
-            },
-            body: JSON.stringify(requestBody),
-          }
-        )
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Backend error response:", errorData)
-          console.error("Response status:", response.status)
-          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-        
-        const data = await response.json()
+      });
+      return;
+    }
 
-        gameDispatch({
-          type: 'EVENT_LOOK_ASHES_PLAYED',
-          payload: {
-            action_id: data.action_id,
-            available_cards: data.available_cards,
-          },
-        })
-
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        });
-        
-        setSelectedCards([])
-        setHasPLayedEvent(true);
-      } catch (err) {
-        console.error("Error playing Look Into The Ashes:", err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-      
-    } else if (selectedCards[0]?.name === "Another Victim") {
-      
-      setLoading(true)
-      setError(null)
-
+    // ----------  Another Victim ----------
+    if (card.name === "Another Victim") {
       // Jugar la carta y seleccionar el jugador objetivo y el set objetivo
+      setLoading(true)
+      setError(null)
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_START',
         payload: { playerId: userState.id },
       })
-
       gameDispatch({
         type: 'UPDATE_DRAW_ACTION',
         payload: { skipDiscard: true },
       });
-
       setLoading(false)
+      return;
+    }
 
-    } else if (selectedCards[0]?.name === "Cards off the table") {
-      console.log("Attempting to play Cards off the Table")
-      
+    if (card.name === "Cards off the table") {
+      // Jugar la carta y seleccionar el jugador objetivo      
       setLoading(true)
       setError(null)
-
       gameDispatch({
         type: 'EVENT_CARDS_OFF_TABLE_START',
         payload: { 
@@ -171,74 +157,18 @@ export default function GameScreen() {
           message: 'Selecciona un jugador para descartar sus cartas NSF'
         },
       })
-
       gameDispatch({
         type: 'UPDATE_DRAW_ACTION',
         payload: { skipDiscard: true },
       });
-
       setLoading(false)
-
-    } else if(selectedCards[0]?.name === "Early train to paddington") {
-      console.log("Attempting to play Early train to paddington")
-
-      setLoading(true)
-      setError(null)
-
-      try {
-
-        const cardId = Number(selectedCards[0]?.id)
-
-        if (isNaN(cardId)){
-          throw new Error("Invalid card ID")
-        }
-
-        const requestBody = {
-          card_id: cardId
-        }
-
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/early_train_to_paddington`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'http-user-id': userState.id.toString(),
-            },
-            body: JSON.stringify(requestBody)
-          }
-        )
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Backend error response:", errorData)
-          console.error("Response status:", response.status)
-          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-
-        const data = await response.json()
-        console.log('Early train to paddington played succesfully', data)
-
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        })
-
-        setSelectedCards([])
-        setHasPLayedEvent(true)
-      } catch (err) {
-        console.error("Error playing early train to paddington", err)
-        setError(err.message)
-        setTimeout(() => setError(null), 5000)
-      } finally {
-        setLoading(false)
-      }
-      
-    } else {
-      setError("Esta carta aún no está implementada")
-      setTimeout(() => setError(null), 3000)
+      return;
     }
+
+    // La carta no esta implementada    
+    setError("Esta carta aún no está implementada")
+    setTimeout(() => setError(null), 3000)
+    return;
   }
 
   const handleDiscard = async () => {
@@ -392,66 +322,43 @@ export default function GameScreen() {
     
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/cards_off_the_table`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              HTTP_USER_ID: userState.id.toString(),
-            },
-            body: JSON.stringify({
-              targetPlayerId: jugadorId,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Backend error:", errorData);
-          throw new Error(getErrorMessage(response.status, errorData));
+      // Se obtuvo el jugador objetivo, ahora se inicia la accion
+      const payload = { targetPlayerId: jugadorId };
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        endpoint: "/cards_off_the_table",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        successDispatch: (data) => {
+          gameDispatch({
+            type: 'EVENT_CARDS_OFF_TABLE_COMPLETE',
+            payload: {
+              message: `Se descartaron ${data.nsf_cards_discarded} cartas NSF`
+            }
+          });
+          setSelectedCards([]);
+          setHasPLayedEvent(true);
         }
-
-        const data = await response.json();
-        console.log("Cards Off the Table played successfully:", data);
-
-        gameDispatch({
-          type: 'EVENT_CARDS_OFF_TABLE_COMPLETE',
-          payload: {
-            message: `Se descartaron ${data.nsf_cards_discarded} cartas NSF`
-          }
-        });
-
-        setSelectedCards([]);
-        setHasPLayedEvent(true);
-
-      } catch (err) {
-        console.error("❌ Error playing Cards Off the Table:", err);
-        setError(err.message);
-        setTimeout(() => setError(null), 5000);
-        
-        gameDispatch({ type: 'EVENT_CARDS_OFF_TABLE_COMPLETE' });
-      } finally {
-        setLoading(false);
-      }
+      });
       return;
     }
-    
-    // Caso 1: Another Victim (selecting target player for set steal)
+
+    // Caso 1: Another Victim
     if (currentEventType === 'another_victim') {
+      // se obtuvo el jugador objetivo, ahora seleccionar el set
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
         payload: jugadorId,
       });
       return;
     }
-    
-    // Caso 2: Detective Action - seleccion de jugador objetivo para accion de detective
+
+    // Caso 2: Detective Action
     if (detectiveAction && actionId) {
+      // Se obtuvo el jugador objetivo
       gameDispatch({
         type: 'DETECTIVE_TARGET_CONFIRMED',
         payload: {
@@ -459,10 +366,8 @@ export default function GameScreen() {
           targetPlayerData: jugadorId,
         },
       });
-
-      // si es marple --> seleccionar secreto tamb
+      // Caso 2.a: Tambien seleccionar el secreto a ocular/revelar
       if (detectiveSetType == "marple" || detectiveSetType == "poirot" || detectiveSetType == "pyne") {
-        // seleccionar secreto
         gameDispatch({
           type: 'DETECTIVE_PLAYER_SELECTED',
           payload: {
@@ -471,10 +376,14 @@ export default function GameScreen() {
             needsSecret: true,
           },
         })
-
-      } else {
-        // si es otro no seleccionar secreto
+      } else { // Caso 2.b: El objetivo tiene que seleccionar el secreto a ocultar/revelar
         try {
+          const payload = {
+            actionId: actionId,
+            executorId: userState.id,
+            targetPlayerId: jugadorId,
+            secretId: null,
+          }
           const response = await fetch(
             `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
             {
@@ -483,12 +392,7 @@ export default function GameScreen() {
                 'Content-Type': 'application/json',
                 HTTP_USER_ID: userState.id.toString(),
               },
-              body: JSON.stringify({
-                actionId: actionId,
-                executorId: userState.id,
-                targetPlayerId: jugadorId,
-                secretId: null,
-              }),
+              body: JSON.stringify(payload),
             }
           );
           
@@ -508,10 +412,7 @@ export default function GameScreen() {
               needsSecret: false,
             },
           })
-        } catch (error) {
-          console.error('Error selecting target player:', error);
-
-          // Reset seleccion del jugador si hay error
+        } catch (error) { // Si hubo error resetear la seleccion de jugador
           gameDispatch({
             type: 'DETECTIVE_SET_SUBMITTED',
             payload: {
@@ -571,65 +472,40 @@ export default function GameScreen() {
     }
 
     const hasWildcard = checkForWildcard(cardsToUse);
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
-        {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            owner: userState.id,
-            setType,
-            cards: cardsToUse.map(card => card.id), 
-            hasWildcard,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al crear el set");
-      }
-
-      const data = await response.json();
-
-      // Dispatch the action that prepares for player selection
-      gameDispatch({
-        type: 'DETECTIVE_SET_SUBMITTED',
-        payload: {
-          actionId: data.actionId,
-          setType: setType, 
-          stage: 'awaiting_player_selection',
-          cards: cardsToUse,
-          hasWildcard: hasWildcard,
-          allowedPlayers: data.nextAction.allowedPlayers || [],
-          secretsPool: data.nextAction.metadata?.secretsPool || [],
-        },
-      });
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-
     
-      setSelectedCards([]);
-      setHasPLayedSet(true);
-
-    } catch (err) {
-      console.error("❌ Error al crear set:", err);
-      setError(err.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
+    const payload = {
+      owner: userState.id,
+      setType,
+      cards: cardsToUse.map(c => c.id),
+      hasWildcard,
+    };
+    
+    await startActionWithCounterCheck({
+      roomId: gameState.roomId,
+      userId: userState.id,
+      endpoint: "/play-detective-set",
+      payload,
+      setLoading,
+      setError,
+      gameDispatch,
+      successDispatch: (data) => {
+        gameDispatch({
+          type: "DETECTIVE_SET_SUBMITTED",
+          payload: { 
+              actionId: data.actionId,
+              setType: setType, 
+              stage: 'awaiting_player_selection',
+              cards: cardsToUse,
+              hasWildcard: hasWildcard,
+              allowedPlayers: data.nextAction.allowedPlayers || [],
+              secretsPool: data.nextAction.metadata?.secretsPool || [],
+           },
+        });
+        gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+        setSelectedCards([]);
+        setHasPLayedSet(true);
+      },
+    });
   };
 
   const handleAddToSet = async (set, detectiveToAdd) => {
@@ -646,7 +522,6 @@ export default function GameScreen() {
         return;
     }
 
-
     const nameToSetType = {
       "Hercule Poirot": "poirot",
       "Miss Marple": "marple",
@@ -660,8 +535,6 @@ export default function GameScreen() {
 
     // 1. validar que el set es del tipo del detective 
     const setType = detectSetType(set.cards)
-
-    console.log("tipo de set: " + setType)
 
     // 2. validar que el detective no es una wildcard
     const hasWildcard = checkForWildcard([detectiveToAdd]);
@@ -685,149 +558,86 @@ export default function GameScreen() {
       }
     } 
 
-    setLoading(true);
-    setError(null);
+    const payload = {
+      owner: userState.id,
+      setType,
+      card: detectiveToAdd.id,
+      setPosition: set.position,
+    };
 
-    try {
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/add-to-set`,
-        {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            owner: userState.id,
-            setType,
-            card: detectiveToAdd.id, 
-            setPosition: set.position
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al agregar al set");
-      }
-
-      const data = await response.json();
-      console.log("detective agregado exitosamente!");
-      console.log("Action ID:", data.actionId);
-      console.log("Next Action:", data.nextAction);
-
-      // Dispatch the action that prepares for player selection
-      gameDispatch({
-        type: 'DETECTIVE_SET_SUBMITTED',
-        payload: {
-          actionId: data.actionId,
-          setType: setType, // Use the detected setType
-          stage: 'awaiting_player_selection',
-          cards: [detectiveToAdd, ...set.cards],
-          hasWildcard: checkForWildcard(set.cards),
-          allowedPlayers: data.nextAction.allowedPlayers || [],
-          secretsPool: data.nextAction.metadata?.secretsPool || [],
-        },
-      });
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-
-      setSelectedCards([]);
-      setHasPLayedSet(true);
-    } catch (err) {
-      console.error("❌ Error al crear set:", err);
-      setError(err.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
+    await playWithCounterCheck({
+      endpoint: "/add-to-set",
+      payload,
+      successDispatch: (data) => {
+        gameDispatch({ 
+          type: "DETECTIVE_SET_SUBMITTED", 
+          payload: {
+            actionId: data.actionId,
+            setType: setType, 
+            stage: 'awaiting_player_selection',
+            cards: [detectiveToAdd, ...set.cards],
+            hasWildcard: checkForWildcard(set.cards),
+            allowedPlayers: data.nextAction.allowedPlayers || [],
+            secretsPool: data.nextAction.metadata?.secretsPool || [],
+        } });
+        gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+        setSelectedCards([]);
+        setHasPLayedSet(true);
+      },
+    });
   };
 
   const handleSelectSet = async (selectedSet) => {
-    if (!selectedSet) {
-      console.warn("No set selected");
-      return;
+    if (!selectedSet) { console.warn("No set selected"); return; }
+    // se selecciono un set para robar con another victim
+    const payload = {
+        originalOwnerId: selectedSet.owner_id,
+        setPosition: selectedSet.position,
     }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // POST to the Another Victim event endpoint
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/event/another-victim`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            originalOwnerId: selectedSet.owner_id,
-            setPosition: selectedSet.position,
-          }),
+    await startActionWithCounterCheck({
+      roomId: gameState.roomId,
+      userId: userState.id,
+      endpoint: "/event/another-victim",
+      payload,
+      setLoading,
+      setError,
+      gameDispatch,
+      successDispatch: (data) => {
+        if (!data.success || !data.transferredSet || !data.nextAction) {
+          throw new Error("Respuesta incompleta del servidor al transferir set");
+        }          
+        const cardsFromTransferredSet = data.transferredSet.cards.map(card => ({
+          id: card.cardId,
+          name: card.name || ''
+        }));
+        const setType = detectSetType(cardsFromTransferredSet);
+        if (!setType) {
+          console.error("Could not detect set type from transferred cards:", cardsFromTransferredSet);
+          throw new Error("Error al detectar el tipo de set transferido");
         }
-      );
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Backend error:", errorData);
-        throw new Error(getErrorMessage(response.status, errorData));
-      }
-      
-      const data = await response.json();
-      
-      if (!data.success || !data.transferredSet || !data.nextAction) {
-        throw new Error("Respuesta incompleta del servidor");
-      }
-      
-      const cardsFromTransferredSet = data.transferredSet.cards.map(card => ({
-        id: card.cardId,
-        name: card.name || ''
-      }));
-      
-      const setType = detectSetType(cardsFromTransferredSet);
-      
-      if (!setType) {
-        console.error("Could not detect set type from transferred cards:", cardsFromTransferredSet);
-        throw new Error("Error al detectar el tipo de set transferido");
-      }
-      
-      gameDispatch({
-        type: 'DETECTIVE_SET_SUBMITTED',
-        payload: {
-          actionId: data.actionId,  
-          setType: setType,
-          stage: 'awaiting_player_selection',
-          cards: cardsFromTransferredSet,
-          hasWildcard: data.nextAction.metadata?.hasWildcard || false,
-          allowedPlayers: data.nextAction.allowedPlayers || [],
-          secretsPool: data.nextAction.metadata?.secretsPool || [],
-          fromAnotherVictim: true,
-          transferredSetPosition: data.transferredSet.position,
-        },
-      });
-      
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-      
-      // Complete the Another Victim event
-      gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });
-      
-      setSelectedCards([]);
-      setHasPLayedEvent(true);
-    } catch (err) {
-      console.error("❌ Error playing Another Victim:", err);
-      setError(err.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
+        gameDispatch({
+          type: 'DETECTIVE_SET_SUBMITTED',
+          payload: {
+            actionId: data.actionId,  
+            setType: setType,
+            stage: 'awaiting_player_selection',
+            cards: cardsFromTransferredSet,
+            hasWildcard: data.nextAction.metadata?.hasWildcard || false,
+            allowedPlayers: data.nextAction.allowedPlayers || [],
+            secretsPool: data.nextAction.metadata?.secretsPool || [],
+            fromAnotherVictim: true,
+            transferredSetPosition: data.transferredSet.position,
+          },
+        });
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        }); 
+        gameDispatch({ type: 'EVENT_ANOTHER_VICTIM_COMPLETE' });
+        setSelectedCards([]);
+        setHasPLayedEvent(true);
+      },
+    });
   };
 
   //Handler de HideRevealStealSecrets
