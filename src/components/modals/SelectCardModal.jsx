@@ -6,15 +6,44 @@ export default function SelectCard({
   availableCards,
   onSelectCard,
 }) {
+  // ⚠️ ESTADO LOCAL del modal - NO usar selectedCards de GameScreen
   const [selectedCardId, setSelectedCardId] = useState(null)
 
   if (!isOpen) return null
 
   const handleConfirm = () => {
+    console.log("🎯 SelectCard: handleConfirm llamado")
+    console.log("selectedCardId:", selectedCardId)
+    
     if (selectedCardId) {
+      console.log("✅ Llamando onSelectCard con:", selectedCardId)
       onSelectCard(selectedCardId)
+      setSelectedCardId(null)
+    } else {
+      console.log("No hay carta seleccionada")
     }
   }
+
+  // Handler para seleccionar carta
+  const handleCardClick = (cardId) => {
+    console.log("arta clickeada:", cardId)
+    console.log("Antes selectedCardId:", selectedCardId)
+    
+    // Toggle: si la carta ya está seleccionada, deseleccionar
+    if (selectedCardId === cardId) {
+      setSelectedCardId(null)
+      console.log("Carta deseleccionada")
+    } else {
+      setSelectedCardId(cardId)
+      console.log("✅ Carta seleccionada:", cardId)
+    }
+  }
+
+  console.log("🔍 SelectCard render:", {
+    isOpen,
+    availableCards: availableCards?.length || 0,
+    selectedCardId
+  })
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
@@ -52,36 +81,46 @@ export default function SelectCard({
         </div>
 
         <div className="flex flex-row gap-8 justify-center mb-10">
-          {availableCards.map(card => {
-            const imgSrc = getCardsImage(card)
-            const isSelected = selectedCardId === card.entryId
+          {availableCards && availableCards.length > 0 ? (
+            availableCards.map(card => {
+              const imgSrc = getCardsImage(card)
+              const isSelected = selectedCardId === card.id
 
-            return (
-              <div
-                key={card.entryId}
-                className={
-                  `border-4 rounded-xl cursor-pointer transition-all duration-150 flex p-0 m-0 bg-[#3D0800] overflow-hidden` +
-                  (isSelected ? ' border-[#FFD700]' : ' border-[#825012]')
-                }
-                onClick={() => setSelectedCardId(card.entryId)}
-                style={{
-                  minWidth: 120,
-                  minHeight: 180,
-                  width: 120,
-                  height: 180,
-                }}
-              >
-                {imgSrc && (
-                  <img
-                    src={imgSrc}
-                    alt={card.name}
-                    className="w-full h-full object-cover"
-                    style={{ display: 'block', width: '100%', height: '100%' }}
-                  />
-                )}
-              </div>
-            )
-          })}
+              console.log(`Renderizando carta ${card.id}:`, {
+                isSelected,
+                selectedCardId,
+                cardId: card.id
+              })
+
+              return (
+                <div
+                  key={card.id}
+                  className={
+                    `border-4 rounded-xl cursor-pointer transition-all duration-150 flex p-0 m-0 bg-[#3D0800] overflow-hidden` +
+                    (isSelected ? ' border-[#FFD700]' : ' border-[#825012]')
+                  }
+                  onClick={() => handleCardClick(card.id)}
+                  style={{
+                    minWidth: 120,
+                    minHeight: 180,
+                    width: 120,
+                    height: 180,
+                  }}
+                >
+                  {imgSrc && (
+                    <img
+                      src={imgSrc}
+                      alt={card.name}
+                      className="w-full h-full object-cover"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    />
+                  )}
+                </div>
+              )
+            })
+          ) : (
+            <p className="text-white">No hay cartas disponibles</p>
+          )}
         </div>
 
         <div className="flex justify-center">
@@ -90,7 +129,7 @@ export default function SelectCard({
               `px-6 py-3 text-lg rounded-xl font-[Limelight] border-2 cursor-pointer` +
               (selectedCardId
                 ? ' bg-[#3D0800] text-[#FFD700] border-[#FFD700] hover:bg-[#4d1008] hover:text-yellow-400'
-                : ' bg-[#3D0800] text-[#B49150] border-[#825012]')
+                : ' bg-[#3D0800] text-[#B49150] border-[#825012] opacity-50 cursor-not-allowed')
             }
             onClick={handleConfirm}
             disabled={!selectedCardId}
