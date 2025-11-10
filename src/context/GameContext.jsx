@@ -8,6 +8,7 @@ import {
   useCallback,
 } from 'react'
 import io from 'socket.io-client'
+import { resumeAction, cancelEffect } from '../helpers/NFS'
 
 const GameContext = createContext()
 
@@ -53,8 +54,11 @@ const gameInitialState = {
     cancellable: null,
     timeRemaining: 0,
     originalActionData: {  // lo que se enviaría si se ejecuta
-      endpoint: "/api/game/{game_id}/play-<tipo>",
-      body: {}
+      endpoint: null,        // string "/event/..."
+      body: null,            // body: { ...payload }
+      requiresEndpoint: false,  
+      actionIdentifier: null,
+      actionPayload: null,
     },
     nsfChain: [],           // array de { playerId, cardId, timestamp }
     finalResolution: null,   // “continue” | “cancelled”
@@ -277,6 +281,7 @@ const gameInitialState = {
       // --------------------
 
       case 'SAVE_ACTION_DATA':
+        console.log("SAVE_ACTION_DATA TRIGERED")
         return {
           ...state,
           nsfCounter: {
@@ -284,7 +289,10 @@ const gameInitialState = {
             cardsIds: action.payload.cards,
             originalActionData:{
               endpoint: action.payload.endpoint,
-              body: action.payload.body
+              body: action.payload.body,
+              requiresEndpoint: action.payload.requiresEndpoint,  
+              actionIdentifier: action.payload.actionIdentifier,
+              actionPayload: action.payload.actionPayload,
             }
           }
         }
@@ -324,9 +332,6 @@ const gameInitialState = {
           nsfCounter: {
             ...state.nsfCounter,
             nsfActionId: action.payload.action_id,
-            initiatorPlayerId: action.payload.player_id,
-            actionType: action.payload.action_type,
-            actionName: action.payload.action_name,
             timeRemaining: action.payload.remaining_time,
           }
         }
@@ -336,22 +341,19 @@ const gameInitialState = {
           ...state,
           nsfCounter: {
             ...state.nsfCounter,
-            actionId: action.payload.action_id,
             nsfActionId: action.payload.nsf_action_id,
-            initiatorPlayerId: action.payload.player_id,
-            nsfChain: [ ...nsfChain, card_id],
+            nsfChain: [ ...state.nsfCounter.nsfChain, { playerId: action.payload.card_id, timestamp: action.payload.timestamp } ],
           }
         }
 
       case 'NSF_COUNTER_COMPLETE':
+        // Se termino la cadena de NSF entonces se retoma la accion
         return {
           ...state,
           nsfCounter: {
             ...state.nsfCounter,
             actionId: action.payload.action_id,
-            finalResolution: action.payload.final_result,
-            showNsfBanner: false,
-            active: false,
+            finalResolution: action.payload.final_result
           }
         }
 
@@ -1020,10 +1022,13 @@ const gameInitialState = {
 export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState)
   const socketRef = useRef(null)
+  const gameStateRef = useRef(gameState);
 
-  // Function to connect to socket
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   const connectToGame = useCallback((roomId, userId) => {
-    // Disconnect existing connection if any
     if (socketRef.current) {
       socketRef.current.disconnect()
       socketRef.current = null
@@ -1120,19 +1125,51 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('nsf_played', data => {
+      console.log("NSF_PLAYED", data)
       gameDispatch({
         type: 'NSF_PLAYED',
         payload: data,
       })
     })
 
-    socket.on('nsf_counter_complete', data => {
-      console.log('RECEIVED COUNTER COMPLETE: ',data);
+    socket.on('nsf_counter_complete', async data => {
+      console.log('RECEIVED COUNTER COMPLETE:', data);
+      
+      const currentState = gameStateRef.current;
+      
       gameDispatch({
         type: 'NSF_COUNTER_COMPLETE',
         payload: data,
-      })
-    })
+      });
+      
+      if (currentState.nsfCounter.initiatorPlayerId === currentState.userId) {
+        console.log("RESUMING ACTION");
+        
+        if (data.final_result === 'continue') {
+          const { endpoint, body, requiresEndpoint, actionIdentifier, actionPayload } = 
+            currentState.nsfCounter.originalActionData;
+          
+          console.log('RESUMING ACTION', requiresEndpoint ? endpoint : actionIdentifier);
+          
+          await resumeAction({
+            roomId: currentState.roomId,
+            userId: currentState.userId,
+            endpoint,
+            payload: body,
+            requiresEndpoint,
+            actionIdentifier,
+            actionPayload,
+            gameDispatch,
+          });
+        } else if (data.final_result === 'cancelled') {
+          await cancelEffect({
+            roomId: currentState.roomId,
+            userId: currentState.userId,
+            actionId: data.action_id,
+          });
+        }
+      }
+    });
 
     socket.on('cancelled_action_executed', data => {
       gameDispatch({
@@ -1265,6 +1302,8 @@ export const GameProvider = ({ children }) => {
       socketRef.current = null
       gameDispatch({ type: 'SOCKET_DISCONNECTED' })
     }
+    // Optional: Clear processed actions
+    processedNsfActions.current.clear()
   }, [gameState.roomId])
 
   return (

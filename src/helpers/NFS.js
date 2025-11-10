@@ -5,11 +5,13 @@ export const startActionWithCounterCheck = async ({
   roomId,
   userId,
   cardsIds,
-  actionType,           // "EVENT", "CREATE_SET", "ADD_TO_SET"
+  actionType,         // "EVENT", "CREATE_SET", "ADD_TO_SET"
   setPosition,
   endpoint,           // "/play-detective-set" o otro
-  payload,            // body del endpoint real 
-  successDispatch,    // callback para cuando es exitoso el post
+  payload,            // body del endpoint real: objeto
+  requiresEndpoint = true, 
+  actionIdentifier,
+  actionPayload,    // null if requires endpoint = true
   setLoading,
   setError,
   gameDispatch,
@@ -50,29 +52,33 @@ export const startActionWithCounterCheck = async ({
       throw new Error(data.detail || "Start Action Failed");
     }
 
-    // 2. No counter → run original action
+    // 2. No es cancelable entonces continuar con el efecto de la accion
     if (!data.cancellable) {
-      return await callOriginalEndpoint({
-        roomId,
-        userId,
-        endpoint,
-        payload,
-        successDispatch,
-      });
+      return await resumeAction({
+          roomId: roomId,
+          userId: userId,
+          endpoint,
+          payload,
+          requiresEndpoint,
+          actionIdentifier,
+          actionPayload,
+          gameDispatch,
+        });
     }
 
-    // 3. Counter window opened → store and wait
+    console.log("SAVING DATA " + requiresEndpoint ? endpoint : actionIdentifier );
+    // 3. Si es cancelable entonces guardar datos de la accion, y esperar la validacion e inicio de cadena de NSF para todos por wsocket
     gameDispatch({
         type: 'SAVE_ACTION_DATA', 
         payload: { 
-            cards: cardsIds,  // {cardsxgame.id}
+            cards: cardsIds,  //  [ ...{cardsxgame.id} ]
             endpoint: endpoint, 
-            body: payload,
+            body: payload,   
+            requiresEndpoint: requiresEndpoint,  
+            actionIdentifier: actionIdentifier,
+            actionPayload: actionPayload,
         }
     });
-
-    setError("Ventana de contra abierta – esperando respuestas…");
-    setTimeout(() => setError(null), 4000);
   } catch (err) {
     console.error("Counter check error:", err);
     setError(err.message);
@@ -81,13 +87,16 @@ export const startActionWithCounterCheck = async ({
   }
 };
 
+
 export const callOriginalEndpoint = async ({
   roomId,
   userId,
-  endpoint,
+  endpoint, // Endpoint que continua despues de la cadena de NFS
   payload,
-  successDispatch,
+  actionIdentifier,
+  gameDispatch,
 }) => {
+  console.log("CALLING ORIGINAL ENDPOITN " + endpoint)
   const resp = await fetch(
     `http://localhost:8000/api/game/${roomId}${endpoint}`,
     {
@@ -106,7 +115,46 @@ export const callOriginalEndpoint = async ({
     throw new Error(data.detail || "Action failed");
   }
 
-  if (successDispatch) successDispatch(data);
+  // Continua con el efecto de la carta/set
+  if (endpoint = "/look-into-ashes/play") {
+    gameDispatch({
+      type: actionIdentifier,
+      payload: { action_id: data.action_id, available_cards: data.available_cards } 
+    })
+  }
+
+  if (endpoint = "/play-detective-set") {
+    gameDispatch({
+          type: actionIdentifier,
+          payload: { 
+              actionId: data.actionId,
+              setType: setType, 
+              stage: 'awaiting_player_selection',
+              cards: cardsToUse,
+              hasWildcard: hasWildcard,
+              allowedPlayers: data.nextAction.allowedPlayers || [],
+              secretsPool: data.nextAction.metadata?.secretsPool || [],
+      }
+    });
+  }
+
+  if (endpoint = "/add-to-set") {
+    gameDispatch({ 
+          type: actionIdentifier, 
+          payload: {
+            actionId: data.actionId,
+            setType: setType, 
+            stage: 'awaiting_player_selection',
+            cards: [detectiveToAdd, ...set.cards],
+            hasWildcard: checkForWildcard(set.cards),
+            allowedPlayers: data.nextAction.allowedPlayers || [],
+            secretsPool: data.nextAction.metadata?.secretsPool || [],
+        } 
+    });
+  }
+
+  gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+
   return data;
 };
 
@@ -139,11 +187,84 @@ export const playNotSoFast = async (card, userId, roomId, actionId, setError) =>
         throw new Error(data.detail || "Action failed");
       }
 
-      console.log("NSF PLAYED RESPONSE, ", data);
-      
+      return response.ok;
     } catch (err) {
       setError(err.message);
     }
-
-    return true;
 }
+
+export const resumeAction = async ({
+  roomId,
+  userId,
+  endpoint,
+  payload,
+  requiresEndpoint,
+  actionIdentifier,
+  actionPayload,
+  gameDispatch,
+}) => {
+  console.log("RESUMING ACTION ", requiresEndpoint ? endpoint : actionIdentifier);
+  try {
+    if (requiresEndpoint) {
+      // Flow A: Call endpoint first, then dispatch with response data
+      const actionData = await callOriginalEndpoint({
+        roomId,
+        userId,
+        endpoint,
+        payload,
+        actionIdentifier,
+        gameDispatch
+      });
+      
+      return actionData;
+    } else {
+      // Flow B: Just dispatch to start selection flow (no endpoint needed)
+      gameDispatch({ 
+        type: actionIdentifier, 
+        payload: actionPayload 
+      });
+      gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+
+      return true;
+    }
+  } catch (error) {
+    console.error("Resume action error:", error);
+    throw error;
+  }
+};
+
+export const cancelEffect = async ({
+  roomId,
+  userId,
+  actionId,
+}) => {
+  console.log("CANCELING EFFECT " + {
+  roomId,
+  userId,
+  actionId,
+})
+  try {
+    const response = await fetch(
+      `http://localhost:8000/api/game/${roomId}/cancel-action`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "http-user-id": userId.toString(),
+        },
+        body: JSON.stringify({ action_id: actionId }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Cancel action failed");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Cancel effect error:", error);
+    throw error;
+  }
+};
