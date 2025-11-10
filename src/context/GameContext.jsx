@@ -634,6 +634,30 @@ const gameInitialState = {
           logs: action.payload.message ? [...state.logs, stepUpdateLog].slice(-50) : state.logs
         }
 
+      case 'EVENT_CARD_TRADE_UPDATE': {
+        console.log('[EVENT_CARD_TRADE_UPDATE]', action.payload);
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            actionInProgress: {
+              ...state.eventCards.actionInProgress,
+              ...action.payload,
+            },
+            logs: [
+              ...(state.eventCards.logs || []),
+              {
+                type: 'EVENT',
+                step: action.payload.step,
+                info: `Card Trade actualizado: ${action.payload.step}`,
+                timestamp: Date.now(),
+              },
+            ].slice(-50),
+          },
+        };
+      }
+
       case 'EVENT_CARDS_OFF_TABLE_START':
         const cardsOffTableLog = {
           id: `event-cards-off-${Date.now()}`,
@@ -1055,8 +1079,9 @@ export const GameProvider = ({ children }) => {
       console.log('WS: card_trade_select_own_card received', data)
 
       gameDispatch({
-        type: 'EVENT_STEP_UPDATE',
+        type: 'EVENT_CARD_TRADE_UPDATE',
         payload: {
+          eventType: 'card_trade',
           step: 'target_select_card',
           actionId: data.action_id,
           targetPlayerId: data.target_id,
@@ -1065,6 +1090,7 @@ export const GameProvider = ({ children }) => {
         }
       })
     })
+
 
     // Card Trade - Todos reciben notificación de intercambio completo
     socket.on('card_trade_complete', (data) => {
