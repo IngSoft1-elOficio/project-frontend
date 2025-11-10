@@ -19,6 +19,9 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
+import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
+import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
+import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
 
 
 export default function GameScreen() {
@@ -179,6 +182,83 @@ export default function GameScreen() {
 
       setLoading(false)
 
+
+    /*Delay the murderer's scape*/
+     } else if (selectedCards[0]?.name === "Delay the murderers escape!") {
+          console.log("Attempting to play delay the murderers escape")
+      
+      setLoading(true)
+      setError(null)
+
+      gameDispatch({
+        type: 'EVENT_DELAY_ESCAPE_PLAYED',
+        payload: { 
+          playerId: userState.id,
+          showQty: true,  
+          message: 'Delay the Murderer’s Escape jugada'
+        },
+        })
+
+ 
+      gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+        payload: { skipDiscard: true },
+      })
+        setHasPLayedEvent(true)
+        //setSelectedCards([]) no funciona
+        setLoading(false)
+
+    /*One more*/
+     } else if (selectedCards[0]?.name === "And then there was one more...") {
+      
+      setLoading(true)
+      setError(null)
+      const cardId = Number(selectedCards[0]?.id)
+
+      const requestBody = {
+        card_id: cardId
+      }
+
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/event/one-more`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP_USER_ID': userState.id.toString(), 
+            },
+            body: JSON.stringify(requestBody),
+          }
+        )
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Backend error response:", errorData)
+          console.error("Response status:", response.status)
+          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
+          throw new Error(getErrorMessage(response.status, errorData))
+        }
+        
+        const data = await response.json()
+        console.log("La data de onemore es: ", data)
+        gameDispatch({
+          type: 'EVENT_ONE_MORE_PLAYED',
+          payload: {
+            action_id: data.action_id,
+            available_secrets: data.available_secrets,
+          },
+        })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        });
+        
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
+        //setLoading(false)
+
     } else if(selectedCards[0]?.name === "Early train to paddington") {
       console.log("Attempting to play Early train to paddington")
 
@@ -199,6 +279,7 @@ export default function GameScreen() {
 
         const response = await fetch(
           `http://localhost:8000/api/game/${gameState.roomId}/early_train_to_paddington`,
+
           {
             method: 'POST',
             headers: {
@@ -216,13 +297,13 @@ export default function GameScreen() {
           console.error("Response headers:", Object.fromEntries(response.headers.entries()))
           throw new Error(getErrorMessage(response.status, errorData))
         }
-
         const data = await response.json()
         console.log('Early train to paddington played succesfully', data)
 
         gameDispatch({
           type: 'UPDATE_DRAW_ACTION',
           payload: { skipDiscard: true },
+
         })
 
         setSelectedCards([])
@@ -235,6 +316,7 @@ export default function GameScreen() {
         setLoading(false)
       }
       
+
     } else {
       setError("Esta carta aún no está implementada")
       setTimeout(() => setError(null), 3000)
@@ -389,7 +471,7 @@ export default function GameScreen() {
     const { current: detectiveAction } = gameState.detectiveAction;
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
-    
+
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
       setLoading(true);
@@ -997,6 +1079,147 @@ export default function GameScreen() {
     }
   }
 
+  /*Handler de delay murder escape*/ 
+  const handleConfirmDelayEscape = async (quantity) => {
+  try {
+    const cardId = selectedCards[0]?.id
+
+    const response = await fetch(
+      `http://localhost:8000/api/game/${gameState.roomId}/event/delay-murderer-escape`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP_USER_ID': userState.id.toString(),
+        },
+        body: JSON.stringify({
+          card_id: cardId,
+          quantity: quantity, 
+        }),
+      }
+    )
+
+    const data = await response.json()
+    console.log(' Delay escape completado:', data)
+
+    gameDispatch({
+      type: 'EVENT_DELAY_ESCAPE_COMPLETE',
+      payload: data,
+    })
+      
+      //    gameDispatch({
+      //  type: 'UPDATE_DRAW_ACTION',
+      //  payload: { skipDiscard: true },
+      //})
+
+
+  } catch (err) {
+    console.error('Error en delay escape:', err)
+    setError(err.message)
+  }
+}
+
+  /*Handler OneMoreSecret, hace el 2 post*/
+  const handleOneMoreSecret = async (selectedSecret) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const requestBody = {
+        action_id : gameState.eventCards.oneMore.actionId,
+        selected_secret_id: selectedSecret.id,  
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/one-more/select-secret`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "HTTP_USER_ID": userState.id.toString(),
+          },
+          body: JSON.stringify(requestBody),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+
+      gameDispatch({
+        type: "EVENT_ONE_MORE_SECRET_SELECTED",
+        payload: {
+          secret_id: selectedSecret.id,
+          allowed_players: data.allowed_players, 
+          message: data.message || 'Secreto seleccionado para One More',
+        },
+      })
+
+
+    } catch (err) {
+      console.error("Error selecting secret:", err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+    //handler seleccionar jugador de one more
+  const handleOneMoreSelectPlayer = async (jugadorId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const actionId = gameState.eventCards?.oneMore?.actionId;
+      const roomId = gameState.roomId;
+
+      if (!actionId || !jugadorId) {
+        throw new Error("Faltan datos: actionId o playerId no válidos");
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/event/one-more/select-player`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "HTTP_USER_ID": userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: actionId,
+            target_player_id: jugadorId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("One More select-player completado:", data);
+
+      gameDispatch({
+        type: "EVENT_ONE_MORE_COMPLETE",
+        payload: {
+          message: data.message || "One More completada",
+        },
+      });
+
+    } catch (err) {
+      console.error("Error en One More select-player:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -1322,7 +1545,7 @@ export default function GameScreen() {
       {/* Modal de seleccionar jugador */}
       { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || 
           gameState.detectiveAction?.showSelectPlayer ||
-          gameState.eventCards?.cardsOffTable?.showSelectPlayer ) && 
+          gameState.eventCards?.cardsOffTable?.showSelectPlayer) && 
         (<SelectPlayerModal
           onPlayerSelect={handlePlayerSelect}
         />)
@@ -1343,6 +1566,27 @@ export default function GameScreen() {
           isOpen={gameState.eventCards?.lookAshes?.showSelectCard}
           availableCards={gameState.eventCards.lookAshes.availableCards}
           onSelectCard={handleSelectCardFromAshes}
+        />
+      </div>
+
+      {/* Modal qty Delay the murderer's scape */}
+      <div>
+        <SelectQtyModal 
+          isOpen={gameState.eventCards?.delayEscape?.showQty}
+          onConfirm={handleConfirmDelayEscape}
+        />
+      </div>
+
+            {/* Modal secretos One more*/}
+      <div>
+        <OneMoreSecretsModal 
+          isOpen={gameState.eventCards?.oneMore?.showSecrets}
+          onConfirm={handleOneMoreSecret}
+        />
+
+        <SelectPlayerOneMoreModal 
+          isOpen={gameState.eventCards?.oneMore?.showPlayers}
+          onConfirm={handleOneMoreSelectPlayer}
         />
       </div>
 
