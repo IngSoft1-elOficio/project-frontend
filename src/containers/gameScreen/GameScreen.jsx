@@ -22,6 +22,7 @@ import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
 import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
+import SelectDirectionModal from '../../components/modals/SelectDirectionModal.jsx'
 
 
 export default function GameScreen() {
@@ -35,6 +36,7 @@ export default function GameScreen() {
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
+  const [selectedCardIdForEvent, setSelectedCardIdForEvent] = useState(null);
 
   const roomId = gameState?.roomId
 
@@ -47,7 +49,9 @@ export default function GameScreen() {
      gameState.eventCards.actionInProgress.step !== 'completed' &&
      gameState.eventCards.actionInProgress.playerId === userState.id)
   );
+  console.log("🎯 Estado inicial actionInProgress:", gameState.eventCards.actionInProgress);
 
+  console.log("🧭 Estado inicial de Dead Card Folly:", gameState.eventCards.deadCardFolly);
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
     .filter(set => set.owner_id === userState.id)
@@ -82,6 +86,7 @@ export default function GameScreen() {
 
   const handlePLayEventCard = async () => {
     console.log("Nombre de la carta seleccionada:", selectedCards[0]?.name);
+    
 
     if (hasPlayedEvent) return;
     
@@ -317,28 +322,71 @@ export default function GameScreen() {
         setLoading(false)
       }
       
-    /*DEAD CARD FOLLY */
+// ============================================
+    // DEAD CARD FOLLY
+    // ============================================
     } else if (selectedCards[0]?.name === "Dead card folly") {
-      console.log("Attempting to dcf")
-      //post nfs/start
-            
+      console.log("Attempting to play Dead Card Folly")
+
       setLoading(true)
       setError(null)
 
       try {
-        gameDispatch({
-          type: 'EVENT_DEAD_CARD_FOLLY_START',
-          payload: { playerId: userState.id, message: "Jugaste Dead Card Folly. Elegí una dirección."}})
+        const cardId = Number(selectedCards[0]?.id)
+        if (isNaN(cardId)) throw new Error("Invalid card ID")
+        
 
-        setSelectedCards([])
-        setHasPLayedEvent(true)
+        setSelectedCardIdForEvent(cardId);
+
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/start-action`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "HTTP_USER_ID": userState.id.toString(),
+            },
+            body: JSON.stringify({
+              playerId: userState.id,
+              cardIds: [cardId],
+              additionalData: {
+                actionType: "EVENT",
+                setPosition: null,
+              },
+            }),
+          }
+        )
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.detail || "Error starting Dead Card Folly")
+        }
+
+        const data = await response.json()
+        console.log("Dead Card Folly NSF validated:", data)
+
+        // Abre el modal con el cardId en el payload
+        gameDispatch({
+          type: "EVENT_DEAD_CARD_FOLLY_START",
+          payload: {
+            playerId: userState.id,
+            cardId: cardId,
+            message: "Jugaste Dead Card Folly. Elegí una dirección.",
+          },
+        })
+
+        // Limpiamos las cartas seleccionadas
+        setSelectedCards([]);
+        setHasPLayedEvent(true);
+        
       } catch (err) {
-        console.error("Error playing dead card folly", err)
+        console.error("Error playing Dead Card Folly:", err)
         setError(err.message)
         setTimeout(() => setError(null), 5000)
       } finally {
         setLoading(false)
       }
+
 
     } else {
       setError("Esta carta aún no está implementada")
@@ -1242,63 +1290,75 @@ export default function GameScreen() {
   };
 
   //--------HANDLERS DEAD CARD FOLLY-------------//
-    const handleDirection = async (direction) => {
-    try {
-      setLoading(true);
-      setError(null);
+const handleDirection = async (direction) => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const cardId = Number(selectedCards[0]?.id);
-      const playerId = userState.id;
-      const roomId = gameState.roomId;
-
-      if (isNaN(cardId)) throw new Error("Invalid card ID");
-
-      const response = await fetch(
-        `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "http-user-id": playerId.toString(),
-          },
-          body: JSON.stringify({
-            player_id: playerId,
-            card_id: cardId,
-            direction, // "LEFT" o "RIGHT"
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Error en backend:", errorData);
-        throw new Error(`Error jugando carta: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Dead Card Folly jugada con éxito:", data);
-
-      // 🔄 El backend emite WS: dead_card_folly_select_card
-      // pero igual podés reflejarlo inmediatamente en el contexto si querés:
-      gameDispatch({
-        type: "EVENT_DEAD_CARD_FOLLY_SELECT",
-        payload: {
-          action_id: data.action_id,
-          direction,
-          player_id: playerId,
-          message: `Elegiste dirección ${direction}`,
-        },
-      });
-
-    } catch (err) {
-      console.error("Error jugando Dead Card Folly:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    // 🔑 Usamos el cardId guardado en el estado cuando se jugó la carta
+    const cardId = selectedCardIdForEvent;
+    
+    // Validamos que tengamos un cardId válido
+    if (!cardId || isNaN(cardId)) {
+      throw new Error("No se encontró un card_id válido para Dead Card Folly");
     }
-  };
+    
+    const playerId = userState.id;
+    const roomId = gameState.roomId;
+    
+    console.log("📦 Enviando Dead Card Folly con dirección:", {
+      player_id: playerId,
+      card_id: cardId,
+      direction,
+    });
 
+    const response = await fetch(
+      `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "http-user-id": playerId.toString(),
+        },
+        body: JSON.stringify({
+          player_id: playerId,
+          card_id: cardId,
+          direction: direction.toUpperCase(), // "LEFT" o "RIGHT"
+        }),
+      }
+    );
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error en backend:", errorData);
+      throw new Error(errorData.detail || `Error jugando Dead Card Folly: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Dead Card Folly jugada con éxito:", data);
+
+    // Actualizamos el estado del juego con la respuesta
+    gameDispatch({
+      type: "EVENT_DEAD_CARD_FOLLY_SELECT",
+      payload: {
+        action_id: data.action_id,
+        direction,
+        player_id: playerId,
+        message: `Elegiste dirección ${direction}`,
+      },
+    });
+
+    // Limpiamos el cardId guardado después de usarlo exitosamente
+    setSelectedCardIdForEvent(null);
+
+  } catch (err) {
+    console.error("Error jugando Dead Card Folly:", err);
+    setError(err.message);
+    setTimeout(() => setError(null), 5000);
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   const getErrorMessage = (status, errorData) => {
