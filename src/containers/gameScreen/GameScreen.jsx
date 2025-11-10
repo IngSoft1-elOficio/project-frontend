@@ -71,8 +71,29 @@ export default function GameScreen() {
       return mappedSet
     })
 
+  //helper para verificar si un jugador esta en desgracia social
+  const isPlayerInDisgrace = (playerId) => {
+    return gameState.playersInSocialDisgrace.some(
+      player => player.player_id === playerId
+    );
+  };
+
+  //Helper para el jugador actual
+  const isCurrentPlayerInDisgrace = isPlayerInDisgrace(userState.id);
 
   const handleCardSelect = cardId => {
+    //si el jugador esta en desgracia social
+    if (isCurrentPlayerInDisgrace) {
+      const isAlreadySelected = selectedCards.some(card => card.id === cardId);
+      
+      //si ya hay una carta seleccionada y estas intentando seleccionar otra
+      if (selectedCards.length >= 1 && !isAlreadySelected) {
+        setError('Solo puedes seleccionar una carta en desgracia social');
+        setTimeout(() => setError(null), 3000);
+        return; // ← Bloquear seleccion
+      }
+    }
+    //si el jugador no esta en desgracia social
     setSelectedCards(prev => {
       const isSelected = prev.some(card => card.id === cardId)
       if (isSelected) {
@@ -1484,7 +1505,13 @@ const handleDirection = async (direction) => {
 
         {gameState.jugadores.map((player) => (
           
-          <TabPanel key={player.id} label={(player.name == userState.name ? "Yo" : player.name ) + " " + (player.is_host ? "👑" : "")}>
+          <TabPanel
+            key={player.id}
+            label={
+              (player.name == userState.name ? "Yo" : player.name ) +
+              " "
+              + (player.is_host ? "👑" : "") +
+              (isPlayerInDisgrace(player.player_id) ? "🚫" : "")}>
             {userState.id === player.player_id ? (
               <>
                 {/* Secretos */}
@@ -1659,11 +1686,11 @@ const handleDirection = async (direction) => {
           {/* Botones */}
           <div className="flex flex-col space-y-3">
             
-            {(selectedCards.length === 1 || !hasPlayedEvent ) && (
+            {((selectedCards.length === 1 && !isCurrentPlayerInDisgrace)|| !hasPlayedEvent ) && (
                 <ButtonGame
                   onClick={handlePLayEventCard}
                   disabled={
-                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded || isWaitingForOtherPlayer
+                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded || isWaitingForOtherPlayer || isCurrentPlayerInDisgrace
                   }
                 >
                   Jugar Carta
@@ -1677,9 +1704,10 @@ const handleDirection = async (direction) => {
                     selectedCards.length === 0 ||
                     loading || 
                     isWaitingForOtherPlayer ||
-                    gameState.drawAction.hasDiscarded
+                    gameState.drawAction.hasDiscarded ||
+                    (isCurrentPlayerInDisgrace && selectedCards.length !== 1)
                   }
-                >
+                > 
                   Descartar
                 </ButtonGame>
             )}
@@ -1718,6 +1746,7 @@ const handleDirection = async (direction) => {
         onAddToset={handleAddToSet}
         hasPlayedSet={hasPlayedSet}
         hasPlayedEvent={hasPlayedEvent}
+        isCurrentPlayerInDisgrace={isCurrentPlayerInDisgrace}
       />
 
       {gameState.eventCards?.anotherVictim?.showSelectSets && (

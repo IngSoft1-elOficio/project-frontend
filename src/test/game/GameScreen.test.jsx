@@ -191,6 +191,7 @@ describe('GameScreen Component', () => {
       secretos: [],
       sets: [],
       secretsFromAllPlayers: [],
+      playersInSocialDisgrace: [],
       mazos: {
         deck: { count: 10, draft: [] },
         discard: { top: 'card-top', count: 5 },
