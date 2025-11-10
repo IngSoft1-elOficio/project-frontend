@@ -547,13 +547,20 @@ const gameInitialState = {
         }
 
       case 'DETECTIVE_ACTION_COMPLETE':
+        console.log('🔴 DETECTIVE_ACTION_COMPLETE reducer called')
+        console.log('Full action object:', action)
+        console.log('Payload:', action.payload)
+        console.log('Message from payload:', action.payload?.message)
+        
         const detectiveCompleteLog = {
           id: `detective-complete-${Date.now()}`,
           message: action.payload?.message || 'Acción de detective completada',
           type: 'detective',
           timestamp: new Date().toISOString(),
         };
-
+        
+        console.log('Generated log:', detectiveCompleteLog)
+        
         return {
           ...state,
           detectiveAction: {
@@ -1007,7 +1014,20 @@ export const GameProvider = ({ children }) => {
 
     socket.on('detective_action_complete', data => {
       console.log('✅ Detective action complete:', data)
-      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
+      console.log('📦 Payload structure:', {
+        action: data?.action,
+        message: data?.message,
+        wildcard_used: data?.wildcard_used,
+        secret_data: data?.secret_data,
+        timestamp: data?.timestamp
+      })
+      console.log('💬 Message content:', data?.message)
+      console.log('🎴 Secret data:', data?.secret_data)
+      
+      gameDispatch({ 
+        type: 'DETECTIVE_ACTION_COMPLETE',
+        payload: data  // ✅ IMPORTANTE: Pasar el data como payload
+      })
     })
 
     // ------------------------
