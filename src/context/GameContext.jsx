@@ -91,15 +91,14 @@ const gameInitialState = {
       availableSecrets: [],
       allowedPlayers: [],
       selectedSecretId: null,
-      showSelectSecret: false,
-      showSelectPlayer: false,
+      showSecrets: false,
+      showPlayers: false,
     },
 
     // Delay The Murderer Escape
     delayEscape: {
       actionId: null,
-      availableCards: [],
-      showOrderCards: false,
+      showQty: false,
     },
 
     // Transparency for all events
@@ -812,7 +811,7 @@ const gameInitialState = {
               ...state.eventCards.oneMore,
               actionId: action.payload.action_id,
               availableSecrets: action.payload.available_secrets,
-              showSelectSecret: true,
+              showSecrets: true,
             },
           },
           logs: [...state.logs, oneMoreLog].slice(-50)
@@ -834,8 +833,8 @@ const gameInitialState = {
               ...state.eventCards.oneMore,
               selectedSecretId: action.payload.secret_id,
               allowedPlayers: action.payload.allowed_players,
-              showSelectSecret: false,
-              showSelectPlayer: true,
+              showSecrets: false,
+              showPlayers: true,
             },
           },
           logs: action.payload?.message ? [...state.logs, oneMoreSecretLog].slice(-50) : state.logs
@@ -858,8 +857,8 @@ const gameInitialState = {
               availableSecrets: [],
               allowedPlayers: [],
               selectedSecretId: null,
-              showSelectSecret: false,
-              showSelectPlayer: false,
+              showSecrets: false,
+              showPlayers: false,
             },
             actionInProgress: null,
           },
@@ -881,8 +880,7 @@ const gameInitialState = {
             ...state.eventCards,
             delayEscape: {
               actionId: action.payload.action_id,
-              availableCards: action.payload.available_cards,
-              showOrderCards: true,
+              showQty: true,
             },
           },
           logs: [...state.logs, delayEscapeLog].slice(-50)
@@ -902,8 +900,7 @@ const gameInitialState = {
             ...state.eventCards,
             delayEscape: {
               actionId: null,
-              availableCards: [],
-              showOrderCards: false,
+              showQty: false,
             },
             actionInProgress: null,
           },
