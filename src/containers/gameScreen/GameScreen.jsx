@@ -1469,6 +1469,7 @@ export default function GameScreen() {
             gameState.drawAction.skipDiscard && 
             !gameState.drawAction.hasDiscarded &&
             gameState.mano.length < 6 &&
+            !isCurrentPlayerInDisgrace &&
               `Podes descartar (opcional) o robar ${6 - gameState.mano.length} carta(s)`}
             
             {/* CASO 3: Jugo accion principal, repuso cartas sin descartar */}
@@ -1476,18 +1477,21 @@ export default function GameScreen() {
             gameState.drawAction.skipDiscard && 
             !gameState.drawAction.hasDiscarded &&
             gameState.mano.length === 6 &&
+            !isCurrentPlayerInDisgrace &&
               'Podes descartar (opcional) o finalizar turno'}
 
             {/* CASO 4: Turno normal (no jugo accion principal, no descarto) */}
             {!isWaitingForOtherPlayer && 
             !gameState.drawAction.skipDiscard && 
-            !gameState.drawAction.hasDiscarded && 
+            !gameState.drawAction.hasDiscarded &&
+            !isCurrentPlayerInDisgrace && 
               'Podes bajar un set, jugar una carta o descartar'}
             
             {/* CASO 5: Ya descarto, debe robar */}
             {!isWaitingForOtherPlayer && 
             gameState.drawAction.hasDiscarded &&
             !gameState.drawAction.hasDrawn &&
+            !isCurrentPlayerInDisgrace &&
               `Roba ${gameState.drawAction.cardsToDrawRemaining} carta(s)`}
             
             {/* CASO 6: Ya descarto y robo, puede finalizar */}
@@ -1495,6 +1499,20 @@ export default function GameScreen() {
             gameState.drawAction.hasDiscarded &&
             gameState.drawAction.hasDrawn &&
               'Podes finalizar turno'}
+
+            {/* CASO 7: Desgracia social, debe descartar */}
+            {!isWaitingForOtherPlayer &&
+            !gameState.drawAction.hasDiscarded &&
+            !gameState.drawAction.hasDrawn &&
+            isCurrentPlayerInDisgrace &&
+              'Debes descartar una carta'}
+
+            {/* CASO 8: Desgracia social, debe reponer */}
+            {!isWaitingForOtherPlayer &&
+            gameState.drawAction.hasDiscarded &&
+            !gameState.drawAction.hasDrawn &&
+            isCurrentPlayerInDisgrace &&
+              'Roba 1 carta'}
           </div>
 
           {/* Botones */}
