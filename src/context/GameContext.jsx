@@ -31,6 +31,7 @@ const gameInitialState = {
   mano: [],
   secretsFromAllPlayers: [],
   secretos: [],
+  playersInSocialDisgrace: [],
   gameEnded: false,
   gameCancelled: false,
   winners: [],
@@ -98,6 +99,14 @@ const gameInitialState = {
     delayEscape: {
       actionId: null,
       showQty: false,
+    },
+
+    //dead card folly
+    deadCardFolly:{
+      actionId: null,
+      showDirection: false,
+      isSelecting: false,
+      
     },
 
     // Transparency for all events
@@ -930,10 +939,151 @@ const gameInitialState = {
           logs: [...state.logs, delayCompleteLog].slice(-50)
         }
 
-      default:
-        return state
-    }
-  }
+
+      case 'EVENT_DEAD_CARD_FOLLY_START':
+      const deadCardFollyLog = {
+        id: `event-dead-card-folly-${Date.now()}`,
+        message: action.payload?.message || 'Dead Card Folly jugada',
+        type: 'event',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload?.playerId,
+      };
+
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          deadCardFolly: {
+            ...state.eventCards.deadCardFolly,
+            showDirection: true, 
+            isSelecting: false,
+            direction: null,
+          },
+          actionInProgress: {
+            playerId: action.payload?.playerId,
+            eventType: 'dead_card_folly',
+            step: 'select_direction',
+            message: 'Selecciona la dirección',
+          },
+        },
+        logs: [...state.logs, deadCardFollyLog].slice(-50)
+      };
+
+
+      case "EVENT_DEAD_CARD_FOLLY_SELECT": {
+        const follyLog = {
+          id: `folly-select-${Date.now()}`,
+          message: action.payload.message || 'Seleccionar carta para intercambiar',
+          type: "event",
+          timestamp: action.payload.timestamp || new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            deadCardFolly: {
+              ...state.eventCards.deadCardFolly,
+              showDirection: false,
+              isSelecting: true,
+              actionId: action.payload.action_id,
+              direction: action.payload.direction,
+            },
+            actionInProgress: {
+              playerId: action.payload.player_id,
+              eventType: "dead_card_folly",
+              step: "select_card",
+              message: action.payload.message,
+            },
+          },
+          logs: [...state.logs, follyLog].slice(-50),
+        };
+      }
+
+      case "EVENT_DEAD_CARD_FOLLY_COMPLETE": {
+        const follyLog = {
+          id: `folly-complete-${Date.now()}`,
+          message: action.payload.message,
+          type: "event",
+          timestamp: action.payload.timestamp || new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            deadCardFolly: {
+              ...state.eventCards.deadCardFolly,
+              isSelecting: false,
+              actionId: null,
+              direction: null,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, follyLog].slice(-50),
+        };
+      }
+             
+
+      // --------------------
+      // | DESGRACIA SOCIAL |
+      // --------------------
+
+      case 'SOCIAL_DISGRACE_UPDATE': {
+        const { players_in_disgrace, change } = action.payload;
+
+        let finalList = players_in_disgrace || [];
+
+        //Si la lista del backend viene vacia pero el 'change' dice que
+        //alguien entro, construimos la lista nosotros mismos.
+        if (finalList.length === 0 && change && change.action === 'entered') {
+          //Asumimos que la lista solo debe contener al jugador que acaba de entrar
+          finalList = [
+            {
+              player_id: change.player_id,
+              player_name: change.player_name,
+              avatar_src: change.avatar_src,
+              entered_at: new Date().toISOString() 
+            }
+          ];
+        }
+
+        let logMessage = null;
+        if (change) {
+          if (change.action === 'entered') {
+            logMessage = {
+              type: 'SOCIAL_DISGRACE',
+              message: `${change.player_name} ha entrado en desgracia social`,
+              timestamp: new Date().toISOString(),
+              playerId: change.player_id,
+              action: 'entered'
+            };
+          } else if (change.action === 'exited') {
+            logMessage = {
+              type: 'SOCIAL_DISGRACE',
+              message: `${change.player_name} ha salido de desgracia social`,
+              timestamp: new Date().toISOString(),
+              playerId: change.player_id,
+              action: 'exited'
+            };
+          }
+        }
+        
+        return {
+          ...state,
+          playersInSocialDisgrace: finalList, //lista corregida
+          logs: logMessage 
+            ? [...state.logs, logMessage].slice(-50)
+            : state.logs
+        };
+      }
+
+        default:
+          return state;
+
+    }}
+  
 
 export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState)
@@ -1046,7 +1196,7 @@ export const GameProvider = ({ children }) => {
 
     socket.on('detective_action_complete', data => {
       console.log('✅ Detective action complete:', data)
-      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE', payload: data })
     })
 
     // ------------------------
@@ -1104,6 +1254,26 @@ export const GameProvider = ({ children }) => {
         }
       })
     })
+    // ---------------------------
+    // | DEAD CARD FOLLY EVENTS |
+    // ---------------------------
+
+    socket.on("dead_card_folly_select_card", (data) => {
+      console.log("Dead Card Folly - selección iniciada:", data);
+      gameDispatch({
+        type: "EVENT_DEAD_CARD_FOLLY_SELECT",
+        payload: data,
+      });
+    });
+
+    socket.on("dead_card_folly_complete", (data) => {
+      console.log("Dead Card Folly - rotación completada:", data);
+      gameDispatch({
+        type: "EVENT_DEAD_CARD_FOLLY_COMPLETE",
+        payload: data,
+      });
+    });
+
 
     // ------------------------
     // | DRAW-DISCARD CARD LISTENERS |
@@ -1176,6 +1346,22 @@ export const GameProvider = ({ children }) => {
         payload: { timestamp: new Date().toISOString() },
       })
     })
+
+    // ------------------------------
+    // | DESGRACIA SOCIAL LISTENERS |
+    // ------------------------------
+    socket.on('social_disgrace_update', (data) => {
+      console.log('Actualizacion desgracia social:', data);
+      console.log('Players in disgrace:', data.players_in_disgrace);
+      
+      gameDispatch({
+        type: 'SOCIAL_DISGRACE_UPDATE',
+        payload: {
+          players_in_disgrace: data.players_in_disgrace,
+          change: data.change
+        }
+      });
+    });
   }, [])
 
   // Function to disconnect from socket

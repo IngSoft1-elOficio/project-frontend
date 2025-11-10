@@ -32,10 +32,31 @@ vi.mock('react-icons/fi', () => ({
 }))
 
 describe('PlayerSetsModal', () => {
+  // Mocks de funciones
   const mockOnClose = vi.fn()
   const mockOnCardSelect = vi.fn()
   const mockOnCreateSet = vi.fn()
+  const mockOnAddToset = vi.fn() // <-- NUEVO
 
+  // Mocks de datos
+  const mockSets = [
+    {
+      id: 1,
+      position: 1, // 'position' es importante para la lógica de selección
+      setName: 'Hercule Poirot',
+      setType: 'poirot',
+      cards: [
+        { id: 101, name: 'Poirot 1', img_src: '/cards/poirot.png' },
+        { id: 102, name: 'Poirot 2', img_src: '/cards/poirot.png' },
+      ],
+    },
+  ]
+
+  const mockSingleCard = [
+    { id: 201, name: 'Miss Marple', img_src: '/cards/marple.png' },
+  ]
+
+  // Props por defecto completas
   const defaultProps = {
     isOpen: true,
     onClose: mockOnClose,
@@ -43,6 +64,10 @@ describe('PlayerSetsModal', () => {
     selectedCards: [],
     onCardSelect: mockOnCardSelect,
     onCreateSet: mockOnCreateSet,
+    onAddToset: mockOnAddToset, // <-- NUEVO
+    hasPlayedSet: false, // <-- NUEVO
+    hasPlayedEvent: false, // <-- NUEVO
+    isCurrentPlayerInDisgrace: false, // <-- NUEVO
   }
 
   beforeEach(() => {
@@ -87,7 +112,8 @@ describe('PlayerSetsModal', () => {
   // ========== TESTS CON SETS ==========
 
   describe('Renderizado de sets', () => {
-    const mockSets = [
+    // Se usa un mock local para probar múltiples sets
+    const mockMultipleSets = [
       {
         id: 1,
         setName: 'Hercule Poirot',
@@ -122,7 +148,7 @@ describe('PlayerSetsModal', () => {
     ]
 
     it('renderiza múltiples sets correctamente', () => {
-      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+      render(<PlayerSetsModal {...defaultProps} sets={mockMultipleSets} />)
 
       expect(screen.getByText('Hercule Poirot')).toBeInTheDocument()
       // Miss Marple aparece 2 veces (setName + setType)
@@ -131,7 +157,7 @@ describe('PlayerSetsModal', () => {
     })
 
     it('renderiza el tipo de set usando getSetTypeName', () => {
-      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+      render(<PlayerSetsModal {...defaultProps} sets={mockMultipleSets} />)
 
       // Nota: hay dos textos "Miss Marple", uno es setName y otro es el tipo
       const poirotType = screen.getByText('Poirot')
@@ -139,14 +165,14 @@ describe('PlayerSetsModal', () => {
     })
 
     it('renderiza el badge "Jugado" para cada set', () => {
-      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+      render(<PlayerSetsModal {...defaultProps} sets={mockMultipleSets} />)
 
       const badges = screen.getAllByText('Jugado')
       expect(badges).toHaveLength(2)
     })
 
     it('renderiza las imágenes de las cartas correctamente', () => {
-      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+      render(<PlayerSetsModal {...defaultProps} sets={mockMultipleSets} />)
 
       const images = screen.getAllByRole('img')
       expect(images.length).toBeGreaterThan(0)
@@ -170,7 +196,7 @@ describe('PlayerSetsModal', () => {
     })
 
     it('usa setName como título del set', () => {
-      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+      render(<PlayerSetsModal {...defaultProps} sets={mockMultipleSets} />)
 
       expect(screen.getByText('Hercule Poirot')).toBeInTheDocument()
     })
@@ -242,7 +268,7 @@ describe('PlayerSetsModal', () => {
 
   // ========== TESTS DE INTERACCIÓN ==========
 
-  describe('Botones de acción', () => {
+  describe('Botones de acción (Original)', () => {
     it('llama a onClose cuando se clickea "Volver"', () => {
       render(<PlayerSetsModal {...defaultProps} />)
 
@@ -268,11 +294,180 @@ describe('PlayerSetsModal', () => {
       expect(crearSetButton).toBeDisabled()
     })
 
-    it('habilita "Crear Set" cuando hay cartas seleccionadas', () => {
-      render(<PlayerSetsModal {...defaultProps} selectedCards={[1, 2, 3]} />)
+    it('habilita "Crear Set" cuando hay 2 o más cartas seleccionadas', () => {
+      render(<PlayerSetsModal {...defaultProps} selectedCards={[1, 2]} />)
 
       const crearSetButton = screen.getByTestId('button-Crear Set')
       expect(crearSetButton).not.toBeDisabled()
+    })
+  })
+
+  // ========== (NUEVO) TESTS DE BOTÓN "CREAR SET" (COMPLETOS) ==========
+
+  describe('Botón "Crear Set" (Condiciones deshabilitado)', () => {
+    const twoCards = [
+      { id: 301, name: 'Card 1' },
+      { id: 302, name: 'Card 2' },
+    ]
+
+    it.each([
+      {
+        name: 'cuando hay menos de 2 cartas',
+        props: { selectedCards: [twoCards[0]] },
+      },
+      {
+        name: 'cuando ya se jugó un set',
+        props: { hasPlayedSet: true },
+      },
+      {
+        name: 'cuando ya se jugó un evento',
+        props: { hasPlayedEvent: true },
+      },
+      {
+        name: 'cuando el jugador está en desgracia',
+        props: { isCurrentPlayerInDisgrace: true },
+      },
+    ])('se deshabilita $name', ({ props }) => {
+      render(
+        <PlayerSetsModal
+          {...defaultProps}
+          selectedCards={props.selectedCards || twoCards} // Usa twoCards por defecto
+          {...props} // Sobrescribe con la condición deshabilitante
+        />
+      )
+
+      const createButton = screen.getByTestId('button-Crear Set')
+      expect(createButton).toBeDisabled()
+    })
+  })
+
+  // ========== (NUEVO) TESTS DE INTERACCIÓN - SELECCIONAR SET ==========
+
+  describe('Interacción con sets existentes', () => {
+    it('selecciona un set al hacer clic y muestra la info box', () => {
+      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+
+      // 1. Verificar que la info box del set no existe
+      expect(
+        screen.queryByText(/set seleccionado:/i)
+      ).not.toBeInTheDocument()
+
+      // 2. Hacer clic en el set (en el contenedor)
+      const setElement = screen.getByText('Hercule Poirot')
+      fireEvent.click(setElement.closest('div[class*="cursor-pointer"]')) // Clic en el div padre
+
+      // 3. Verificar que la info box aparece con los nombres de las cartas
+      const infoBox = screen.getByText(/set seleccionado:/i)
+      expect(infoBox).toBeInTheDocument()
+      expect(infoBox).toHaveTextContent('Poirot 1')
+      expect(infoBox).toHaveTextContent('Poirot 2')
+    })
+
+    it('deselecciona un set al hacer clic por segunda vez', () => {
+      render(<PlayerSetsModal {...defaultProps} sets={mockSets} />)
+
+      const setElementDiv = screen
+        .getByText('Hercule Poirot')
+        .closest('div[class*="cursor-pointer"]')
+
+      // 1. Hacer clic una vez para seleccionar
+      fireEvent.click(setElementDiv)
+
+      // 2. Verificar que está seleccionado
+      expect(screen.getByText(/set seleccionado:/i)).toBeInTheDocument()
+
+      // 3. Hacer clic una segunda vez para deseleccionar
+      fireEvent.click(setElementDiv)
+
+      // 4. Verificar que la info box desaparece
+      expect(
+        screen.queryByText(/set seleccionado:/i)
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  // ========== (NUEVO) TESTS DE BOTÓN "AGREGAR A SET" ==========
+
+  describe('Botón "Agregar a Set"', () => {
+    it('llama a onAddToset con los argumentos correctos (camino feliz)', () => {
+      render(
+        <PlayerSetsModal
+          {...defaultProps}
+          sets={mockSets}
+          selectedCards={mockSingleCard} // <-- 1 sola carta seleccionada
+        />
+      )
+
+      // 1. Seleccionar el set al que queremos agregar
+      fireEvent.click(
+        screen
+          .getByText('Hercule Poirot')
+          .closest('div[class*="cursor-pointer"]')
+      )
+
+      // 2. Buscar y hacer clic en el botón "Agregar a Set"
+      const addButton = screen.getByTestId('button-Agregar a Set')
+      expect(addButton).not.toBeDisabled()
+      fireEvent.click(addButton)
+
+      // 3. Verificar que el callback fue llamado correctamente
+      expect(mockOnAddToset).toHaveBeenCalledTimes(1)
+      expect(mockOnAddToset).toHaveBeenCalledWith(
+        mockSets[0], // El set seleccionado
+        mockSingleCard[0] // La carta seleccionada
+      )
+    })
+
+    // Usamos test.each para probar todos los casos "disabled"
+    it.each([
+      {
+        name: 'cuando no hay cartas seleccionadas',
+        props: { selectedCards: [] },
+      },
+      {
+        name: 'cuando hay más de 1 carta seleccionada',
+        props: { selectedCards: [mockSingleCard[0], mockSingleCard[0]] },
+      },
+      {
+        name: 'cuando no hay un set seleccionado',
+        props: { selectedCards: mockSingleCard },
+        // En este caso, no simulamos el clic en el set
+      },
+      {
+        name: 'cuando ya se jugó un set',
+        props: { selectedCards: mockSingleCard, hasPlayedSet: true },
+      },
+      {
+        name: 'cuando ya se jugó un evento',
+        props: { selectedCards: mockSingleCard, hasPlayedEvent: true },
+      },
+      {
+        name: 'cuando el jugador está en desgracia',
+        props: {
+          selectedCards: mockSingleCard,
+          isCurrentPlayerInDisgrace: true,
+        },
+      },
+    ])('se deshabilita $name', ({ name, props }) => {
+      render(
+        <PlayerSetsModal
+          {...defaultProps}
+          sets={mockSets}
+          {...props} // Sobrescribe las props para este caso
+        />
+      )
+
+      // Si el caso lo permite, seleccionamos un set para aislar la variable
+      if (name !== 'cuando no hay un set seleccionado') {
+        fireEvent.click(
+          screen
+            .getByText('Hercule Poirot')
+            .closest('div[class*="cursor-pointer"]')
+        )
+      }
+
+      const addButton = screen.getByTestId('button-Agregar a Set')
+      expect(addButton).toBeDisabled()
     })
   })
 

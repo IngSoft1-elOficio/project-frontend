@@ -23,7 +23,8 @@ import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
 import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
 import SelectCard from '../../components/modals/SelectCardModal.jsx'
-
+import SelectDirectionModal from '../../components/modals/SelectDirectionModal.jsx'
+import SelectCardForExchange from '../../components/modals/SelectCardForExchange.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -37,6 +38,7 @@ export default function GameScreen() {
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
   const [selectedCardTrade, setSelectedCardTrade] = useState(null)
+  const [selectedCardIdForEvent, setSelectedCardIdForEvent] = useState(null);
 
   const roomId = gameState?.roomId
   const action = gameState.eventCards?.actionInProgress;
@@ -51,7 +53,9 @@ export default function GameScreen() {
      gameState.eventCards.actionInProgress.step !== 'completed' &&
      gameState.eventCards.actionInProgress.playerId === userState.id)
   );
+  console.log("🎯 Estado inicial actionInProgress:", gameState.eventCards.actionInProgress);
 
+  console.log("🧭 Estado inicial de Dead Card Folly:", gameState.eventCards.deadCardFolly);
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
     .filter(set => set.owner_id === userState.id)
@@ -71,8 +75,29 @@ export default function GameScreen() {
       return mappedSet
     })
 
+  //helper para verificar si un jugador esta en desgracia social
+  const isPlayerInDisgrace = (playerId) => {
+    return gameState.playersInSocialDisgrace.some(
+      player => player.player_id === playerId
+    );
+  };
+
+  //Helper para el jugador actual
+  const isCurrentPlayerInDisgrace = isPlayerInDisgrace(userState.id);
 
   const handleCardSelect = cardId => {
+    //si el jugador esta en desgracia social
+    if (isCurrentPlayerInDisgrace) {
+      const isAlreadySelected = selectedCards.some(card => card.id === cardId);
+      
+      //si ya hay una carta seleccionada y estas intentando seleccionar otra
+      if (selectedCards.length >= 1 && !isAlreadySelected) {
+        setError('Solo puedes seleccionar una carta en desgracia social');
+        setTimeout(() => setError(null), 3000);
+        return; // ← Bloquear seleccion
+      }
+    }
+    //si el jugador no esta en desgracia social
     setSelectedCards(prev => {
       const isSelected = prev.some(card => card.id === cardId)
       if (isSelected) {
@@ -85,6 +110,8 @@ export default function GameScreen() {
   }
 
   const handlePLayEventCard = async () => {
+    console.log("Nombre de la carta seleccionada:", selectedCards[0]?.name);
+    
 
     if (hasPlayedEvent) return;
     
@@ -319,7 +346,9 @@ export default function GameScreen() {
       } finally {
         setLoading(false)
       }
-    } else if (selectedCards[0]?.name === "Card trade") {
+      
+
+      } else if (selectedCards[0]?.name === "Card trade") {
       console.log("Attempting to play Card Trade")
       
       setLoading(true)
@@ -354,6 +383,44 @@ export default function GameScreen() {
 
       } catch (err) {
         console.error("Error playing Card Trade:", err)
+        setError(err.message)
+        setTimeout(() => setError(null), 5000)
+      } finally {
+        setLoading(false)
+      }
+    } else if (selectedCards[0]?.name === "Dead card folly") {
+      console.log("Attempting to play Dead Card Folly")
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const cardId = Number(selectedCards[0]?.id)
+        if (isNaN(cardId)) throw new Error("Invalid card ID")
+        
+
+        setSelectedCardIdForEvent(cardId);
+
+        // Abre el modal con el cardId en el payload
+        gameDispatch({
+          type: "EVENT_DEAD_CARD_FOLLY_START",
+          payload: {
+            playerId: userState.id,
+            cardId: cardId,
+            message: "Jugaste Dead Card Folly. Elegí una dirección.",
+          },
+        })
+
+          gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        })
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
+        
+      } catch (err) {
+        console.error("Error playing Dead Card Folly:", err)
         setError(err.message)
         setTimeout(() => setError(null), 5000)
       } finally {
@@ -821,11 +888,8 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
 
     if (setType === 'pyne') {
-      const hasOtherPlayersWithRevealedSecrets = gameState.secretsFromAllPlayers?.some(
-        secret => secret.player_id !== userState.id && !secret.hidden
-      );
-      
-      if (!hasOtherPlayersWithRevealedSecrets) {
+      const hasRevealedSecret = gameState.secretsFromAllPlayers.some(s => !s.hidden);
+      if (!hasRevealedSecret) {
         setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
         setTimeout(() => setError(null), 3000);
         return;
@@ -1016,6 +1080,15 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     
     setLoading(true);
     setError(null);
+
+    if (selectedSet.setType === 'pyne') {
+      const hasRevealedSecret = gameState.secretsFromAllPlayers.some(s => !s.hidden);
+      if (!hasRevealedSecret) {
+        setError("Parker Pyne requiere que otros jugadores tengan secretos revelados");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+    }
     
     try {
       // POST to the Another Victim event endpoint
@@ -1103,7 +1176,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
 
       let body = {};
       
-      // Detectives de un solo paso (owner roba secreto)
       if (["marple", "pyne", "poirot"].includes(detectiveType)) {
         body = {
           actionId,
@@ -1138,8 +1210,10 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
         const errorData = await response.json();
         throw new Error(errorData?.detail || "Error al ejecutar acción");
       }
-      
+
       const data = await response.json();
+
+      console.log(`data: ${data}`)
       
     } catch (error) {
       console.error("Error al ejecutar acción de detective", error);
@@ -1384,6 +1458,12 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
         },
       });
 
+            gameDispatch({
+        type: 'UPDATE_DRAW_ACTION',
+       payload: { skipDiscard: true },
+      })
+
+
     } catch (err) {
       console.error("Error en One More select-player:", err);
       setError(err.message);
@@ -1391,6 +1471,138 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
       setLoading(false);
     }
   };
+
+  //--------HANDLERS DEAD CARD FOLLY-------------//
+const handleDirection = async (direction) => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const cardId = selectedCardIdForEvent;
+
+    if (!cardId || isNaN(cardId)) {
+      throw new Error("No se encontró un card_id válido para Dead Card Folly");
+    }
+    
+    const playerId = userState.id;
+    const roomId = gameState.roomId;
+
+    const response = await fetch(
+      `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "http-user-id": playerId.toString(),
+        },
+        body: JSON.stringify({
+          player_id: playerId,
+          card_id: cardId,
+          direction: direction.toUpperCase(), // "LEFT" o "RIGHT"
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error en backend:", errorData);
+      throw new Error(errorData.detail || `Error jugando Dead Card Folly: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    gameDispatch({
+      type: "EVENT_DEAD_CARD_FOLLY_SELECT",
+      payload: {
+        action_id: data.action_id,
+        direction,
+        player_id: playerId,
+        message: `You chose ${direction}`,
+      },
+    });
+
+
+    setSelectedCardIdForEvent(null);
+
+  } catch (err) {
+    console.error("Error jugando Dead Card Folly:", err);
+    setError(err.message);
+    setTimeout(() => setError(null), 5000);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleExchange = async (selectedCardId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const playerId = userState.id;
+      const roomId = gameState.roomId;
+      const actionId = gameState.eventCards?.deadCardFolly?.actionId;
+
+      if (!actionId || !selectedCardId || !playerId) {
+        throw new Error("Faltan datos para enviar la carta seleccionada");
+      }
+
+      console.log("Enviando carta seleccionada para Dead Card Folly:", {
+        action_id: actionId,
+        player_id: playerId,
+        card_id: selectedCardId,
+      });
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/select-card`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "http-user-id": playerId.toString(),
+          },
+          body: JSON.stringify({
+            action_id: actionId,
+            card_id: selectedCardId,
+            player_id: playerId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error enviando carta: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Dead Card Folly - respuesta:", data);
+
+      // Si el backend devuelve waiting=true, todavía faltan jugadores
+      if (data.waiting) {
+        console.log(`Waiting for ${data.pending_count} more players...`);
+        // Simplemente mostramos un mensaje temporal
+        setError(`Waiting for ${data.pending_count} more players...`);
+        setTimeout(() => setError(null), 4000);
+      } else {
+        // Si el intercambio se completó, despachamos el evento final
+        gameDispatch({
+          type: "EVENT_DEAD_CARD_FOLLY_COMPLETE",
+          payload: {
+            message: data.message || "Exchange completed successfully",
+          },
+        });
+      }
+
+    } catch (err) {
+      console.error(" Error enviando carta en Dead Card Folly:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
 
 
 
@@ -1482,7 +1694,13 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
 
         {gameState.jugadores.map((player) => (
           
-          <TabPanel key={player.id} label={(player.name == userState.name ? "Yo" : player.name ) + " " + (player.is_host ? "👑" : "")}>
+          <TabPanel
+            key={player.id}
+            label={
+              (player.name == userState.name ? "Yo" : player.name ) +
+              " "
+              + (player.is_host ? "👑" : "") +
+              (isPlayerInDisgrace(player.player_id) ? "🚫" : "")}>
             {userState.id === player.player_id ? (
               <>
                 {/* Secretos */}
@@ -1626,6 +1844,7 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
             gameState.drawAction.skipDiscard && 
             !gameState.drawAction.hasDiscarded &&
             gameState.mano.length < 6 &&
+            !isCurrentPlayerInDisgrace &&
               `Podes descartar (opcional) o robar ${6 - gameState.mano.length} carta(s)`}
             
             {/* CASO 3: Jugo accion principal, repuso cartas sin descartar */}
@@ -1633,18 +1852,21 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
             gameState.drawAction.skipDiscard && 
             !gameState.drawAction.hasDiscarded &&
             gameState.mano.length === 6 &&
+            !isCurrentPlayerInDisgrace &&
               'Podes descartar (opcional) o finalizar turno'}
 
             {/* CASO 4: Turno normal (no jugo accion principal, no descarto) */}
             {!isWaitingForOtherPlayer && 
             !gameState.drawAction.skipDiscard && 
-            !gameState.drawAction.hasDiscarded && 
+            !gameState.drawAction.hasDiscarded &&
+            !isCurrentPlayerInDisgrace && 
               'Podes bajar un set, jugar una carta o descartar'}
             
             {/* CASO 5: Ya descarto, debe robar */}
             {!isWaitingForOtherPlayer && 
             gameState.drawAction.hasDiscarded &&
             !gameState.drawAction.hasDrawn &&
+            !isCurrentPlayerInDisgrace &&
               `Roba ${gameState.drawAction.cardsToDrawRemaining} carta(s)`}
             
             {/* CASO 6: Ya descarto y robo, puede finalizar */}
@@ -1652,16 +1874,30 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
             gameState.drawAction.hasDiscarded &&
             gameState.drawAction.hasDrawn &&
               'Podes finalizar turno'}
+
+            {/* CASO 7: Desgracia social, debe descartar */}
+            {!isWaitingForOtherPlayer &&
+            !gameState.drawAction.hasDiscarded &&
+            !gameState.drawAction.hasDrawn &&
+            isCurrentPlayerInDisgrace &&
+              'Debes descartar una carta'}
+
+            {/* CASO 8: Desgracia social, debe reponer */}
+            {!isWaitingForOtherPlayer &&
+            gameState.drawAction.hasDiscarded &&
+            !gameState.drawAction.hasDrawn &&
+            isCurrentPlayerInDisgrace &&
+              'Roba 1 carta'}
           </div>
 
           {/* Botones */}
           <div className="flex flex-col space-y-3">
             
-            {(selectedCards.length === 1 || !hasPlayedEvent ) && (
+            {((selectedCards.length === 1 && !isCurrentPlayerInDisgrace)|| !hasPlayedEvent ) && (
                 <ButtonGame
                   onClick={handlePLayEventCard}
                   disabled={
-                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded || isWaitingForOtherPlayer
+                    loading || selectedCards.length !== 1 || hasPlayedEvent || hasPlayedSet || gameState.drawAction.hasDiscarded || isWaitingForOtherPlayer || isCurrentPlayerInDisgrace
                   }
                 >
                   Jugar Carta
@@ -1675,9 +1911,10 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
                     selectedCards.length === 0 ||
                     loading || 
                     isWaitingForOtherPlayer ||
-                    gameState.drawAction.hasDiscarded
+                    gameState.drawAction.hasDiscarded ||
+                    (isCurrentPlayerInDisgrace && selectedCards.length !== 1)
                   }
-                >
+                > 
                   Descartar
                 </ButtonGame>
             )}
@@ -1716,6 +1953,7 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
         onAddToset={handleAddToSet}
         hasPlayedSet={hasPlayedSet}
         hasPlayedEvent={hasPlayedEvent}
+        isCurrentPlayerInDisgrace={isCurrentPlayerInDisgrace}
       />
 
       {gameState.eventCards?.anotherVictim?.showSelectSets && (
@@ -1773,6 +2011,39 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
         <SelectPlayerOneMoreModal 
           isOpen={gameState.eventCards?.oneMore?.showPlayers}
           onConfirm={handleOneMoreSelectPlayer}
+        />
+      </div>
+
+      {/* Modales dead card folly*/}
+      <div>
+        <SelectDirectionModal 
+          isOpen={gameState.eventCards?.deadCardFolly?.showDirection}
+          onConfirm={handleDirection}
+        />
+      </div>
+
+      <div>
+        <SelectCardForExchange 
+        isOpen={gameState.eventCards?.deadCardFolly?.isSelecting}
+        hand={gameState.mano}
+        onConfirm={handleExchange}
+      />
+
+      </div>
+
+      {/* Modales dead card folly*/}
+      <div>
+        <SelectDirectionModal 
+          isOpen={gameState.eventCards?.deadCardFolly?.showDirection}
+          onConfirm={handleDirection}
+        />
+      </div>
+
+      <div>
+        <SelectCardForExchange 
+        isOpen={gameState.eventCards?.deadCardFolly?.isSelecting}
+        hand={gameState.mano}
+        onConfirm={handleExchange}
         />
       </div>
 
