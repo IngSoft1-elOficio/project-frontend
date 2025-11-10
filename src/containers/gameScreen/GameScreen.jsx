@@ -19,7 +19,8 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
-import { startActionWithCounterCheck } from '../../helpers/NFS.js'
+import { startActionWithCounterCheck, playNotSoFast } from '../../helpers/NFS.js'
+import NsfBanner from '../../components/game/NsfBanner.jsx'
 
 export default function GameScreen() {
   const { userState } = useUser()
@@ -31,9 +32,10 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
-  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
 
-  const roomId = gameState?.roomId
+  useEffect(() => {
+    console.log(gameState);
+  }, [gameState]);
 
   const isWaitingForOtherPlayer = 
   gameState.turnoActual === userState.id && 
@@ -64,7 +66,6 @@ export default function GameScreen() {
       return mappedSet
     })
 
-
   const handleCardSelect = cardId => {
     setSelectedCards(prev => {
       const isSelected = prev.some(card => card.id === cardId)
@@ -75,6 +76,36 @@ export default function GameScreen() {
         return [...prev, { id: cardId, name: card?.name || '' }]
       }
     })
+  }
+
+  const handlePlayNotSoFast = async () => {
+    console.log("HANDLER PLAY NOT SO FAST");
+    
+    // Validate selection
+    if (selectedCards.length !== 1) return;
+    
+    const card = selectedCards[0];
+    if (!card) return;
+    
+    // Check if it's a valid NSF card
+    if (card.name !== "Not so fast") return;
+    
+    // Check if counter window is active
+    if (!gameState.nsfCounter.active) return;
+    
+    // Play the NSF card
+    const playedNsfCounter = await playNotSoFast(
+      card, 
+      userState.id, 
+      gameState.roomId,
+      gameState.nsfCounter.actionId,
+      setError
+    );
+    
+    if (playedNsfCounter) {
+      // Clear selection after successful play
+      setSelectedCards([]);
+    }
   }
 
   const handlePLayEventCard = async () => {
@@ -90,6 +121,8 @@ export default function GameScreen() {
       await startActionWithCounterCheck({
         roomId: gameState.roomId,
         userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
         endpoint: "/look-into-ashes/play",
         payload,
         setError,
@@ -112,6 +145,8 @@ export default function GameScreen() {
       await startActionWithCounterCheck({
         roomId: gameState.roomId,
         userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
         endpoint: "/early_train_to_paddington",
         payload,
         setError,
@@ -327,6 +362,9 @@ export default function GameScreen() {
       await startActionWithCounterCheck({
         roomId: gameState.roomId,
         userId: userState.id,
+        cardsIds: selectedCards,
+        actionType: 'EVENT',
+        setPosition: null,
         endpoint: "/cards_off_the_table",
         payload,
         setError,
@@ -483,6 +521,9 @@ export default function GameScreen() {
     await startActionWithCounterCheck({
       roomId: gameState.roomId,
       userId: userState.id,
+      cardsIds: cardsToUse.map(c => c.id),
+      actionType: 'CREATE_SET',
+      setPosition: null,
       endpoint: "/play-detective-set",
       payload,
       setLoading,
@@ -566,6 +607,11 @@ export default function GameScreen() {
     };
 
     await playWithCounterCheck({
+      roomId: gameState.roomId,
+      userId: userState.id,
+      cardsIds: [detectiveToAdd.id],
+      actionType: 'CREATE_SET',
+      setPosition: set.position,
       endpoint: "/add-to-set",
       payload,
       successDispatch: (data) => {
@@ -594,9 +640,12 @@ export default function GameScreen() {
         originalOwnerId: selectedSet.owner_id,
         setPosition: selectedSet.position,
     }
+
     await startActionWithCounterCheck({
       roomId: gameState.roomId,
       userId: userState.id,
+      cardsIds: selectedSet.cards,
+      actionType: 'EVENT',
       endpoint: "/event/another-victim",
       payload,
       setLoading,
@@ -877,6 +926,9 @@ export default function GameScreen() {
           {error}
         </div>
       )}
+
+    {/* Nsf Banner */}
+    { gameState.nsfCounter.active && <NsfBanner handler={handlePlayNotSoFast} />}
 
     {/* MAIN CONTENT AREA (Tabs) */}
     <div className="relative flex-1 min-h-screen px-4 py-3">

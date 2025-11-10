@@ -4,6 +4,9 @@ import { useUser } from "../context/UserContext";
 export const startActionWithCounterCheck = async ({
   roomId,
   userId,
+  cardsIds,
+  actionType,           // "EVENT", "CREATE_SET", "ADD_TO_SET"
+  setPosition,
   endpoint,           // "/play-detective-set" o otro
   payload,            // body del endpoint real 
   successDispatch,    // callback para cuando es exitoso el post
@@ -20,29 +23,35 @@ export const startActionWithCounterCheck = async ({
 
   try {
     // 1. Check if counter window is needed
-    /*
-    const checkResp = await fetch(
-      `http://localhost:8000/api/game/${roomId}/counter/check`,
+    const request = {
+        playerId: userId, // ID del jugador que inicia la acción
+        cardIds: cardsIds, // Lista de IDs de cartas (cardsXgame.id) jugadas en la acción
+        additionalData: { // Datos adicionales de la acción
+            actionType: actionType, 
+            setPosition: setPosition ? setPosition : null, // Posición del set al que se agrega la carta (obligatorio si actionType=ADD_TO_SET)")
+        }
+    }
+
+    console.log(request);
+    const response = await fetch(
+      `http://localhost:8000/api/game/${roomId}/start-action`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "http-user-id": userId.toString(),
         },
-        body: JSON.stringify({
-          intended_action: endpoint.replace(/^\//, ""),
-          intended_payload: payload,
-        }),
+        body: JSON.stringify(request),
       }
     );
 
-    const checkData = await checkResp.json();
-    if (!checkResp.ok) {
-      throw new Error(checkData.detail || "Counter check failed");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Start Action Failed");
     }
-    */
+
     // 2. No counter → run original action
-    //if (!checkData.counter_window) {
+    if (!data.cancellable) {
       return await callOriginalEndpoint({
         roomId,
         userId,
@@ -50,22 +59,20 @@ export const startActionWithCounterCheck = async ({
         payload,
         successDispatch,
       });
-    //}
-    /*
+    }
+
     // 3. Counter window opened → store and wait
     gameDispatch({
-      type: "COUNTER_WINDOW_STARTED",
-      payload: {
-        actionId: checkData.action_id,
-        originalEndpoint: endpoint,
-        originalPayload: payload,
-        successDispatch,
-      },
+        type: 'SAVE_ACTION_DATA', 
+        payload: { 
+            cards: cardsIds,  // {cardsxgame.id}
+            endpoint: endpoint, 
+            body: payload,
+        }
     });
 
     setError("Ventana de contra abierta – esperando respuestas…");
     setTimeout(() => setError(null), 4000);
-    */
   } catch (err) {
     console.error("Counter check error:", err);
     setError(err.message);
@@ -74,9 +81,6 @@ export const startActionWithCounterCheck = async ({
   }
 };
 
-/**
- * Calls the *real* endpoint (same as before)
- */
 export const callOriginalEndpoint = async ({
   roomId,
   userId,
@@ -105,3 +109,41 @@ export const callOriginalEndpoint = async ({
   if (successDispatch) successDispatch(data);
   return data;
 };
+
+export const playNotSoFast = async (card, userId, roomId, actionId, setError) => {
+    console.log('CARD FOR NSF: ', card );
+    console.log('PLAYER WHO COUNTERS: ', userId)
+    console.log('ACTIONID ', actionId);
+
+    try {
+      const request = {
+        actionId: actionId,
+        playerId: userId,
+        cardId: card.id,
+      }
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/instant/not-so-fast`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "http-user-id": userId.toString(),
+          },
+          body: JSON.stringify(request),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Action failed");
+      }
+
+      console.log("NSF PLAYED RESPONSE, ", data);
+      
+    } catch (err) {
+      setError(err.message);
+    }
+
+    return true;
+}

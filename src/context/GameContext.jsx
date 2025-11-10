@@ -4,6 +4,7 @@ import {
   useContext,
   useReducer,
   useRef,
+  useEffect,
   useCallback,
 } from 'react'
 import io from 'socket.io-client'
@@ -44,12 +45,13 @@ const gameInitialState = {
   nsfCounter: {
     active: false,
     actionId: null,
+    nsfActionId: null,
     initiatorPlayerId: null,
     actionType: null,
     actionName: null,
-    cardIds: [],           // las cartas jugadas como intención
+    cardsIds: [],           // las cartas jugadas como intención
     cancellable: null,
-    timeRemaining: null,
+    timeRemaining: 0,
     originalActionData: {  // lo que se enviaría si se ejecuta
       endpoint: "/api/game/{game_id}/play-<tipo>",
       body: {}
@@ -274,9 +276,83 @@ const gameInitialState = {
       // | ACTION - COUNTER |
       // --------------------
 
+      case 'SAVE_ACTION_DATA':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            cardsIds: action.payload.cards,
+            originalActionData:{
+              endpoint: action.payload.endpoint,
+              body: action.payload.body
+            }
+          }
+        }
+      
       case 'VALID_ACTION':
         return {
           ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+              actionId: action.payload.action_id,
+              initiatorPlayerId: action.payload.player_id,
+              actionType: action.payload.action_type,
+              actionName: action.payload.action_name,
+              cancellable: action.payload.cancellable,
+          }
+        }
+      
+      case 'NSF_COUNTER_START':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            active: true,
+            actionId: action.payload.action_id,
+            nsfActionId: action.payload.nsf_action_id,
+            initiatorPlayerId: action.payload.player_id,
+            actionType: action.payload.action_type,
+            actionName: action.payload.action_name,
+            timeRemaining: action.payload.time_remaining,
+            showNsfBanner: true
+          }
+        }
+      
+      case 'NSF_COUNTER_TICK':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            nsfActionId: action.payload.action_id,
+            initiatorPlayerId: action.payload.player_id,
+            actionType: action.payload.action_type,
+            actionName: action.payload.action_name,
+            timeRemaining: action.payload.remaining_time,
+          }
+        }
+      
+      case 'NSF_PLAYED':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            actionId: action.payload.action_id,
+            nsfActionId: action.payload.nsf_action_id,
+            initiatorPlayerId: action.payload.player_id,
+            nsfChain: [ ...nsfChain, card_id],
+          }
+        }
+
+      case 'NSF_COUNTER_COMPLETE':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            actionId: action.payload.action_id,
+            finalResolution: action.payload.final_result,
+            showNsfBanner: false,
+            active: false,
+          }
         }
 
       // ---------------------
@@ -807,7 +883,7 @@ const gameInitialState = {
           logs: [...state.logs, delayCompleteLog].slice(-50)
         }
       
-        // ----------------------
+      // ----------------------
       // | CARDS DRAW-DISCARD |
       // ----------------------
       case 'PLAYER_MUST_DRAW':
@@ -953,8 +1029,6 @@ export const GameProvider = ({ children }) => {
       socketRef.current = null
     }
 
-    console.log('🔌 Connecting web-socket to roomId:', roomId)
-
     const socket = io('http://localhost:8000', {
       query: {
         room_id: roomId,
@@ -993,7 +1067,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('game_state_public', data => {
-      console.log('📡 Received game_state_public:', data)
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
         payload: data,
@@ -1001,9 +1074,7 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('game_state_private', data => {
-      console.log('📡 Received game_state_private:', data)
       gameDispatch({ type: 'UPDATE_GAME_STATE_PRIVATE', payload: data })
-      console.log('updated game state private')
     })
 
     socket.on('connect_error', error => {
@@ -1011,7 +1082,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('game_ended', data => {
-      console.log('🏁 Game finished:', data)
       gameDispatch({
         type: 'GAME_ENDED',
         payload: {
@@ -1022,12 +1092,60 @@ export const GameProvider = ({ children }) => {
       })
     })
 
+    // --------------------
+    // | ACTION LISTENERS |
+    // --------------------
+
+    socket.on('valid_action', data => {
+      console.log('RCEIVED VALID ACTION: ', data);
+      gameDispatch({
+        type: 'VALID_ACTION',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_start', data => {
+      console.log('RECEIVED START COUNTER WINDOW', data)
+      gameDispatch({
+        type: 'NSF_COUNTER_START',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_tick', data => {
+      gameDispatch({
+        type: 'NSF_COUNTER_TICK',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_played', data => {
+      gameDispatch({
+        type: 'NSF_PLAYED',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_complete', data => {
+      console.log('RECEIVED COUNTER COMPLETE: ',data);
+      gameDispatch({
+        type: 'NSF_COUNTER_COMPLETE',
+        payload: data,
+      })
+    })
+
+    socket.on('cancelled_action_executed', data => {
+      gameDispatch({
+        type: '',
+        payload: data,
+      })
+    })
+    
     // ------------------------------
     // | DETECTIVE ACTION LISTENERS |
     // ------------------------------
 
     socket.on('detective_action_started', data => {
-      console.log('Detective action started:', data)
       gameDispatch({
         type: 'DETECTIVE_ACTION_STARTED',
         payload: data,
@@ -1035,7 +1153,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('detective_target_selected', data => {
-      console.log('Detective target selected:', data)
       gameDispatch({
         type: 'DETECTIVE_TARGET_SELECTED',
         payload: data,
@@ -1043,7 +1160,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('select_own_secret', data => {
-      console.log('Must select own secret:', data)
       gameDispatch({
         type: 'DETECTIVE_INCOMING_REQUEST',
         payload: data,
@@ -1051,7 +1167,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('detective_action_complete', data => {
-      console.log('✅ Detective action complete:', data)
       gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
     })
 
@@ -1060,7 +1175,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('event_action_started', data => {
-      console.log('Event action started:', data)
       gameDispatch({
         type: 'EVENT_ACTION_STARTED',
         payload: data,
@@ -1068,7 +1182,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('event_step_update', data => {
-      console.log('Event step update:', data)
       gameDispatch({
         type: 'EVENT_STEP_UPDATE',
         payload: data,
@@ -1076,8 +1189,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('event_action_complete', data => {
-      console.log('✅ Event action complete:', data)
-      // Specific event completion handled by game_state_public
     })
 
     // ------------------------
@@ -1085,7 +1196,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('player_must_draw', data => {
-      console.log('Player must draw cards:', data)
       gameDispatch({
         type: 'PLAYER_MUST_DRAW',
         payload: data,
@@ -1093,7 +1203,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('card_drawn_simple', data => {
-      console.log('Card drawn:', data)
       gameDispatch({
         type: 'CARD_DRAWN_SIMPLE',
         payload: data,
@@ -1101,7 +1210,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('turn_finished', data => {
-      console.log('✅ Turn finished:', data)
       gameDispatch({ 
         type: 'FINISH_TURN',
         payload: data,
@@ -1114,10 +1222,8 @@ export const GameProvider = ({ children }) => {
 
     // Caso abandonar sala
     socket.on('player_left', data => {
-      console.log('Un Jugador abandono la sala:', data)
       if (data.player_id === userId) {
         // Yo abandono la sala
-        console.log('Abandonando sala')
         gameDispatch({
           type: 'PLAYER_REMOVED_FROM_LOBBY',
           payload: { timestamp: new Date().toISOString() },
@@ -1145,7 +1251,6 @@ export const GameProvider = ({ children }) => {
 
     // Caso cancelar partida
     socket.on('game_cancelled', data => {
-      console.log('Partida cancelada por el host:', data)
       gameDispatch({
         type: 'GAME_CANCELLED',
         payload: { timestamp: new Date().toISOString() },
@@ -1156,7 +1261,6 @@ export const GameProvider = ({ children }) => {
   // Function to disconnect from socket
   const disconnectFromGame = useCallback(() => {
     if (socketRef.current) {
-      console.log('🔌 Disconnecting from RoomId = ', gameState.roomId)
       socketRef.current.disconnect()
       socketRef.current = null
       gameDispatch({ type: 'SOCKET_DISCONNECTED' })
