@@ -2355,4 +2355,317 @@ describe('GameScreen Component', () => {
       })
     })
   })
+  describe('Turn state indicators with social disgrace', () => {
+    beforeEach(() => {
+      mockGameState.turnoActual = 1
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+    })
+  
+    it('shows "Esperando que un jugador complete su accion..." when waiting for other player', () => {
+      mockGameState.detectiveAction.current = {
+        actionId: 'action-123',
+        stage: 'awaiting_player_selection'
+      }
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Esperando que un jugador complete su accion/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 2: skip discard, not discarded, hand < 6, not in disgrace', () => {
+      mockGameState.drawAction = {
+        skipDiscard: true,
+        hasDiscarded: false,
+        hasDrawn: false,
+        cardsToDrawRemaining: 2
+      }
+      mockGameState.mano = [
+        { id: '1', name: 'Card 1' },
+        { id: '2', name: 'Card 2' },
+        { id: '3', name: 'Card 3' },
+        { id: '4', name: 'Card 4' }
+      ]
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Podes descartar \(opcional\) o robar 2 carta\(s\)/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 3: skip discard, not discarded, hand = 6, not in disgrace', () => {
+      mockGameState.drawAction = {
+        skipDiscard: true,
+        hasDiscarded: false,
+        hasDrawn: false,
+        cardsToDrawRemaining: 0
+      }
+      mockGameState.mano = [
+        { id: '1', name: 'Card 1' },
+        { id: '2', name: 'Card 2' },
+        { id: '3', name: 'Card 3' },
+        { id: '4', name: 'Card 4' },
+        { id: '5', name: 'Card 5' },
+        { id: '6', name: 'Card 6' }
+      ]
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Podes descartar \(opcional\) o finalizar turno/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 4: normal turn, no skip, not discarded, not in disgrace', () => {
+      mockGameState.drawAction = {
+        skipDiscard: false,
+        hasDiscarded: false,
+        hasDrawn: false,
+        cardsToDrawRemaining: 0
+      }
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Podes bajar un set, jugar una carta o descartar/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 5: already discarded, must draw, not in disgrace', () => {
+      mockGameState.drawAction = {
+        hasDiscarded: true,
+        hasDrawn: false,
+        cardsToDrawRemaining: 3,
+        skipDiscard: false
+      }
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Roba 3 carta\(s\)/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 6: already discarded and drawn, can finish turn', () => {
+      mockGameState.drawAction = {
+        hasDiscarded: true,
+        hasDrawn: true,
+        cardsToDrawRemaining: 0,
+        skipDiscard: false
+      }
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Podes finalizar turno/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 7: in disgrace, must discard', () => {
+      mockGameState.drawAction = {
+        hasDiscarded: false,
+        hasDrawn: false,
+        cardsToDrawRemaining: 0,
+        skipDiscard: false
+      }
+      mockGameState.playersInSocialDisgrace = [
+        { player_id: 1, player_name: 'TestPlayer' }
+      ]
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Debes descartar una carta/)).toBeInTheDocument()
+    })
+  
+    it('shows CASO 8: in disgrace, discarded, must draw 1 card', () => {
+      mockGameState.drawAction = {
+        hasDiscarded: true,
+        hasDrawn: false,
+        cardsToDrawRemaining: 1,
+        skipDiscard: false
+      }
+      mockGameState.playersInSocialDisgrace = [
+        { player_id: 1, player_name: 'TestPlayer' }
+      ]
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      expect(screen.getByText(/Roba 1 carta/)).toBeInTheDocument()
+    })
+  })
+  
+  describe('Social disgrace card selection restrictions', () => {
+    beforeEach(() => {
+      mockGameState.turnoActual = 1
+      mockGameState.playersInSocialDisgrace = [
+        { player_id: 1, player_name: 'TestPlayer' }
+      ]
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+    })
+  
+    it('allows selecting one card when in disgrace', () => {
+      render(<GameScreen />)
+  
+      fireEvent.click(screen.getByText('Select Card 1'))
+  
+      expect(screen.getByText(/Selected: card-1/)).toBeInTheDocument()
+    })
+  
+    it('blocks selecting a second card when in disgrace', () => {
+      render(<GameScreen />)
+  
+      fireEvent.click(screen.getByText('Select Card 1'))
+      fireEvent.click(screen.getByText('Select Card 2'))
+  
+      // Debería mostrar error y NO seleccionar la segunda carta
+      expect(screen.getByText(/Solo puedes seleccionar una carta en desgracia social/)).toBeInTheDocument()
+      expect(screen.getByText(/Selected: card-1/)).toBeInTheDocument()
+    })
+  
+    it('allows deselecting and selecting a different card when in disgrace', () => {
+      render(<GameScreen />)
+  
+      // Seleccionar primera carta
+      fireEvent.click(screen.getByText('Select Card 1'))
+      expect(screen.getByText(/Selected: card-1/)).toBeInTheDocument()
+  
+      // Deseleccionar
+      fireEvent.click(screen.getByText('Select Card 1'))
+      expect(screen.getByText(/Selected:$/)).toBeInTheDocument()
+  
+      // Seleccionar otra carta
+      fireEvent.click(screen.getByText('Select Card 2'))
+      expect(screen.getByText(/Selected: card-2/)).toBeInTheDocument()
+    })
+  
+    it('error message disappears after 3 seconds', async () => {
+      render(<GameScreen />)
+    
+      fireEvent.click(screen.getByText('Select Card 1'))
+      fireEvent.click(screen.getByText('Select Card 2'))
+    
+      // Error debería estar presente
+      expect(screen.getByText(/Solo puedes seleccionar una carta en desgracia social/)).toBeInTheDocument()
+    
+      // Esperar 3.1 segundos (un poco más que el timeout)
+      await new Promise(resolve => setTimeout(resolve, 3100))
+    
+      // El error debería haber desaparecido
+      expect(screen.queryByText(/Solo puedes seleccionar una carta en desgracia social/)).not.toBeInTheDocument()
+    }, 10000) // Timeout de 10 segundos para el test
+  })
+  
+  describe('Button states with social disgrace', () => {
+    beforeEach(() => {
+      mockGameState.turnoActual = 1
+      mockGameState.playersInSocialDisgrace = [
+        { player_id: 1, player_name: 'TestPlayer' }
+      ]
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+    })
+  
+    it('disables "Jugar Carta" when in disgrace', () => {
+      render(<GameScreen />)
+  
+      fireEvent.click(screen.getByText('Select Card 1'))
+  
+      const jugarCartaButton = screen.queryByTestId('button-jugar-carta')
+      
+      if (jugarCartaButton) {
+        expect(jugarCartaButton).toBeDisabled()
+      }
+    })
+  
+    it('enables "Descartar" with exactly 1 card selected when in disgrace', () => {
+      render(<GameScreen />)
+  
+      fireEvent.click(screen.getByText('Select Card 1'))
+  
+      const descartarButton = screen.getByTestId('button-descartar')
+      expect(descartarButton).not.toBeDisabled()
+    })
+  
+    it('disables "Descartar" with 0 cards selected when in disgrace', () => {
+      render(<GameScreen />)
+  
+      const descartarButton = screen.getByTestId('button-descartar')
+      expect(descartarButton).toBeDisabled()
+    })
+  
+    it('shows disgrace emoji (🚫) in player tab when in disgrace', () => {
+      render(<GameScreen />)
+  
+      // El emoji está en el label del TabPanel
+      // Verificar que el testid contiene el emoji
+      const tabPanel = screen.getByTestId(/tab-panel-Yo.*🚫/)
+      expect(tabPanel).toBeInTheDocument()
+    })
+  })
+  
+  describe('Other players in social disgrace', () => {
+    it('shows disgrace emoji for other player in disgrace', () => {
+      mockGameState.playersInSocialDisgrace = [
+        { player_id: 2, player_name: 'OtherPlayer' }
+      ]
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      // El emoji está en el label del TabPanel del otro jugador
+      const tabPanel = screen.getByTestId(/tab-panel-OtherPlayer.*🚫/)
+      expect(tabPanel).toBeInTheDocument()
+    })
+  
+    it('does not show disgrace emoji when no players in disgrace', () => {
+      mockGameState.playersInSocialDisgrace = []
+      useGame.mockReturnValue({
+        gameState: mockGameState,
+        gameDispatch: mockGameDispatch,
+      })
+  
+      render(<GameScreen />)
+  
+      // Verificar que NO hay emoji en los tabs
+      expect(screen.queryByTestId(/tab-panel-.*🚫/)).not.toBeInTheDocument()
+    })
+  })
 })
