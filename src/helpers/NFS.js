@@ -94,6 +94,7 @@ export const callOriginalEndpoint = async ({
   endpoint, // Endpoint que continua despues de la cadena de NFS
   payload,
   actionIdentifier,
+  actionPayload,
   gameDispatch,
 }) => {
   console.log("CALLING ORIGINAL ENDPOITN " + endpoint)
@@ -128,10 +129,10 @@ export const callOriginalEndpoint = async ({
           type: actionIdentifier,
           payload: { 
               actionId: data.actionId,
-              setType: setType, 
+              setType: actionPayload.setType, 
               stage: 'awaiting_player_selection',
-              cards: cardsToUse,
-              hasWildcard: hasWildcard,
+              cards: actionPayload.cardsToUse,
+              hasWildcard: actionPayload.hasWildcard,
               allowedPlayers: data.nextAction.allowedPlayers || [],
               secretsPool: data.nextAction.metadata?.secretsPool || [],
       }
@@ -143,9 +144,9 @@ export const callOriginalEndpoint = async ({
           type: actionIdentifier, 
           payload: {
             actionId: data.actionId,
-            setType: setType, 
+            setType: actionPayload.setType, 
             stage: 'awaiting_player_selection',
-            cards: [detectiveToAdd, ...set.cards],
+            cards: [actionPayload.detectiveToAdd, ...actionPayload.set.cards],
             hasWildcard: checkForWildcard(set.cards),
             allowedPlayers: data.nextAction.allowedPlayers || [],
             secretsPool: data.nextAction.metadata?.secretsPool || [],
@@ -213,6 +214,7 @@ export const resumeAction = async ({
         endpoint,
         payload,
         actionIdentifier,
+        actionPayload,
         gameDispatch
       });
       
@@ -237,22 +239,28 @@ export const cancelEffect = async ({
   roomId,
   userId,
   actionId,
+  cardsIds,
+  additionalData
 }) => {
-  console.log("CANCELING EFFECT " + {
-  roomId,
-  userId,
-  actionId,
-})
+  console.log("CANCELING EFFECT " + actionId)
   try {
+    const request = {
+      actionId: actionId,
+      playerId: userId, 
+      cardIds: cardsIds,
+      additionalData: additionalData,
+    }
+    console.log("request to cancel: " + request.additionalData);
+    
     const response = await fetch(
-      `http://localhost:8000/api/game/${roomId}/cancel-action`,
+      `http://localhost:8000/api/game/${roomId}/instant/not-so-fast/cancel`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "http-user-id": userId.toString(),
         },
-        body: JSON.stringify({ action_id: actionId }),
+        body: JSON.stringify(request),
       }
     );
 

@@ -561,7 +561,7 @@ export default function GameScreen() {
       gameDispatch,
       requiresEndpoint: true, 
       actionIdentifier: "DETECTIVE_SET_SUBMITTED",
-      actionPayload: null,
+      actionPayload: { setType, cardsToUse, hasWildcard},
     });
     setLoading(false);
     setSelectedCards([]);
@@ -637,7 +637,7 @@ export default function GameScreen() {
       gameDispatch,
       requiresEndpoint: true, 
       actionIdentifier: "DETECTIVE_SET_SUBMITTED",
-      actionPayload: null,
+      actionPayload: { setType, detectiveToAdd, set },
     });
     setLoading(flase);
     setSelectedCards([]);

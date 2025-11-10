@@ -353,7 +353,16 @@ const gameInitialState = {
           nsfCounter: {
             ...state.nsfCounter,
             actionId: action.payload.action_id,
-            finalResolution: action.payload.final_result
+            finalResolution: action.payload.final_result,
+            active: false,
+            showNsfBanner: false,
+            originalActionData: {
+              endpoint: null,
+              body: null,
+              actionIdentifier: null,
+              actionPayload: null,
+            },
+            nsfChain: []
           }
         }
 
@@ -1161,12 +1170,24 @@ export const GameProvider = ({ children }) => {
             actionPayload,
             gameDispatch,
           });
+
         } else if (data.final_result === 'cancelled') {
+          const { actionType } = currentState.nsfCounter;
+          const { body } = currentState.nsfCounter.originalActionData;
+          let additionalDataToCancel = { actionType: actionType }
+          
+          if (actionType == 'ADD_TO_SET') {
+              additionalDataToCancel = { actionType: actionType, player_target: currentState.userId, setPosition: body.setPosition }
+          }
           await cancelEffect({
             roomId: currentState.roomId,
             userId: currentState.userId,
             actionId: data.action_id,
+            cardsIds: currentState.nsfCounter.cardsIds,
+            additionalData: additionalDataToCancel
           });
+          gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+
         }
       }
     });
