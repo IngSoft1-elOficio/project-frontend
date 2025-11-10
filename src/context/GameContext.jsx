@@ -31,6 +31,7 @@ const gameInitialState = {
   mano: [],
   secretsFromAllPlayers: [],
   secretos: [],
+  playersInSocialDisgrace: [],
   gameEnded: false,
   gameCancelled: false,
   winners: [],
@@ -906,8 +907,61 @@ const gameInitialState = {
           logs: [...state.logs, delayCompleteLog].slice(-50)
         }
 
-      default:
-        return state
+      // --------------------
+      // | DESGRACIA SOCIAL |
+      // --------------------
+
+      case 'SOCIAL_DISGRACE_UPDATE': {
+        const { players_in_disgrace, change } = action.payload;
+
+        let finalList = players_in_disgrace || [];
+
+        //Si la lista del backend viene vacia pero el 'change' dice que
+        //alguien entro, construimos la lista nosotros mismos.
+        if (finalList.length === 0 && change && change.action === 'entered') {
+          //Asumimos que la lista solo debe contener al jugador que acaba de entrar
+          finalList = [
+            {
+              player_id: change.player_id,
+              player_name: change.player_name,
+              avatar_src: change.avatar_src,
+              entered_at: new Date().toISOString() 
+            }
+          ];
+        }
+
+        let logMessage = null;
+        if (change) {
+          if (change.action === 'entered') {
+            logMessage = {
+              type: 'SOCIAL_DISGRACE',
+              message: `${change.player_name} ha entrado en desgracia social`,
+              timestamp: new Date().toISOString(),
+              playerId: change.player_id,
+              action: 'entered'
+            };
+          } else if (change.action === 'exited') {
+            logMessage = {
+              type: 'SOCIAL_DISGRACE',
+              message: `${change.player_name} ha salido de desgracia social`,
+              timestamp: new Date().toISOString(),
+              playerId: change.player_id,
+              action: 'exited'
+            };
+          }
+        }
+        
+        return {
+          ...state,
+          playersInSocialDisgrace: finalList, //lista corregida
+          logs: logMessage 
+            ? [...state.logs, logMessage].slice(-50)
+            : state.logs
+        };
+      }
+
+        default:
+          return state;
     }
   }
 
@@ -1121,6 +1175,22 @@ export const GameProvider = ({ children }) => {
         payload: { timestamp: new Date().toISOString() },
       })
     })
+
+    // ------------------------------
+    // | DESGRACIA SOCIAL LISTENERS |
+    // ------------------------------
+    socket.on('social_disgrace_update', (data) => {
+      console.log('Actualizacion desgracia social:', data);
+      console.log('Players in disgrace:', data.players_in_disgrace);
+      
+      gameDispatch({
+        type: 'SOCIAL_DISGRACE_UPDATE',
+        payload: {
+          players_in_disgrace: data.players_in_disgrace,
+          change: data.change
+        }
+      });
+    });
   }, [])
 
   // Function to disconnect from socket
