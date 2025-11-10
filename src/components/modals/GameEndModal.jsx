@@ -16,7 +16,7 @@ export default function GameEndModal({ ganaste, winners, finish_reason }) {
     const roleMap = {
       murderer: 'Asesino',
       accomplice: 'Cómplice',
-      detective: 'Detective', //future use
+      detective: 'Detective',
     }
     return roleMap[role] || role
   }
@@ -27,6 +27,7 @@ export default function GameEndModal({ ganaste, winners, finish_reason }) {
       deck_empty: 'El asesino escapó - se terminó el mazo',
       murderer_caught: 'Los detectives atraparon al asesino',
       game_completed: 'La partida ha finalizado',
+      TOTAL_DISGRACE: '¡El asesino gana! Todos los detectives cayeron en desgracia social'
     }
     return reasonMap[finish_reason] || finish_reason
   }

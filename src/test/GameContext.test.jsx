@@ -950,7 +950,7 @@ describe('GameContext', () => {
             { id: 'secret-1', name: 'Secret 1' },
             { id: 'secret-2', name: 'Secret 2' },
           ],
-          showSelectSecret: true,
+          showSecrets: true,
         })
       )
     })
@@ -984,8 +984,8 @@ describe('GameContext', () => {
         expect.objectContaining({
           selectedSecretId: 'secret-1',
           allowedPlayers: ['user-1', 'user-2'],
-          showSelectSecret: false,
-          showSelectPlayer: true,
+          showSecrets: false,
+          showPlayers: true,
         })
       )
     })
@@ -1016,8 +1016,8 @@ describe('GameContext', () => {
         availableSecrets: [],
         allowedPlayers: [],
         selectedSecretId: null,
-        showSelectSecret: false,
-        showSelectPlayer: false,
+        showSecrets: false,
+        showPlayers: false,
       })
       expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
     })
@@ -1042,11 +1042,7 @@ describe('GameContext', () => {
 
       expect(result.current.gameState.eventCards.delayEscape).toEqual({
         actionId: 'action-789',
-        availableCards: [
-          { id: 'card-1', name: 'Card 1' },
-          { id: 'card-2', name: 'Card 2' },
-        ],
-        showOrderCards: true,
+        showQty: true,
       })
     })
 
@@ -1073,8 +1069,7 @@ describe('GameContext', () => {
 
       expect(result.current.gameState.eventCards.delayEscape).toEqual({
         actionId: null,
-        availableCards: [],
-        showOrderCards: false,
+        showQty: false,
       })
       expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
     })

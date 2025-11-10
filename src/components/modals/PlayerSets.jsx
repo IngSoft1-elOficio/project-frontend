@@ -13,6 +13,7 @@ const PlayerSetsModal = ({
   onAddToset,         //funcion → callback para agregar un detective a un set
   hasPlayedSet,       //bool → indica si este turno ya se jugo un set
   hasPlayedEvent,     //bool → insica si este turno ya se jugo una carta de evento
+  isCurrentPlayerInDisgrace, //bool -> indica si el jugador esta en desgracia social
 }) => {
   if (!isOpen) return null //no renderizar nada si el modal esta cerrado
 
@@ -174,7 +175,7 @@ const PlayerSetsModal = ({
             <ButtonGame onClick={onClose}>Volver</ButtonGame>
             <ButtonGame
               onClick={onCreateSet}
-              disabled={selectedCards.length < 2 || hasPlayedSet || hasPlayedEvent}
+              disabled={selectedCards.length < 2 || hasPlayedSet || hasPlayedEvent || isCurrentPlayerInDisgrace}
             >
               Crear Set
             </ButtonGame>
@@ -186,6 +187,7 @@ const PlayerSetsModal = ({
                 selectedCards.length === 0 || 
                 hasPlayedSet || 
                 hasPlayedEvent || 
+                isCurrentPlayerInDisgrace ||
                 !selectedSet?.position  
               }
             >

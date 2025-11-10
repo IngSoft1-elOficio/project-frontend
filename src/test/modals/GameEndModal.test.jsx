@@ -153,6 +153,23 @@ describe('GameEndModal', () => {
         screen.queryByText(/asesino|detective|finalizado/i)
       ).not.toBeInTheDocument()
     })
+
+    it('debe mostrar razón traducida para "TOTAL_DISGRACE"', () => {
+      renderWithProviders(
+        <GameEndModal
+          ganaste={false}
+          winners={[
+            { player_id: 1, name: 'Malo', role: 'murderer' },
+            { player_id: 2, name: 'Complice', role: 'accomplice' }
+          ]}
+          finish_reason="TOTAL_DISGRACE"
+        />
+      )
+  
+      expect(
+        screen.getByText('¡El asesino gana! Todos los detectives cayeron en desgracia social')
+      ).toBeInTheDocument()
+    })
   })
 
   describe('Lista de ganadores', () => {

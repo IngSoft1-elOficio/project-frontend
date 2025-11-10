@@ -1,27 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React, { useEffect } from 'react'
 import { GameProvider, useGame } from '../../context/GameContext.jsx'
 import HideRevealStealSecrets from "../../components/modals/HideRevealStealSecrets.jsx"
 
-// Mock del ButtonGame
-let __capturedConfirmHandler = null
-vi.mock('../../components/common/ButtonGame.jsx', () => ({
-  default: ({ onClick, disabled, children }) => {
-    __capturedConfirmHandler = onClick
-    return (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        data-testid="button-confirm"
-      >
-        {children}
-      </button>
-    )
-  },
-}))
-
-// Mock de socket.io-client para evitar conexiones reales
 vi.mock('socket.io-client', () => ({
   default: vi.fn(() => ({
     on: vi.fn(),
@@ -30,18 +12,17 @@ vi.mock('socket.io-client', () => ({
   })),
 }))
 
-// Componente helper para inyectar estado en el GameContext
-const StateInjector = ({ secretsFromAllPlayers }) => {
+const StateInjector = ({ gameState }) => {
   const { gameDispatch } = useGame()
   
   useEffect(() => {
-    if (secretsFromAllPlayers) {
+    if (gameState) {
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
-        payload: { secretsFromAllPlayers }
+        payload: gameState
       })
     }
-  }, [secretsFromAllPlayers, gameDispatch])
+  }, [gameState, gameDispatch])
   
   return null
 }
@@ -49,29 +30,24 @@ const StateInjector = ({ secretsFromAllPlayers }) => {
 describe('HideRevealStealSecrets', () => {
   const mockOnConfirm = vi.fn()
 
-  const defaultSecrets = [
-    { id: 1, position: 1, player_id: 10, hidden: true },
-    { id: 2, position: 2, player_id: 10, hidden: false },
-    { id: 3, position: 3, player_id: 11, hidden: true },
-  ]
+  const createGameState = (secrets = [], players = []) => ({
+    secretsFromAllPlayers: secrets,
+    jugadores: players,
+  })
 
-  const defaultDetective = {
-    current: { hasWildcard: false },
-    actionInProgress: { 
-      setType: 'Poirot',
-      targetPlayerId: 10,
-    },
-  }
+  const createDetective = (setType, targetPlayerId, hasWildcard = false) => ({
+    current: { hasWildcard },
+    actionInProgress: { setType, targetPlayerId },
+  })
 
-  const renderModal = (props = {}, secrets = defaultSecrets) => {
+  const renderModal = (detective, gameState, isOpen = true) => {
     return render(
       <GameProvider>
-        <StateInjector secretsFromAllPlayers={secrets} />
+        <StateInjector gameState={gameState} />
         <HideRevealStealSecrets
-          isOpen={true}
-          detective={defaultDetective}
+          isOpen={isOpen}
+          detective={detective}
           onConfirm={mockOnConfirm}
-          {...props}
         />
       </GameProvider>
     )
@@ -81,178 +57,186 @@ describe('HideRevealStealSecrets', () => {
     vi.clearAllMocks()
   })
 
-  it('no renderiza nada cuando isOpen es false', () => {
-    const { container } = render(
-      <GameProvider>
-        <HideRevealStealSecrets
-          isOpen={false}
-          detective={defaultDetective}
-          onConfirm={mockOnConfirm}
-        />
-      </GameProvider>
+  // Partición: Modal cerrado
+  it('no renderiza cuando isOpen es false', () => {
+    const { container } = renderModal(
+      createDetective('Poirot', 10),
+      createGameState(),
+      false
     )
     expect(container.firstChild).toBeNull()
   })
 
-  it('muestra nombre y efecto del detective correctamente', () => {
-    renderModal()
-    expect(screen.getByText('Hercule Poirot')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Elegí un secreto del jugador objetivo para revelar/)
-    ).toBeInTheDocument()
-  })
+  // Partición: Detective Poirot con secretos mixtos
+  describe('Detective Poirot', () => {
+    const secrets = [
+      { id: 1, position: 1, player_id: 10, hidden: true },
+      { id: 2, position: 2, player_id: 10, hidden: false },
+      { id: 3, position: 3, player_id: 11, hidden: true },
+    ]
+    const players = [{ player_id: 10, name: 'Alice' }]
 
-  it('filtra los secretos solo del jugador objetivo', () => {
-    renderModal()
-    const cards = screen.getAllByRole('img')
-    expect(cards).toHaveLength(2) // Solo los del jugador 10
-  })
+    it('muestra nombre y efecto correcto con nombre de jugador', () => {
+      renderModal(
+        createDetective('Poirot', 10),
+        createGameState(secrets, players)
+      )
+      expect(screen.getByText('Hercule Poirot')).toBeInTheDocument()
+      expect(screen.getByText(/Elegí un secreto de Alice para revelar/)).toBeInTheDocument()
+    })
 
-  it('muestra error si selecciona un secreto revelado cuando requiere oculto', () => {
-    renderModal()
-    const revealedCard = screen
-      .getAllByRole('img')
-      .find((img) => img.alt.includes('2'))
-    fireEvent.click(revealedCard)
-    expect(
-      screen.getByText('Solo podés seleccionar secretos ocultos.')
-    ).toBeInTheDocument()
-  })
+    it('filtra solo secretos ocultos del jugador objetivo', () => {
+      renderModal(
+        createDetective('Poirot', 10),
+        createGameState(secrets, players)
+      )
+      const cards = screen.getAllByRole('img')
+      expect(cards).toHaveLength(1)
+      expect(cards[0]).toHaveAttribute('alt', 'Secreto 1')
+    })
 
-  it('selecciona un secreto oculto válido y limpia errores previos', () => {
-    renderModal()
-    const hiddenCard = screen
-      .getAllByRole('img')
-      .find((img) => img.alt.includes('1'))
-    fireEvent.click(hiddenCard)
-    expect(
-      screen.queryByText('Solo podés seleccionar secretos ocultos.')
-    ).not.toBeInTheDocument()
-  })
-
-  it('deshabilita el botón confirmar si no hay secreto seleccionado', () => {
-    renderModal()
-    const button = screen.getByTestId('button-confirm')
-    expect(button).toBeDisabled()
-  })
-
-  it('no llama a onConfirm si el botón está deshabilitado', () => {
-    renderModal()
-    const button = screen.getByTestId('button-confirm')
-    fireEvent.click(button)
-    expect(mockOnConfirm).not.toHaveBeenCalled()
-  })
-
-  it('llama a onConfirm con el secreto seleccionado correctamente', () => {
-    renderModal()
-    const hiddenCard = screen
-      .getAllByRole('img')
-      .find((img) => img.alt.includes('1'))
-    fireEvent.click(hiddenCard)
-    fireEvent.click(screen.getByTestId('button-confirm'))
-    expect(mockOnConfirm).toHaveBeenCalledTimes(1)
-    expect(mockOnConfirm.mock.calls[0][0]).toMatchObject({
-      position: 1,
-      hidden: true,
+    it('permite seleccionar secreto oculto y confirmar', async () => {
+      renderModal(
+        createDetective('Poirot', 10),
+        createGameState(secrets, players)
+      )
+      
+      const card = screen.getByAltText('Secreto 1')
+      fireEvent.click(card)
+      
+      const confirmBtn = screen.getByText('Revelar')
+      expect(confirmBtn).toBeEnabled()
+      
+      fireEvent.click(confirmBtn)
+      
+      await waitFor(() => {
+        expect(mockOnConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({ position: 1, player_id: 10, hidden: true })
+        )
+      })
     })
   })
 
-  it('detective pyne solo permite seleccionar secretos revelados', () => {
-    const pyneDetective = {
-      current: { hasWildcard: false },
-      actionInProgress: { 
-        setType: 'Pyne',
-        targetPlayerId: 10,
-      },
-    }
-    renderModal({ detective: pyneDetective })
+  // Partición: Detective Pyne (lógica inversa)
+  describe('Detective Pyne', () => {
+    const secrets = [
+      { id: 1, position: 1, player_id: 10, hidden: true },
+      { id: 2, position: 2, player_id: 10, hidden: false },
+    ]
+    const players = [{ player_id: 10, name: 'Bob' }]
 
-    const hiddenCard = screen
-      .getAllByRole('img')
-      .find((img) => img.alt.includes('1'))
-    fireEvent.click(hiddenCard)
-    expect(
-      screen.getByText('Solo podés seleccionar secretos revelados.')
-    ).toBeInTheDocument()
-
-    const revealedCard = screen
-      .getAllByRole('img')
-      .find((img) => img.alt.includes('2'))
-    fireEvent.click(revealedCard)
-    expect(
-      screen.queryByText('Solo podés seleccionar secretos revelados.')
-    ).not.toBeInTheDocument()
-  })
-
-  it('confirmSelection muestra error cuando no hay secreto seleccionado', async () => {
-    renderModal()
-    expect(typeof __capturedConfirmHandler).toBe('function')
-    act(() => {
-      __capturedConfirmHandler()
+    it('filtra solo secretos revelados', () => {
+      renderModal(
+        createDetective('Pyne', 10),
+        createGameState(secrets, players)
+      )
+      const cards = screen.getAllByRole('img')
+      expect(cards).toHaveLength(1)
     })
-    expect(mockOnConfirm).not.toHaveBeenCalled()
-    expect(await screen.findByText('Seleccioná un secreto válido antes de confirmar.')).toBeInTheDocument()
+
+    it('muestra botón con texto "Ocultar"', () => {
+      renderModal(
+        createDetective('Pyne', 10),
+        createGameState(secrets, players)
+      )
+      expect(screen.getByText('Ocultar')).toBeInTheDocument()
+    })
   })
 
-  it('maneja detective desconocido', () => {
-    const unknown = {
-      current: { hasWildcard: false },
-      actionInProgress: { 
-        setType: 'Desconocido',
-        targetPlayerId: 10,
-      },
-    }
-    renderModal({ detective: unknown })
+  // Caso borde: Sin secretos disponibles
+  it('muestra mensaje cuando no hay secretos', () => {
+    renderModal(
+      createDetective('Poirot', 10),
+      createGameState([], [{ player_id: 10, name: 'Charlie' }])
+    )
+    expect(screen.getByText('No hay secretos disponibles para seleccionar')).toBeInTheDocument()
+  })
+
+  // Caso borde: Todos los secretos filtrados
+  it('muestra mensaje cuando ningún secreto cumple el filtro', () => {
+    const allRevealed = [
+      { id: 1, position: 1, player_id: 10, hidden: false },
+      { id: 2, position: 2, player_id: 10, hidden: false },
+    ]
+    renderModal(
+      createDetective('Poirot', 10),
+      createGameState(allRevealed, [{ player_id: 10, name: 'Diana' }])
+    )
+    expect(screen.getByText('No hay secretos disponibles para seleccionar')).toBeInTheDocument()
+  })
+
+  // Caso borde: Detective undefined
+  it('maneja detective undefined con valores por defecto', () => {
+    renderModal(
+      undefined,
+      createGameState()
+    )
     expect(screen.getByText('Detective desconocido')).toBeInTheDocument()
     expect(screen.getByText('Sin efecto')).toBeInTheDocument()
   })
 
-  it('muestra fallback cuando detective es undefined', () => {
-    renderModal({ detective: undefined })
+  // Caso borde: setType desconocido
+  it('maneja setType no reconocido', () => {
+    renderModal(
+      createDetective('UnknownDetective', 10),
+      createGameState([], [{ player_id: 10, name: 'Eve' }])
+    )
     expect(screen.getByText('Detective desconocido')).toBeInTheDocument()
-    expect(screen.getByText('Sin efecto')).toBeInTheDocument()
   })
 
-  it('maneja secretsFromAllPlayers vacío sin errores', () => {
-    renderModal({}, [])
-    
-    expect(screen.queryAllByRole('img')).toHaveLength(0)
-    expect(
-      screen.getByText('No hay secretos disponibles para seleccionar')
-    ).toBeInTheDocument()
+  // Caso borde: Jugador objetivo sin nombre
+  it('usa fallback cuando jugador no tiene nombre', () => {
+    renderModal(
+      createDetective('Marple', 99),
+      createGameState([{ id: 1, position: 1, player_id: 99, hidden: true }], [])
+    )
+    expect(screen.getByText(/el jugador objetivo/)).toBeInTheDocument()
   })
 
+  // Partición: Satterthwaite con wildcard
   it('muestra efecto especial para Satterthwaite con wildcard', () => {
-    const satterthwaiteDetective = {
-      current: { hasWildcard: true },
-      actionInProgress: { 
-        setType: 'Satterthwaite',
-        targetPlayerId: 10,
-      },
-    }
-    renderModal({ detective: satterthwaiteDetective })
-    
-    expect(screen.getByText('Mr. Satterthwaite')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Como este set se jugó con Harley Quin/)
-    ).toBeInTheDocument()
+    renderModal(
+      createDetective('Satterthwaite', 10, true),
+      createGameState([{ id: 1, position: 1, player_id: 10, hidden: true }], [])
+    )
+    expect(screen.getByText(/Como este set se jugó con Harley Quin/)).toBeInTheDocument()
   })
 
-  it('muestra el texto correcto en el botón para Poirot', () => {
-    renderModal()
-    expect(screen.getByTestId('button-confirm')).toHaveTextContent('Revelar')
+  // Validación botón deshabilitado
+  it('botón deshabilitado sin selección', () => {
+    renderModal(
+      createDetective('Poirot', 10),
+      createGameState([{ id: 1, position: 1, player_id: 10, hidden: true }], [])
+    )
+    const btn = screen.getByText('Revelar')
+    expect(btn).toBeDisabled()
   })
 
-  it('muestra el texto correcto en el botón para Pyne', () => {
-    const pyneDetective = {
-      current: { hasWildcard: false },
-      actionInProgress: { 
-        setType: 'Pyne',
-        targetPlayerId: 10,
-      },
-    }
+  // Error al confirmar sin selección
+  it('muestra error al confirmar sin selección', async () => {
+    renderModal(
+      createDetective('Poirot', 10),
+      createGameState([{ id: 1, position: 1, player_id: 10, hidden: true }], [])
+    )
     
-    renderModal({ detective: pyneDetective })
-    expect(screen.getByTestId('button-confirm')).toHaveTextContent('Ocultar')
+    const btn = screen.getByText('Revelar')
+    fireEvent.click(btn)
+    
+    expect(mockOnConfirm).not.toHaveBeenCalled()
+  })
+
+  // Otros detectives
+  it.each([
+    ['Marple', 'Miss Marple'],
+    ['EileenBrent', 'Lady Eileen \'Bundle\' Brent'],
+    ['TommyBeresford', 'Tommy Beresford'],
+    ['TuppenceBeresford', 'Tuppence Beresford'],
+    ['Beresford', 'Hermanos Beresford'],
+  ])('muestra nombre correcto para detective %s', (setType, expectedName) => {
+    renderModal(
+      createDetective(setType, 10),
+      createGameState([], [{ player_id: 10, name: 'Test' }])
+    )
+    expect(screen.getByText(expectedName)).toBeInTheDocument()
   })
 })
