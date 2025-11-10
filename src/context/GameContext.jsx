@@ -1050,6 +1050,35 @@ export const GameProvider = ({ children }) => {
       // Specific event completion handled by game_state_public
     })
 
+    // Card Trade - P2 recibe notificación para seleccionar carta
+    socket.on('card_trade_select_own_card', (data) => {
+      console.log('WS: card_trade_select_own_card received', data)
+
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: {
+          step: 'target_select_card',
+          actionId: data.action_id,
+          targetPlayerId: data.target_id,
+          requesterId: data.requester_id,
+          message: `${data.requester_name || 'Un jugador'} quiere intercambiar una carta contigo`
+        }
+      })
+    })
+
+    // Card Trade - Todos reciben notificación de intercambio completo
+    socket.on('card_trade_complete', (data) => {
+      console.log('WS: card_trade_complete received', data)
+      
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: {
+          step: 'completed',
+          message: data.message || 'Intercambio de cartas completado'
+        }
+      })
+    })
+
     // ------------------------
     // | DRAW-DISCARD CARD LISTENERS |
     // ------------------------

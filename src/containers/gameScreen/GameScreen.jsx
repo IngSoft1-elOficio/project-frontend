@@ -22,6 +22,7 @@ import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
 import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
 import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
+import SelectCard from '../../components/modals/SelectCardModal.jsx'
 
 
 export default function GameScreen() {
@@ -35,6 +36,7 @@ export default function GameScreen() {
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
   const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
+  const [selectedCardTrade, setSelectedCardTrade] = useState(null)
 
   const roomId = gameState?.roomId
 
@@ -195,7 +197,7 @@ export default function GameScreen() {
         payload: { 
           playerId: userState.id,
           showQty: true,  
-          message: 'Delay the Murderer’s Escape jugada'
+          message: 'Delay the Murderers Escape jugada'
         },
         })
 
@@ -316,6 +318,77 @@ export default function GameScreen() {
         setLoading(false)
       }
       
+    // ============================================
+    // 🆕 CARD TRADE - AGREGADO AQUÍ
+    // ============================================
+    } else if (selectedCards[0]?.name === "Card trade") {
+      console.log("Attempting to play Card Trade")
+      
+      setLoading(true)
+      setError(null)
+
+      try {
+        const cardId = Number(selectedCards[0]?.id)
+        
+        if (isNaN(cardId)) {
+          throw new Error("Invalid card ID")
+        }
+
+        // Validar que es carta NSF antes de proceder
+        const response = await fetch(
+          `http://localhost:8000/api/game/${gameState.roomId}/start-action`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP_USER_ID': userState.id.toString(),
+            },
+            body: JSON.stringify({
+              playerId: userState.id,
+              cardIds: [cardId],
+              additionalData: {
+                actionType: "EVENT",
+                setPosition: null
+              }
+            }),
+          }
+        )
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(getErrorMessage(response.status, errorData))
+        }
+
+        const data = await response.json()
+        console.log("Card Trade NSF validated:", data)
+
+        // Iniciar el flujo de Card Trade usando el action existente
+        gameDispatch({
+          type: 'EVENT_ACTION_STARTED',
+          payload: { 
+            player_id: userState.id,
+            event_type: 'card_trade',
+            card_name: 'Card trade',
+            step: 'select_player',
+            message: 'Selecciona un jugador para intercambiar cartas'
+          },
+        })
+
+        gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        })
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
+
+      } catch (err) {
+        console.error("Error playing Card Trade:", err)
+        setError(err.message)
+        setTimeout(() => setError(null), 5000)
+      } finally {
+        setLoading(false)
+      }
 
     } else {
       setError("Esta carta aún no está implementada")
@@ -463,6 +536,126 @@ export default function GameScreen() {
     }
   }
 
+  // Handler cuando P1 selecciona su carta propia para intercambiar
+  const handleSelectOwnCardForTrade = async (selectedCardId) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { actionInProgress } = gameState.eventCards
+      
+      if (!actionInProgress || actionInProgress.eventType !== 'card_trade') {
+        throw new Error("No hay una acción de Card Trade en progreso")
+      }
+
+      // Obtener el targetPlayerId del step_update que debería haber llegado
+      const targetPlayerId = actionInProgress.targetPlayerId
+      
+      if (!targetPlayerId) {
+        throw new Error("No se ha seleccionado un jugador objetivo")
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/card-trade/play`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP_USER_ID': userState.id.toString(),
+          },
+          body: JSON.stringify({
+            own_card_id: selectedCardId,
+            target_player_id: targetPlayerId
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Backend error:", errorData)
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log("Card Trade initiated successfully:", data)
+
+      // Actualizar el step usando el action existente
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: {
+          step: 'waiting_target',
+          message: `Esperando que ${gameState.jugadores.find(p => p.player_id === targetPlayerId)?.name} seleccione su carta...`
+        }
+      })
+
+    } catch (err) {
+      console.error("Error selecting own card for trade:", err)
+      setError(err.message)
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handler cuando P2 selecciona su carta para completar el intercambio
+  const handleSelectTargetCardForTrade = async (selectedCardId) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { actionInProgress } = gameState.eventCards
+      
+      if (!actionInProgress || actionInProgress.eventType !== 'card_trade') {
+        throw new Error("No hay una acción de Card Trade en progreso")
+      }
+
+      const actionId = actionInProgress.actionId
+      
+      if (!actionId) {
+        throw new Error("No action ID found")
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/card-trade/complete`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP_USER_ID': userState.id.toString(),
+          },
+          body: JSON.stringify({
+            action_id: actionId,
+            own_card_id: selectedCardId
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Backend error:", errorData)
+        throw new Error(getErrorMessage(response.status, errorData))
+      }
+
+      const data = await response.json()
+      console.log("Card Trade completed successfully:", data)
+
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: {
+          step: 'completed',
+          message: 'Intercambio de cartas completado'
+        }
+      })
+
+    } catch (err) {
+      console.error("Error completing card trade:", err)
+      setError(err.message)
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handlePlayerSelect = async (jugadorId) => {
     
     const { actionInProgress } = gameState.eventCards;
@@ -471,6 +664,19 @@ export default function GameScreen() {
     const { current: detectiveAction } = gameState.detectiveAction;
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
+
+    if (currentEventType === 'card_trade' && actionInProgress.step === 'select_player') {
+      // Guardar el jugador objetivo y cambiar al siguiente paso
+      gameDispatch({
+        type: 'EVENT_STEP_UPDATE',
+        payload: {
+          step: 'select_own_card',
+          targetPlayerId: jugadorId,
+          message: 'Selecciona la carta que quieres intercambiar'
+        }
+      })
+      return
+    }
 
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
@@ -1106,12 +1312,6 @@ export default function GameScreen() {
       type: 'EVENT_DELAY_ESCAPE_COMPLETE',
       payload: data,
     })
-      
-      //    gameDispatch({
-      //  type: 'UPDATE_DRAW_ACTION',
-      //  payload: { skipDiscard: true },
-      //})
-
 
   } catch (err) {
     console.error('Error en delay escape:', err)
@@ -1270,6 +1470,16 @@ export default function GameScreen() {
   const currentPlayerIndex = gameState.jugadores.findIndex(
     player => player.player_id === userState.id
   );
+
+  const shouldShowSelectOwnCard = 
+    gameState.eventCards?.actionInProgress?.eventType === 'card_trade' &&
+    gameState.eventCards?.actionInProgress?.step === 'select_own_card' &&
+    gameState.eventCards?.actionInProgress?.playerId === userState.id
+
+  const shouldShowSelectTargetCard = 
+    gameState.eventCards?.actionInProgress?.eventType === 'card_trade' &&
+    gameState.eventCards?.actionInProgress?.step === 'target_select_card' &&
+    gameState.eventCards?.actionInProgress?.targetPlayerId === userState.id
 
   return (
     <main
@@ -1545,7 +1755,9 @@ export default function GameScreen() {
       {/* Modal de seleccionar jugador */}
       { ( gameState.eventCards?.anotherVictim?.showSelectPlayer || 
           gameState.detectiveAction?.showSelectPlayer ||
-          gameState.eventCards?.cardsOffTable?.showSelectPlayer) && 
+          gameState.eventCards?.cardsOffTable?.showSelectPlayer ||
+          (gameState.eventCards?.actionInProgress?.eventType === 'card_trade' && 
+           gameState.eventCards?.actionInProgress?.step === 'select_player')) && 
         (<SelectPlayerModal
           onPlayerSelect={handlePlayerSelect}
         />)
@@ -1577,7 +1789,7 @@ export default function GameScreen() {
         />
       </div>
 
-            {/* Modal secretos One more*/}
+      {/* Modal secretos One more*/}
       <div>
         <OneMoreSecretsModal 
           isOpen={gameState.eventCards?.oneMore?.showSecrets}
@@ -1589,6 +1801,26 @@ export default function GameScreen() {
           onConfirm={handleOneMoreSelectPlayer}
         />
       </div>
+
+      {/* Modals de card trade */}
+    
+      {/* Modal Card Trade - P1 selecciona carta propia */}
+      {shouldShowSelectOwnCard && (
+        <SelectCard
+          isOpen={true}
+          availableCards={gameState.mano}
+          onSelectCard={handleSelectOwnCardForTrade}
+        />
+      )}
+
+      {/* Modal Card Trade - P2 selecciona carta propia */}
+      {shouldShowSelectTargetCard && (
+        <SelectCard
+          isOpen={true}
+          availableCards={gameState.mano}
+          onSelectCard={handleSelectTargetCardForTrade}
+        />
+      )}
 
     </main>
   )
