@@ -348,9 +348,13 @@ export default function GameScreen() {
           },
         })
 
-        // Limpiamos las cartas seleccionadas
-        setSelectedCards([]);
-        setHasPLayedEvent(true);
+          gameDispatch({
+          type: 'UPDATE_DRAW_ACTION',
+          payload: { skipDiscard: true },
+        })
+
+        setSelectedCards([])
+        setHasPLayedEvent(true)
         
       } catch (err) {
         console.error("Error playing Dead Card Folly:", err)
@@ -1274,22 +1278,14 @@ const handleDirection = async (direction) => {
     setLoading(true);
     setError(null);
 
-    // 🔑 Usamos el cardId guardado en el estado cuando se jugó la carta
     const cardId = selectedCardIdForEvent;
-    
-    // Validamos que tengamos un cardId válido
+
     if (!cardId || isNaN(cardId)) {
       throw new Error("No se encontró un card_id válido para Dead Card Folly");
     }
     
     const playerId = userState.id;
     const roomId = gameState.roomId;
-    
-    console.log("📦 Enviando Dead Card Folly con dirección:", {
-      player_id: playerId,
-      card_id: cardId,
-      direction,
-    });
 
     const response = await fetch(
       `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
@@ -1314,20 +1310,18 @@ const handleDirection = async (direction) => {
     }
 
     const data = await response.json();
-    console.log("Dead Card Folly jugada con éxito:", data);
 
-    // Actualizamos el estado del juego con la respuesta
     gameDispatch({
       type: "EVENT_DEAD_CARD_FOLLY_SELECT",
       payload: {
         action_id: data.action_id,
         direction,
         player_id: playerId,
-        message: `Elegiste dirección ${direction}`,
+        message: `You chose ${direction}`,
       },
     });
 
-    // Limpiamos el cardId guardado después de usarlo exitosamente
+
     setSelectedCardIdForEvent(null);
 
   } catch (err) {
@@ -1352,7 +1346,7 @@ const handleDirection = async (direction) => {
         throw new Error("Faltan datos para enviar la carta seleccionada");
       }
 
-      console.log("📤 Enviando carta seleccionada para Dead Card Folly:", {
+      console.log("Enviando carta seleccionada para Dead Card Folly:", {
         action_id: actionId,
         player_id: playerId,
         card_id: selectedCardId,
@@ -1380,26 +1374,26 @@ const handleDirection = async (direction) => {
       }
 
       const data = await response.json();
-      console.log("✅ Dead Card Folly - respuesta:", data);
+      console.log("Dead Card Folly - respuesta:", data);
 
       // Si el backend devuelve waiting=true, todavía faltan jugadores
       if (data.waiting) {
-        console.log(`⏳ Esperando ${data.pending_count} jugadores más...`);
+        console.log(`Waiting for ${data.pending_count} more players...`);
         // Simplemente mostramos un mensaje temporal
-        setError(`Esperando ${data.pending_count} jugadores...`);
+        setError(`Waiting for ${data.pending_count} more players...`);
         setTimeout(() => setError(null), 4000);
       } else {
         // Si el intercambio se completó, despachamos el evento final
         gameDispatch({
           type: "EVENT_DEAD_CARD_FOLLY_COMPLETE",
           payload: {
-            message: data.message || "Intercambio completado correctamente 🎴",
+            message: data.message || "Exchange completed successfully",
           },
         });
       }
 
     } catch (err) {
-      console.error("❌ Error enviando carta en Dead Card Folly:", err);
+      console.error(" Error enviando carta en Dead Card Folly:", err);
       setError(err.message);
       setTimeout(() => setError(null), 5000);
     } finally {
