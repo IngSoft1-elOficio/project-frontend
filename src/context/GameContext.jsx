@@ -916,33 +916,23 @@ const gameInitialState = {
 
       case 'SOCIAL_DISGRACE_UPDATE': {
         const { players_in_disgrace, change } = action.payload;
-      
-        console.log('🔥 REDUCER EJECUTADO!');
-        console.log('🔥 players_in_disgrace (recibido):', players_in_disgrace);
-        console.log('🔥 change (recibido):', change);
-        
+
         let finalList = players_in_disgrace || [];
-      
-        // --- ¡ESTA ES LA LÓGICA CLAVE! ---
-        // Si la lista del backend viene vacía pero el 'change' dice que
-        // alguien entró, construimos la lista nosotros mismos.
+
+        //Si la lista del backend viene vacia pero el 'change' dice que
+        //alguien entro, construimos la lista nosotros mismos.
         if (finalList.length === 0 && change && change.action === 'entered') {
-          
-          console.warn('⚠️ Desgracia Social: La lista del backend vino vacía. Usando "change" para construir el estado.');
-          
-          // Asumimos que la lista solo debe contener al jugador que acaba de entrar
+          //Asumimos que la lista solo debe contener al jugador que acaba de entrar
           finalList = [
             {
               player_id: change.player_id,
               player_name: change.player_name,
-              avatar_src: change.avatar_src, // <-- Por esto modificamos el backend antes
+              avatar_src: change.avatar_src,
               entered_at: new Date().toISOString() 
             }
           ];
         }
-        // --- FIN DE LA LÓGICA CLAVE ---
-      
-        // ... (tu código para generar 'logMessage' va aquí) ...
+
         let logMessage = null;
         if (change) {
           if (change.action === 'entered') {
@@ -966,7 +956,7 @@ const gameInitialState = {
         
         return {
           ...state,
-          playersInSocialDisgrace: finalList, // <-- Usamos la lista corregida
+          playersInSocialDisgrace: finalList, //lista corregida
           logs: logMessage 
             ? [...state.logs, logMessage].slice(-50)
             : state.logs

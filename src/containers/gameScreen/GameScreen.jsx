@@ -73,11 +73,6 @@ export default function GameScreen() {
 
   //Helper para el jugador actual
   const isCurrentPlayerInDisgrace = isPlayerInDisgrace(userState.id);
-  console.log('🔍 DEBUG Desgracia Social:');
-  console.log('- playersInSocialDisgrace:', gameState.playersInSocialDisgrace);
-  console.log('- userState.id:', userState.id);
-  console.log('- isCurrentPlayerInDisgrace:', isCurrentPlayerInDisgrace);
-
 
   const handleCardSelect = cardId => {
     //si el jugador esta en desgracia social
