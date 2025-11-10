@@ -101,6 +101,14 @@ const gameInitialState = {
       showQty: false,
     },
 
+    //dead card folly
+    deadCardFolly:{
+      actionId: null,
+      showDirection: false,
+      isSelecting: false,
+      
+    },
+
     // Transparency for all events
     actionInProgress: null, // { playerId, eventType, step, message }
   },
@@ -907,6 +915,93 @@ const gameInitialState = {
           logs: [...state.logs, delayCompleteLog].slice(-50)
         }
 
+
+      case 'EVENT_DEAD_CARD_FOLLY_START':
+      const deadCardFollyLog = {
+        id: `event-dead-card-folly-${Date.now()}`,
+        message: action.payload?.message || 'Dead Card Folly jugada',
+        type: 'event',
+        timestamp: new Date().toISOString(),
+        playerId: action.payload?.playerId,
+      };
+
+      return {
+        ...state,
+        eventCards: {
+          ...state.eventCards,
+          deadCardFolly: {
+            ...state.eventCards.deadCardFolly,
+            showDirection: true, 
+            isSelecting: false,
+            direction: null,
+          },
+          actionInProgress: {
+            playerId: action.payload?.playerId,
+            eventType: 'dead_card_folly',
+            step: 'select_direction',
+            message: 'Selecciona la dirección',
+          },
+        },
+        logs: [...state.logs, deadCardFollyLog].slice(-50)
+      };
+
+
+      case "EVENT_DEAD_CARD_FOLLY_SELECT": {
+        const follyLog = {
+          id: `folly-select-${Date.now()}`,
+          message: action.payload.message || 'Seleccionar carta para intercambiar',
+          type: "event",
+          timestamp: action.payload.timestamp || new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            deadCardFolly: {
+              ...state.eventCards.deadCardFolly,
+              showDirection: false,
+              isSelecting: true,
+              actionId: action.payload.action_id,
+              direction: action.payload.direction,
+            },
+            actionInProgress: {
+              playerId: action.payload.player_id,
+              eventType: "dead_card_folly",
+              step: "select_card",
+              message: action.payload.message,
+            },
+          },
+          logs: [...state.logs, follyLog].slice(-50),
+        };
+      }
+
+      case "EVENT_DEAD_CARD_FOLLY_COMPLETE": {
+        const follyLog = {
+          id: `folly-complete-${Date.now()}`,
+          message: action.payload.message,
+          type: "event",
+          timestamp: action.payload.timestamp || new Date().toISOString(),
+        };
+
+        return {
+          ...state,
+          eventCards: {
+            ...state.eventCards,
+            deadCardFolly: {
+              ...state.eventCards.deadCardFolly,
+              isSelecting: false,
+              actionId: null,
+              direction: null,
+            },
+            actionInProgress: null,
+          },
+          logs: [...state.logs, follyLog].slice(-50),
+        };
+      }
+             
+
       // --------------------
       // | DESGRACIA SOCIAL |
       // --------------------
@@ -962,8 +1057,9 @@ const gameInitialState = {
 
         default:
           return state;
-    }
-  }
+
+    }}
+  
 
 export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState)
@@ -1103,6 +1199,27 @@ export const GameProvider = ({ children }) => {
       console.log('✅ Event action complete:', data)
       // Specific event completion handled by game_state_public
     })
+
+    // ---------------------------
+    // | DEAD CARD FOLLY EVENTS |
+    // ---------------------------
+
+    socket.on("dead_card_folly_select_card", (data) => {
+      console.log("Dead Card Folly - selección iniciada:", data);
+      gameDispatch({
+        type: "EVENT_DEAD_CARD_FOLLY_SELECT",
+        payload: data,
+      });
+    });
+
+    socket.on("dead_card_folly_complete", (data) => {
+      console.log("Dead Card Folly - rotación completada:", data);
+      gameDispatch({
+        type: "EVENT_DEAD_CARD_FOLLY_COMPLETE",
+        payload: data,
+      });
+    });
+
 
     // ------------------------
     // | DRAW-DISCARD CARD LISTENERS |
