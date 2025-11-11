@@ -267,7 +267,7 @@ export default function GameScreen() {
     // ----------  And then there was one more... ----------
     if (card.name === "And then there was one more...") {
       const hasVisibleSecret = gameState.secretsFromAllPlayers.some(s => s.hidden === false);
-      if (!hasVisibleSecret) return;
+      if (!hasVisibleSecret) setError("No podes jugar And then there was one more.. si no hay secretos revelados."); return;
       const payload = {
         card_id: card.id
       }
