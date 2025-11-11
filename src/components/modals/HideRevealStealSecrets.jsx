@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import ButtonGame from "../ButtonGame.jsx";
+import React, { useState, useEffect } from "react";
+import ButtonGame from "../common/ButtonGame.jsx";
 import { useGame } from '../../context/GameContext.jsx'
 
 const HideRevealStealSecretsModal = ({
@@ -8,39 +8,37 @@ const HideRevealStealSecretsModal = ({
   onConfirm,
 }) => {
   const { gameState } = useGame()
+  const [selectedSecret, setSelectedSecret] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   if (!isOpen) return null;
-  console.log("El detective que llego es", detective);
 
   const setType = detective?.actionInProgress?.setType || "Detective";
-  
-  // Get targetPlayerId from actionInProgress, not from detective root
   const targetPlayerId = detective?.actionInProgress?.targetPlayerId;
-  
-  // Always use secretsFromAllPlayers as it has the 'id' field needed for the API
-  const filteredSecrets = gameState.secretsFromAllPlayers.filter(
-    (s) => s.player_id == targetPlayerId
-  );
 
-  console.log('Target Player ID:', targetPlayerId);
-  console.log('Filtered Secrets:', filteredSecrets);
-  console.log('First secret structure:', filteredSecrets[0]);
+  const targetPlayer = gameState.jugadores?.find(p => p.player_id === targetPlayerId);
+  const targetPlayerName = targetPlayer?.name || "el jugador objetivo";
 
   const hasWildcard = detective?.current?.hasWildcard || false;
 
-  const [selectedSecret, setSelectedSecret] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
+  let filteredSecrets;
+
+  if (setType == "pyne") {
+    filteredSecrets = gameState.secretsFromAllPlayers.filter((s) => (s.player_id === targetPlayerId) && (s.hidden === false))
+  } else {
+    filteredSecrets = gameState.secretsFromAllPlayers.filter((s) => (s.player_id === targetPlayerId) && (s.hidden === true))
+  }
 
   // ====== INFO DEL DETECTIVE ======
   const detectiveInfo = {
     poirot: {
       name: "Hercule Poirot",
-      effect: "Elegí un secreto del jugador objetivo para revelar",
+      effect: `Elegí un secreto de ${targetPlayerName} para revelar`,
       requiresHidden: true,
     },
     marple: {
       name: "Miss Marple",
-      effect: "Elegí un secreto del jugador objetivo para revelar",
+      effect: `Elegí un secreto de ${targetPlayerName} para revelar`,
       requiresHidden: true,
     },
     satterthwaite: {
@@ -50,7 +48,7 @@ const HideRevealStealSecretsModal = ({
     },
     pyne: {
       name: "Parker Pyne",
-      effect: "Elegí un secreto para ocultar",
+      effect: `Elegí un secreto de ${targetPlayerName} para ocultar`,
       requiresHidden: false,
     },
     eileenbrent: {
@@ -103,6 +101,7 @@ const HideRevealStealSecretsModal = ({
     }
     setErrorMsg("");
     setSelectedSecret(secret);
+    console.log(secret);
   };
 
   const confirmSelection = () => {
@@ -125,7 +124,7 @@ const HideRevealStealSecretsModal = ({
     "text-base text-[#B49150]/80 mt-4 mb-8 px-6 text-center leading-relaxed";
   const cardBox =
     "w-32 h-48 border-2 border-[#825012] bg-[#3D0800]/40 rounded-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105";
-  const selectedCard = "border-[#B49150] scale-105";
+  const selectedCard = "border-[#B49150]";
   const buttonsContainer = "flex justify-center gap-6 mt-6";
 
   return (
@@ -153,21 +152,22 @@ const HideRevealStealSecretsModal = ({
           {filteredSecrets.length > 0 ? (
             filteredSecrets.map((secret) => (
               <div
-                key={secret.position}
+                key={`${secret.position}-${secret.player_id}`}
                 onClick={() => validateSecrets(secret)}
                 className={`${cardBox} ${
-                  selectedSecret?.position === secret.position ? selectedCard : ""
+                  selectedSecret?.position === secret.position && 
+                  selectedSecret?.player_id === secret.player_id ? selectedCard : ""
                 }`}
               >
                 {secret.hidden ? (
                   <img
-                    src="/cards/secret_front.png"
+                    src="/cards/secret_front.png" 
                     alt={`Secreto ${secret.position}`}
-                    className="w-full h-full object-cover rounded-md opacity-90"
+                    className="w-full h-full object-cover rounded-md"
                   />
                 ) : (
                   <img
-                    src="/cards/secret_back.png"
+                    src="/cards/secret_back.png"  
                     alt={`Secreto ${secret.position}`}
                     className="w-full h-full object-cover rounded-md"
                   />

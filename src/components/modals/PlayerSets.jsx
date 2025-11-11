@@ -1,17 +1,24 @@
-import React from 'react'
-import HandCards from '../HandCards.jsx'
-import ButtonGame from '../ButtonGame.jsx'
+import HandCards from '../game/HandCards.jsx'
+import ButtonGame from '../common/ButtonGame.jsx'
 import { FiArchive } from 'react-icons/fi'
+import { useState } from 'react'
 
 const PlayerSetsModal = ({
-  isOpen, //bool → indica si el modal está visible
-  onClose, //función → cierra el modal
-  sets = [], //array → lista de sets jugados
+  isOpen,             //bool → indica si el modal está visible
+  onClose,            //función → cierra el modal
+  sets = [],          //array → lista de sets jugados
   selectedCards = [], //array → cartas actualmente seleccionadas
-  onCardSelect, //función → callback al seleccionar/deseleccionar una carta
-  onCreateSet, //función → callback para crear un nuevo set
+  onCardSelect,       //función → callback al seleccionar/deseleccionar una carta
+  onCreateSet,        //función → callback para crear un nuevo set
+  onAddToset,         //funcion → callback para agregar un detective a un set
+  hasPlayedSet,       //bool → indica si este turno ya se jugo un set
+  hasPlayedEvent,     //bool → insica si este turno ya se jugo una carta de evento
+  isCurrentPlayerInDisgrace, //bool -> indica si el jugador esta en desgracia social
 }) => {
   if (!isOpen) return null //no renderizar nada si el modal esta cerrado
+
+  // estado interno para seleccionar un set como objeto
+  const [selectedSet, setSelectedSet] = useState({});
 
   // ========== ESTILOS ==========
   // Container principal -> Todo
@@ -72,6 +79,18 @@ const PlayerSetsModal = ({
     return typeNames[setType] || 'Detective'
   }
 
+  const handlerSelectSet = (set) =>  {
+      if (set.position === selectedSet.position) {
+        setSelectedSet({})
+      } else {
+        setSelectedSet(set)
+      }
+  }
+
+  const handleConfirmAddToSet = (set, detectiveToAdd) => {
+    onAddToset(set, detectiveToAdd);
+  }
+
   // ========== RENDER ==========
   return (
     <div className={modalOverlay}>
@@ -102,42 +121,50 @@ const PlayerSetsModal = ({
               ) : (
                 // Caso hay sets
                 <div className={setsGrid}>
-                  {sets.map((set, index) => (
-                    <div key={set.id || index} className={setCard}>
-                      <div className={setHeader}>
-                        <div>
-                          <h3 className={setTitle}>
-                            {set.setName || `Set ${index + 1}`}
-                          </h3>
-                          {set.setType && (
-                            <p className={setType}>
-                              {getSetTypeName(set.setType)}
-                            </p>
-                          )}
+                  {sets.map((set, index) => {
+                    const isSelected = selectedSet.position === set.position;
+
+                    return (
+                      <div 
+                        key={set.id || index} 
+                        className={`${setCard} ${isSelected ? "border border-yellow-600" : "none"} cursor-pointer`}
+                        onClick = {() => handlerSelectSet(set)}
+                        >
+                        <div className={setHeader}>
+                          <div>
+                            <h3 className={setTitle}>
+                              {set.setName || `Set ${index + 1}`}
+                            </h3>
+                            {set.setType && (
+                              <p className={setType}>
+                                {getSetTypeName(set.setType)}
+                              </p>
+                            )}
+                          </div>
+                          <span className={setBadge}>Jugado</span>
                         </div>
-                        <span className={setBadge}>Jugado</span>
+                        {/* Render de cartas */}
+                        <div className={setCards}>
+                          {set.cards &&
+                            set.cards.map((card, cardIndex) => (
+                              <div
+                                key={card.id || cardIndex}
+                                className={miniCard}
+                              >
+                                <img
+                                  src={card.img_src || '/cards/01-card_back.png'}
+                                  alt={card.name || 'Card'}
+                                  className="w-full h-full object-cover"
+                                  onError={e => {
+                                    e.target.src = '/cards/01-card_back.png'
+                                  }}
+                                />
+                              </div>
+                            ))}
+                        </div>
                       </div>
-                      {/* Render de cartas */}
-                      <div className={setCards}>
-                        {set.cards &&
-                          set.cards.map((card, cardIndex) => (
-                            <div
-                              key={card.id || cardIndex}
-                              className={miniCard}
-                            >
-                              <img
-                                src={card.img_src || '/cards/01-card_back.png'}
-                                alt={card.name || 'Card'}
-                                className="w-full h-full object-cover"
-                                onError={e => {
-                                  e.target.src = '/cards/01-card_back.png'
-                                }}
-                              />
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -148,9 +175,18 @@ const PlayerSetsModal = ({
             <ButtonGame onClick={onClose}>Volver</ButtonGame>
             <ButtonGame
               onClick={onCreateSet}
-              disabled={selectedCards.length === 0}
+              disabled={selectedCards.length < 2 || hasPlayedSet || hasPlayedEvent || isCurrentPlayerInDisgrace}
             >
               Crear Set
+            </ButtonGame>
+
+            <ButtonGame
+              onClick={() => handleConfirmAddToSet(selectedSet, selectedCards[0])}     
+              disabled={
+                !selectedSet?.position 
+              }
+            >
+              Agregar a Set
             </ButtonGame>
 
             {/* Info adicional */}
@@ -159,6 +195,11 @@ const PlayerSetsModal = ({
                 {selectedCards.length} carta
                 {selectedCards.length !== 1 ? 's' : ''} seleccionada
                 {selectedCards.length !== 1 ? 's' : ''}
+              </div>
+            )}
+            { selectedSet.cards && (
+              <div className={infoBox}>
+                {`set seleccionado: ${selectedSet.cards.map(card => {return `${card.name}\n`} )}`}
               </div>
             )}
           </div>

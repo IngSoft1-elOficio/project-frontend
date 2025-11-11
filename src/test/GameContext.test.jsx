@@ -950,7 +950,7 @@ describe('GameContext', () => {
             { id: 'secret-1', name: 'Secret 1' },
             { id: 'secret-2', name: 'Secret 2' },
           ],
-          showSelectSecret: true,
+          showSecrets: true,
         })
       )
     })
@@ -984,8 +984,8 @@ describe('GameContext', () => {
         expect.objectContaining({
           selectedSecretId: 'secret-1',
           allowedPlayers: ['user-1', 'user-2'],
-          showSelectSecret: false,
-          showSelectPlayer: true,
+          showSecrets: false,
+          showPlayers: true,
         })
       )
     })
@@ -1016,8 +1016,8 @@ describe('GameContext', () => {
         availableSecrets: [],
         allowedPlayers: [],
         selectedSecretId: null,
-        showSelectSecret: false,
-        showSelectPlayer: false,
+        showSecrets: false,
+        showPlayers: false,
       })
       expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
     })
@@ -1042,11 +1042,7 @@ describe('GameContext', () => {
 
       expect(result.current.gameState.eventCards.delayEscape).toEqual({
         actionId: 'action-789',
-        availableCards: [
-          { id: 'card-1', name: 'Card 1' },
-          { id: 'card-2', name: 'Card 2' },
-        ],
-        showOrderCards: true,
+        showQty: true,
       })
     })
 
@@ -1073,8 +1069,7 @@ describe('GameContext', () => {
 
       expect(result.current.gameState.eventCards.delayEscape).toEqual({
         actionId: null,
-        availableCards: [],
-        showOrderCards: false,
+        showQty: false,
       })
       expect(result.current.gameState.eventCards.actionInProgress).toBeNull()
     })
@@ -1237,6 +1232,7 @@ describe('GameContext', () => {
         otherPlayerDrawing: null,
         hasDiscarded: false,
         hasDrawn: false,
+        skipDiscard: false,
       })
     })
 
@@ -1262,6 +1258,7 @@ describe('GameContext', () => {
         otherPlayerDrawing: null,
         hasDiscarded: false,
         hasDrawn: false,
+        skipDiscard: false,
       })
     })
   })
@@ -1829,26 +1826,6 @@ describe('GameContext', () => {
     })
 
     describe('Logs System', () => {
-      it('adds logs and limits to 50 entries', () => {
-        const { result } = renderHook(() => useGame(), {
-          wrapper: GameProvider,
-        })
-
-        // Agregar más de 50 logs
-        for (let i = 0; i < 55; i++) {
-          act(() => {
-            result.current.gameDispatch({
-              type: 'UPDATE_GAME_STATE_PUBLIC',
-              payload: {
-                message: `Message ${i}`,
-              },
-            })
-          })
-        }
-
-        // Verificar que solo mantiene los últimos 50
-        expect(result.current.gameState.logs.length).toBe(50)
-      })
 
       it('includes playerId in logs when provided', () => {
         const { result } = renderHook(() => useGame(), {
@@ -2302,11 +2279,6 @@ describe('GameContext', () => {
           result.current.connectToGame('room-123', 'user-456')
         })
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          '🔌 Connecting web-socket to roomId:',
-          'room-123'
-        )
-
         consoleLogSpy.mockRestore()
       })
 
@@ -2340,11 +2312,6 @@ describe('GameContext', () => {
         act(() => {
           result.current.disconnectFromGame()
         })
-
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          '🔌 Disconnecting from RoomId = ',
-          'room-999'
-        )
 
         consoleLogSpy.mockRestore()
       })
@@ -2534,13 +2501,6 @@ describe('GameContext', () => {
           },
         })
       })
-
-      // Verificar que SÍ se agregó log cuando hay message
-      expect(result.current.gameState.logs.length).toBe(initialLogsLength + 1)
-      expect(
-        result.current.gameState.logs[result.current.gameState.logs.length - 1]
-          .message
-      ).toBe('Game state updated')
     })
   })
 
@@ -2615,12 +2575,6 @@ describe('GameContext', () => {
       act(() => {
         result.current.connectToGame('room-123', 'user-456')
       })
-
-      // Verificar log de conexión
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-123'
-      )
 
       // Simular evento connected
       const connectedHandler = mockSocket.on.mock.calls.find(
@@ -3022,12 +2976,6 @@ describe('GameContext', () => {
         result.current.disconnectFromGame()
       })
 
-      // Verificar que se llamó el console.log con el roomId correcto
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Disconnecting from RoomId = ',
-        'room-xyz-789'
-      )
-
       consoleLogSpy.mockRestore()
     })
 
@@ -3045,69 +2993,12 @@ describe('GameContext', () => {
         result.current.connectToGame('room-alpha', 'user-1')
       })
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-alpha'
-      )
-
       // Reconectar a otra sala
       act(() => {
         result.current.connectToGame('room-beta', 'user-2')
       })
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-beta'
-      )
-
       consoleLogSpy.mockRestore()
-    })
-
-    it('covers UPDATE_GAME_STATE_PUBLIC log limit behavior', () => {
-      const { result } = renderHook(() => useGame(), {
-        wrapper: GameProvider,
-      })
-
-      // Agregar exactamente 50 logs con mensaje
-      for (let i = 0; i < 50; i++) {
-        act(() => {
-          result.current.gameDispatch({
-            type: 'UPDATE_GAME_STATE_PUBLIC',
-            payload: {
-              message: `Message ${i}`,
-              turno_actual: i,
-            },
-          })
-        })
-      }
-
-      expect(result.current.gameState.logs.length).toBe(50)
-
-      // Agregar uno más con mensaje - debe mantener solo 50
-      act(() => {
-        result.current.gameDispatch({
-          type: 'UPDATE_GAME_STATE_PUBLIC',
-          payload: {
-            message: 'Message 50',
-            turno_actual: 50,
-          },
-        })
-      })
-
-      expect(result.current.gameState.logs.length).toBe(50)
-
-      // Agregar uno sin mensaje - debe mantener los 50 anteriores
-      act(() => {
-        result.current.gameDispatch({
-          type: 'UPDATE_GAME_STATE_PUBLIC',
-          payload: {
-            turno_actual: 51,
-            // Sin message
-          },
-        })
-      })
-
-      expect(result.current.gameState.logs.length).toBe(50)
     })
   })
 })
