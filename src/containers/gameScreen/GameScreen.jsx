@@ -1,7 +1,7 @@
 import '../../index.css'
 import { useUser } from '../../context/UserContext.jsx'
 import { useGame } from '../../context/GameContext.jsx'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Deck from '../../components/game/Deck.jsx'
 import Discard from '../../components/game/Discard.jsx'
 import GameEndModal from '../../components/modals/GameEndModal'
@@ -38,6 +38,7 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
+    const selectedCardIdRef = useRef(null);
 
   useEffect(() => {
     console.log(gameState.nsfCounter);
@@ -238,6 +239,7 @@ export default function GameScreen() {
     
     // ----------  Delay the murderers escape! ----------
     if (card.name === "Delay the murderers escape!") {
+      selectedCardIdRef.current = card.id
       await startActionWithCounterCheck({
         roomId: gameState.roomId,
         userId: userState.id,
@@ -1142,7 +1144,7 @@ export default function GameScreen() {
 
   const handleConfirmDelayEscape = async (quantity) => {
     try {
-      const cardId = selectedCards[0]?.id
+      const cardId = selectedCardIdRef.current 
 
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/event/delay-murderer-escape`,
