@@ -183,12 +183,7 @@ const PlayerSetsModal = ({
             <ButtonGame
               onClick={() => handleConfirmAddToSet(selectedSet, selectedCards[0])}     
               disabled={
-                selectedCards.length > 1 || 
-                selectedCards.length === 0 || 
-                hasPlayedSet || 
-                hasPlayedEvent || 
-                isCurrentPlayerInDisgrace ||
-                !selectedSet?.position  
+                !selectedSet?.position 
               }
             >
               Agregar a Set
