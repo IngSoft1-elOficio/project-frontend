@@ -332,7 +332,9 @@ export default function GameScreen() {
             message: "Jugaste Dead Card Folly. Elegí una dirección.",
           },
       })
-      setSelectedCardIdForEvent(cardId);
+      setSelectedCardIdForEvent(card.id);
+      console.log("🔍 selectedCardIdForEvent:", selectedCardIdForEvent);
+
       setSelectedCards([])
       setHasPLayedEvent(true)
     }  
