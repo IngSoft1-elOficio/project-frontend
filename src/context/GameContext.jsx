@@ -4,9 +4,11 @@ import {
   useContext,
   useReducer,
   useRef,
+  useEffect,
   useCallback,
 } from 'react'
 import io from 'socket.io-client'
+import { resumeAction, cancelEffect } from '../helpers/NSF'
 
 const GameContext = createContext()
 
@@ -41,6 +43,28 @@ const gameInitialState = {
   connected: false,
   logs: [], // { id, message, type, timestamp, playerId }
   playerLeftNotification: null,
+
+  nsfCounter: {
+    active: false,
+    actionId: null,
+    nsfActionId: null,
+    initiatorPlayerId: null,
+    actionType: null,
+    actionName: null,
+    cardsIds: [],           // las cartas jugadas como intención
+    cancellable: null,
+    timeRemaining: 0,
+    originalActionData: {  // lo que se enviaría si se ejecuta
+      endpoint: null,        // string "/event/..."
+      body: null,            // body: { ...payload }
+      requiresEndpoint: false,  
+      actionIdentifier: null,
+      actionPayload: null,
+    },
+    nsfChain: [],           // array de { playerId, cardId, timestamp }
+    finalResolution: null,   // “continue” | “cancelled”
+    showNsfBanner: false
+  },
 
   // Detective Actions
   detectiveAction: {
@@ -166,7 +190,6 @@ const gameInitialState = {
         }
 
       case 'UPDATE_GAME_STATE_PUBLIC':
-
         return {
           ...state,
           roomId: action.payload.room_id ?? state.roomId,
@@ -260,133 +283,111 @@ const gameInitialState = {
           playerLeftNotification: null,
         }
 
-      // ----------------------
-      // | CARDS DRAW-DISCARD |
-      // ----------------------
-      case 'PLAYER_MUST_DRAW':
-        const isMe = action.payload.player_id === state.userId
+      // --------------------
+      // | ACTION - COUNTER |
+      // --------------------
 
-        const discardLog = {
-          id: `discard-${Date.now()}`,
+      case 'SAVE_ACTION_DATA':
+        console.log("SAVE_ACTION_DATA TRIGERED")
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            cardsIds: action.payload.cards,
+            originalActionData:{
+              endpoint: action.payload.endpoint,
+              body: action.payload.body,
+              requiresEndpoint: action.payload.requiresEndpoint,  
+              actionIdentifier: action.payload.actionIdentifier,
+              actionPayload: action.payload.actionPayload,
+            }
+          }
+        }
+      
+      case 'VALID_ACTION':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+              actionId: action.payload.action_id,
+              initiatorPlayerId: action.payload.player_id,
+              actionType: action.payload.action_type,
+              actionName: action.payload.action_name,
+              cancellable: action.payload.cancellable,
+          }
+        }
+      
+      case 'NSF_COUNTER_START':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            active: true,
+            actionId: action.payload.action_id,
+            nsfActionId: action.payload.nsf_action_id,
+            initiatorPlayerId: action.payload.player_id,
+            actionType: action.payload.action_type,
+            actionName: action.payload.action_name,
+            timeRemaining: action.payload.time_remaining,
+            showNsfBanner: true
+          }
+        }
+      
+      case 'NSF_COUNTER_TICK':
+        return {
+          ...state,
+          nsfCounter: {
+            ...state.nsfCounter,
+            nsfActionId: action.payload.action_id,
+            timeRemaining: action.payload.remaining_time,
+          }
+        }
+      
+      case 'NSF_PLAYED':
+        const nsfPlayedLog = {
+          id: `instant-${Date.now()}`,
           message: action.payload.message,
-          type: 'discard',
+          type: 'instant',
           timestamp: new Date().toISOString(),
           playerId: action.payload.player_id,
         };
 
         return {
           ...state,
-          drawAction: {
-            ...state.drawAction,
-            cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
-            otherPlayerDrawing: !isMe
-              ? {
-                  playerId: action.payload.player_id,
-                  cardsRemaining: action.payload.cards_to_draw,
-                  message: action.payload.message,
-                }
-              : null,
-            hasDiscarded: true,
-            hasDrawn: false,
+          nsfCounter: {
+            ...state.nsfCounter,
+            nsfActionId: action.payload.nsf_action_id,
+            nsfChain: [ ...state.nsfCounter.nsfChain, { playerId: action.payload.player_id, timestamp: action.payload.timestamp } ],
           },
-          logs: [...state.logs, discardLog].slice(-50)
+          logs: [...state.logs, nsfPlayedLog].slice(-50)
         }
 
-      case 'CARD_DRAWN_SIMPLE':
-        const isMeDrawing = action.payload.player_id === state.userId
-        const cardsRemaining = action.payload.cards_remaining
-
-        const drawLog = {
-          id: `draw-${Date.now()}`,
+      case 'NSF_COUNTER_COMPLETE':
+        // Se termino la cadena de NSF entonces se retoma la accion
+        const nsfComplete = {
+          id: `instant-${Date.now()}`,
           message: action.payload.message,
-          type: 'draw',
+          type: 'instant',
           timestamp: new Date().toISOString(),
-          playerId: action.payload.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            ...state.drawAction,
-            cardsToDrawRemaining: isMeDrawing
-              ? cardsRemaining
-              : state.drawAction.cardsToDrawRemaining,
-            otherPlayerDrawing:
-              !isMeDrawing && cardsRemaining > 0
-                ? {
-                    playerId: action.payload.player_id,
-                    cardsRemaining: cardsRemaining,
-                    message: action.payload.message,
-                  }
-                : null,
-            hasDiscarded: state.drawAction.hasDiscarded,
-            hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
-          },
-          logs: [...state.logs, drawLog].slice(-50)
         }
 
-      case 'UPDATE_DRAW_ACTION':
         return {
           ...state,
-          drawAction: {
-            ...state.drawAction,
-            ...action.payload,
+          nsfCounter: {
+            ...state.nsfCounter,
+            actionId: action.payload.action_id,
+            finalResolution: action.payload.final_result,
+            active: false,
+            showNsfBanner: false,
+            originalActionData: {
+              endpoint: null,
+              body: null,
+              actionIdentifier: null,
+              actionPayload: null,
+            },
+            nsfChain: []
           },
-        };
-
-      case 'RESET_DRAW_ACTION':
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: false,
-            hasDrawn: false,
-            skipDiscard: false,
-          },
-        };
-
-      case 'DRAW_ACTION_COMPLETE':
-        
-        const drawCompleteLog = {
-          id: `draw-complete-${Date.now()}`,
-          message: action.payload?.message || 'Robo de cartas completado',
-          type: 'draw',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload?.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: true,
-            hasDrawn: true,
-          },
-          logs: [...state.logs, drawCompleteLog].slice(-50)
-        }
-
-      case 'FINISH_TURN':
-
-        const finishTurnLog = {
-          id: `turn-${Date.now()}`,
-          message: action.payload.message,
-          type: 'turn',
-          timestamp: new Date().toISOString(),
-          playerId: action.payload.player_id,
-        };
-
-        return {
-          ...state,
-          drawAction: {
-            cardsToDrawRemaining: 0,
-            otherPlayerDrawing: null,
-            hasDiscarded: false,
-            hasDrawn: false,
-            skipDiscard: false,
-          },
-          logs: [...state.logs, finishTurnLog].slice(-50)
+          logs: [...state.logs, nsfComplete].slice(-50)
         }
 
       // ---------------------
@@ -938,6 +939,135 @@ const gameInitialState = {
           },
           logs: [...state.logs, delayCompleteLog].slice(-50)
         }
+      
+      // ----------------------
+      // | CARDS DRAW-DISCARD |
+      // ----------------------
+      case 'PLAYER_MUST_DRAW':
+        const isMe = action.payload.player_id === state.userId
+
+        const discardLog = {
+          id: `discard-${Date.now()}`,
+          message: action.payload.message,
+          type: 'discard',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            cardsToDrawRemaining: isMe ? action.payload.cards_to_draw : 0,
+            otherPlayerDrawing: !isMe
+              ? {
+                  playerId: action.payload.player_id,
+                  cardsRemaining: action.payload.cards_to_draw,
+                  message: action.payload.message,
+                }
+              : null,
+            hasDiscarded: true,
+            hasDrawn: false,
+          },
+          logs: [...state.logs, discardLog].slice(-50)
+        }
+
+      case 'CARD_DRAWN_SIMPLE':
+        const isMeDrawing = action.payload.player_id === state.userId
+        const cardsRemaining = action.payload.cards_remaining
+
+        const drawLog = {
+          id: `draw-${Date.now()}`,
+          message: action.payload.message,
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            cardsToDrawRemaining: isMeDrawing
+              ? cardsRemaining
+              : state.drawAction.cardsToDrawRemaining,
+            otherPlayerDrawing:
+              !isMeDrawing && cardsRemaining > 0
+                ? {
+                    playerId: action.payload.player_id,
+                    cardsRemaining: cardsRemaining,
+                    message: action.payload.message,
+                  }
+                : null,
+            hasDiscarded: state.drawAction.hasDiscarded,
+            hasDrawn: cardsRemaining === 0 ? true : state.drawAction.hasDrawn,
+          },
+          logs: [...state.logs, drawLog].slice(-50)
+        }
+
+      case 'UPDATE_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            ...state.drawAction,
+            ...action.payload,
+          },
+        };
+
+      case 'RESET_DRAW_ACTION':
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+            skipDiscard: false,
+          },
+        };
+
+      case 'DRAW_ACTION_COMPLETE':
+        
+        const drawCompleteLog = {
+          id: `draw-complete-${Date.now()}`,
+          message: action.payload?.message || 'Robo de cartas completado',
+          type: 'draw',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload?.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: true,
+            hasDrawn: true,
+          },
+          logs: [...state.logs, drawCompleteLog].slice(-50)
+        }
+
+      case 'FINISH_TURN':
+
+        const finishTurnLog = {
+          id: `turn-${Date.now()}`,
+          message: action.payload.message,
+          type: 'turn',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
+        return {
+          ...state,
+          drawAction: {
+            cardsToDrawRemaining: 0,
+            otherPlayerDrawing: null,
+            hasDiscarded: false,
+            hasDrawn: false,
+            skipDiscard: false,
+          },
+          logs: [...state.logs, finishTurnLog].slice(-50)
+        }
 
 
       case 'EVENT_DEAD_CARD_FOLLY_START':
@@ -1088,16 +1218,17 @@ const gameInitialState = {
 export const GameProvider = ({ children }) => {
   const [gameState, gameDispatch] = useReducer(gameReducer, gameInitialState)
   const socketRef = useRef(null)
+  const gameStateRef = useRef(gameState);
 
-  // Function to connect to socket
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   const connectToGame = useCallback((roomId, userId) => {
-    // Disconnect existing connection if any
     if (socketRef.current) {
       socketRef.current.disconnect()
       socketRef.current = null
     }
-
-    console.log('🔌 Connecting web-socket to roomId:', roomId)
 
     const socket = io('http://localhost:8000', {
       query: {
@@ -1137,7 +1268,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('game_state_public', data => {
-      console.log('📡 Received game_state_public:', data)
       gameDispatch({
         type: 'UPDATE_GAME_STATE_PUBLIC',
         payload: data,
@@ -1145,9 +1275,7 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('game_state_private', data => {
-      console.log('📡 Received game_state_private:', data)
       gameDispatch({ type: 'UPDATE_GAME_STATE_PRIVATE', payload: data })
-      console.log('updated game state private')
     })
 
     socket.on('connect_error', error => {
@@ -1155,7 +1283,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('game_ended', data => {
-      console.log('🏁 Game finished:', data)
       gameDispatch({
         type: 'GAME_ENDED',
         payload: {
@@ -1166,12 +1293,104 @@ export const GameProvider = ({ children }) => {
       })
     })
 
+    // --------------------
+    // | ACTION LISTENERS |
+    // --------------------
+
+    socket.on('valid_action', data => {
+      console.log('RCEIVED VALID ACTION: ', data);
+      gameDispatch({
+        type: 'VALID_ACTION',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_start', data => {
+      console.log('RECEIVED START COUNTER WINDOW', data)
+      gameDispatch({
+        type: 'NSF_COUNTER_START',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_tick', data => {
+      gameDispatch({
+        type: 'NSF_COUNTER_TICK',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_played', data => {
+      console.log("NSF_PLAYED", data)
+      gameDispatch({
+        type: 'NSF_PLAYED',
+        payload: data,
+      })
+    })
+
+    socket.on('nsf_counter_complete', async data => {
+      console.log('RECEIVED COUNTER COMPLETE:', data);
+      
+      const currentState = gameStateRef.current;
+      
+      gameDispatch({
+        type: 'NSF_COUNTER_COMPLETE',
+        payload: data,
+      });
+      
+      if (currentState.nsfCounter.initiatorPlayerId === currentState.userId) {
+        console.log("RESUMING ACTION");
+        
+        if (data.final_result === 'continue') {
+          const { endpoint, body, requiresEndpoint, actionIdentifier, actionPayload } = 
+            currentState.nsfCounter.originalActionData;
+          
+          console.log('RESUMING ACTION', requiresEndpoint ? endpoint : actionIdentifier);
+          
+          await resumeAction({
+            roomId: currentState.roomId,
+            userId: currentState.userId,
+            endpoint,
+            payload: body,
+            requiresEndpoint,
+            actionIdentifier,
+            actionPayload,
+            gameDispatch,
+          });
+
+        } else if (data.final_result === 'cancelled') {
+          const { actionType } = currentState.nsfCounter;
+          const { body } = currentState.nsfCounter.originalActionData;
+          let additionalDataToCancel = { actionType: actionType }
+          
+          if (actionType == 'ADD_TO_SET') {
+              additionalDataToCancel = { actionType: actionType, player_target: currentState.userId, setPosition: body.setPosition }
+          }
+          await cancelEffect({
+            roomId: currentState.roomId,
+            userId: currentState.userId,
+            actionId: data.action_id,
+            cardsIds: currentState.nsfCounter.cardsIds,
+            additionalData: additionalDataToCancel
+          });
+          gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
+
+        }
+      }
+    });
+
+    socket.on('cancelled_action_executed', data => {
+      gameDispatch({
+        type: '',
+        payload: data,
+      })
+    })
+    
     // ------------------------------
     // | DETECTIVE ACTION LISTENERS |
     // ------------------------------
 
     socket.on('detective_action_started', data => {
-      console.log('Detective action started:', data)
       gameDispatch({
         type: 'DETECTIVE_ACTION_STARTED',
         payload: data,
@@ -1179,7 +1398,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('detective_target_selected', data => {
-      console.log('Detective target selected:', data)
       gameDispatch({
         type: 'DETECTIVE_TARGET_SELECTED',
         payload: data,
@@ -1187,7 +1405,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('select_own_secret', data => {
-      console.log('Must select own secret:', data)
       gameDispatch({
         type: 'DETECTIVE_INCOMING_REQUEST',
         payload: data,
@@ -1195,8 +1412,7 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('detective_action_complete', data => {
-      console.log('✅ Detective action complete:', data)
-      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE', payload: data })
+      gameDispatch({ type: 'DETECTIVE_ACTION_COMPLETE' })
     })
 
     // ------------------------
@@ -1204,7 +1420,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('event_action_started', data => {
-      console.log('Event action started:', data)
       gameDispatch({
         type: 'EVENT_ACTION_STARTED',
         payload: data,
@@ -1212,7 +1427,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('event_step_update', data => {
-      console.log('Event step update:', data)
       gameDispatch({
         type: 'EVENT_STEP_UPDATE',
         payload: data,
@@ -1220,8 +1434,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('event_action_complete', data => {
-      console.log('✅ Event action complete:', data)
-      // Specific event completion handled by game_state_public
     })
 
     // Card Trade - P2 recibe notificación para seleccionar carta
@@ -1280,7 +1492,6 @@ export const GameProvider = ({ children }) => {
     // ------------------------
 
     socket.on('player_must_draw', data => {
-      console.log('Player must draw cards:', data)
       gameDispatch({
         type: 'PLAYER_MUST_DRAW',
         payload: data,
@@ -1288,7 +1499,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('card_drawn_simple', data => {
-      console.log('Card drawn:', data)
       gameDispatch({
         type: 'CARD_DRAWN_SIMPLE',
         payload: data,
@@ -1296,7 +1506,6 @@ export const GameProvider = ({ children }) => {
     })
 
     socket.on('turn_finished', data => {
-      console.log('✅ Turn finished:', data)
       gameDispatch({ 
         type: 'FINISH_TURN',
         payload: data,
@@ -1309,10 +1518,8 @@ export const GameProvider = ({ children }) => {
 
     // Caso abandonar sala
     socket.on('player_left', data => {
-      console.log('Un Jugador abandono la sala:', data)
       if (data.player_id === userId) {
         // Yo abandono la sala
-        console.log('Abandonando sala')
         gameDispatch({
           type: 'PLAYER_REMOVED_FROM_LOBBY',
           payload: { timestamp: new Date().toISOString() },
@@ -1340,7 +1547,6 @@ export const GameProvider = ({ children }) => {
 
     // Caso cancelar partida
     socket.on('game_cancelled', data => {
-      console.log('Partida cancelada por el host:', data)
       gameDispatch({
         type: 'GAME_CANCELLED',
         payload: { timestamp: new Date().toISOString() },
@@ -1367,7 +1573,6 @@ export const GameProvider = ({ children }) => {
   // Function to disconnect from socket
   const disconnectFromGame = useCallback(() => {
     if (socketRef.current) {
-      console.log('🔌 Disconnecting from RoomId = ', gameState.roomId)
       socketRef.current.disconnect()
       socketRef.current = null
       gameDispatch({ type: 'SOCKET_DISCONNECTED' })

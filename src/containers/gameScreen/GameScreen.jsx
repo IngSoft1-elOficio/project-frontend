@@ -19,6 +19,8 @@ import PlayerSetsModal from '../../components/modals/PlayerSets.jsx'
 import HideRevealStealSecretsModal from '../../components/modals/HideRevealStealSecrets.jsx'
 import SelectPlayerModal from '../../components/modals/SelectPlayer.jsx'
 import OtherPlayerSecrets from '../../components/game/OtherPLayerSecrets.jsx'
+import { startActionWithCounterCheck, playNotSoFast } from '../../helpers/NSF.js'
+import NsfBanner from '../../components/game/NsfBanner.jsx'
 import SelectQtyModal from '../../components/modals/SelectQtyModal.jsx'
 import OneMoreSecretsModal from '../../components/modals/OneMoreSecretsModal.jsx'
 import SelectPlayerOneMoreModal from '../../components/modals/SelectPlayerOneMoreModal.jsx'
@@ -36,13 +38,16 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showPlayerSets, setShowPlayerSets] = useState(false)
-  const [selectedCardLookAshes, setSelectedCardLookAshes] = useState(null)
-  const [selectedCardTrade, setSelectedCardTrade] = useState(null)
+
+  useEffect(() => {
+    console.log(gameState.nsfCounter);
+  }, [gameState.nsfCounter.originalActionData, gameState.nsfCounter.cancellable, gameState.nsfCounter.initiatorPlayerId, gameState.nsfCounter.nsfChain]);
+  // const [selectedCardTrade, setSelectedCardTrade] = useState(null)
   const [selectedCardIdForEvent, setSelectedCardIdForEvent] = useState(null);
 
-  const roomId = gameState?.roomId
-  const action = gameState.eventCards?.actionInProgress;
-  const step = action?.step;  
+  // const roomId = gameState?.roomId
+  // const action = gameState.eventCards?.actionInProgress;
+  // const step = action?.step;  
 
   const isWaitingForOtherPlayer = 
   gameState.turnoActual === userState.id && 
@@ -53,9 +58,6 @@ export default function GameScreen() {
      gameState.eventCards.actionInProgress.step !== 'completed' &&
      gameState.eventCards.actionInProgress.playerId === userState.id)
   );
-  console.log("🎯 Estado inicial actionInProgress:", gameState.eventCards.actionInProgress);
-
-  console.log("🧭 Estado inicial de Dead Card Folly:", gameState.eventCards.deadCardFolly);
   // Obtener los sets del jugador actual
   const playerSetsForModal = (gameState.sets || [])
     .filter(set => set.owner_id === userState.id)
@@ -109,340 +111,245 @@ export default function GameScreen() {
     })
   }
 
+  const handlePlayNotSoFast = async () => {
+    // Validate selection
+    if (selectedCards.length !== 1) return;
+    
+    const card = selectedCards[0];
+    if (!card) return;
+    
+    // Check if it's a valid NSF card
+    if (card.name !== "Not so fast") return;
+    
+    // Check if counter window is active
+    if (!gameState.nsfCounter.active) return;
+    
+    // Play the NSF card
+    const playedNsfCounter = await playNotSoFast(
+      card, 
+      userState.id, 
+      gameState.roomId,
+      gameState.nsfCounter.actionId,
+      setError
+    );
+    
+    if (playedNsfCounter) {
+      setSelectedCards([]);
+    }
+  }
+
   const handlePLayEventCard = async () => {
-    console.log("Nombre de la carta seleccionada:", selectedCards[0]?.name);
-    
-
     if (hasPlayedEvent) return;
+    const card = selectedCards[0];  // Carta de evento a jugar
+    const payload = { card_id: Number(card.id) };
     
-    if (selectedCards[0]?.name === "Look into the ashes") {      
-      setLoading(true)
-      setError(null)
-      
-      try {
-        const cardId = Number(selectedCards[0]?.id)
-        
-        if (isNaN(cardId)) {
-          throw new Error("Invalid card ID")
-        }
-        
-        const requestBody = {
-          card_id: cardId
-        }
-        
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/look-into-ashes/play`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'http-user-id': userState.id.toString(), 
-            },
-            body: JSON.stringify(requestBody),
-          }
-        )
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Backend error response:", errorData)
-          console.error("Response status:", response.status)
-          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-        
-        const data = await response.json()
-
-        gameDispatch({
-          type: 'EVENT_LOOK_ASHES_PLAYED',
-          payload: {
-            action_id: data.action_id,
-            available_cards: data.available_cards,
-          },
-        })
-
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        });
-        
-        setSelectedCards([])
-        setHasPLayedEvent(true);
-      } catch (err) {
-        console.error("Error playing Look Into The Ashes:", err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-      
-    } else if (selectedCards[0]?.name === "Another Victim") {
-      
-      setLoading(true)
-      setError(null)
-
-      // Jugar la carta y seleccionar el jugador objetivo y el set objetivo
-      gameDispatch({
-        type: 'EVENT_ANOTHER_VICTIM_START',
-        payload: { playerId: userState.id },
-      })
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
+    // ----------  Look Into The Ashes ----------
+    if (card.name === "Look into the ashes") {
+      // Jugar la carta iniciando la accion
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: "/look-into-ashes/play",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: true, 
+        actionIdentifier: "EVENT_LOOK_ASHES_PLAYED",
+        actionPayload: {},
       });
+      setSelectedCards([]);
+      setHasPLayedEvent(true);
+      return;
+    }
 
+    // ----------  Early train to paddington ----------
+    if (card.name === "Early train to paddington") {
+      // Jugar la carta iniciando la accion
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: "/early_train_to_paddington",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: true, 
+        actionIdentifier: null,
+        actionPayload: null,
+      });
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+      return;
+    }
+
+    // ----------  Another Victim ----------
+    if (card.name === "Another Victim") {
+      if (gameState.sets.length <= 0) return;
+      // Jugar la carta y seleccionar el jugador objetivo y el set objetivo
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: null,
+        payload: null,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: false, 
+        actionIdentifier: "EVENT_ANOTHER_VICTIM_START",
+        actionPayload: { playerId: userState.id },
+      })
       setLoading(false)
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+      return;
+    }
 
-    } else if (selectedCards[0]?.name === "Cards off the table") {
-      console.log("Attempting to play Cards off the Table")
-      
-      setLoading(true)
-      setError(null)
-
-      gameDispatch({
-        type: 'EVENT_CARDS_OFF_TABLE_START',
-        payload: { 
+    // ----------  Cards off the table ----------
+    if (card.name === "Cards off the table") {
+      // Jugar la carta y seleccionar el jugador objetivo     
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: null,
+        payload: null,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: false, 
+        actionIdentifier: "EVENT_CARDS_OFF_TABLE_START",
+        actionPayload: { 
           playerId: userState.id,
           message: 'Selecciona un jugador para descartar sus cartas NSF'
         },
       })
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-
-      setLoading(false)
-
-
-    /*Delay the murderer's scape*/
-     } else if (selectedCards[0]?.name === "Delay the murderers escape!") {
-          console.log("Attempting to play delay the murderers escape")
-      
-      setLoading(true)
-      setError(null)
-
-      gameDispatch({
-        type: 'EVENT_DELAY_ESCAPE_PLAYED',
-        payload: { 
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+      return;
+    }
+    
+    // ----------  Delay the murderers escape! ----------
+    if (card.name === "Delay the murderers escape!") {
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: null,
+        payload: null,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: false, 
+        actionIdentifier: "EVENT_DELAY_ESCAPE_PLAYED",
+        actionPayload: { 
           playerId: userState.id,
-          showQty: true,  
+          showQty: true,
           message: 'Delay the Murderers Escape jugada'
         },
-        })
-
- 
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
       })
-        setHasPLayedEvent(true)
-        //setSelectedCards([]) no funciona
-        setLoading(false)
+      setHasPLayedEvent(true)
+      setSelectedCards([])
+      setLoading(false)
+      return;
+    }
 
-    /*One more*/
-     } else if (selectedCards[0]?.name === "And then there was one more...") {
-      
-      setLoading(true)
-      setError(null)
-      const cardId = Number(selectedCards[0]?.id)
-
-      const requestBody = {
-        card_id: cardId
+    // ----------  And then there was one more... ----------
+    if (card.name === "And then there was one more...") {
+      const payload = {
+        card_id: card.id
       }
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: "/event/one-more",
+        payload,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: true, 
+        actionIdentifier: "EVENT_ONE_MORE_PLAYED",
+        actionPayload: {},
+      });       
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+      return;
+    }
 
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/event/one-more`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'HTTP_USER_ID': userState.id.toString(), 
-            },
-            body: JSON.stringify(requestBody),
-          }
-        )
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Backend error response:", errorData)
-          console.error("Response status:", response.status)
-          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-        
-        const data = await response.json()
-        console.log("La data de onemore es: ", data)
-        gameDispatch({
-          type: 'EVENT_ONE_MORE_PLAYED',
-          payload: {
-            action_id: data.action_id,
-            available_secrets: data.available_secrets,
-          },
-        })
-
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        });
-        
-
-        setSelectedCards([])
-        setHasPLayedEvent(true)
-        //setLoading(false)
-
-    } else if(selectedCards[0]?.name === "Early train to paddington") {
-      console.log("Attempting to play Early train to paddington")
-
-      setLoading(true)
-      setError(null)
-
-      try {
-
-        const cardId = Number(selectedCards[0]?.id)
-
-        if (isNaN(cardId)){
-          throw new Error("Invalid card ID")
-        }
-
-        const requestBody = {
-          card_id: cardId
-        }
-
-        const response = await fetch(
-          `http://localhost:8000/api/game/${gameState.roomId}/early_train_to_paddington`,
-
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'http-user-id': userState.id.toString(),
-            },
-            body: JSON.stringify(requestBody)
-          }
-        )
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Backend error response:", errorData)
-          console.error("Response status:", response.status)
-          console.error("Response headers:", Object.fromEntries(response.headers.entries()))
-          throw new Error(getErrorMessage(response.status, errorData))
-        }
-        const data = await response.json()
-        console.log('Early train to paddington played succesfully', data)
-
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-
-        })
-
-        setSelectedCards([])
-        setHasPLayedEvent(true)
-      } catch (err) {
-        console.error("Error playing early train to paddington", err)
-        setError(err.message)
-        setTimeout(() => setError(null), 5000)
-      } finally {
-        setLoading(false)
-      }
-      
-
-      } else if (selectedCards[0]?.name === "Card trade") {
-      console.log("Attempting to play Card Trade")
-      
-      setLoading(true)
-      setError(null)
-
-      try {
-        const cardId = Number(selectedCards[0]?.id)
-        
-        if (isNaN(cardId)) {
-          throw new Error("Invalid card ID")
-        }
-
-        // Iniciar el flujo de Card Trade usando el action existente
-        gameDispatch({
-          type: 'EVENT_ACTION_STARTED',
-          payload: { 
+    // ----------  Card trade ----------
+    if (card.name === "Card trade") {
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: null,
+        payload: null,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: false, 
+        actionIdentifier: "EVENT_ACTION_STARTED",
+        actionPayload: { 
             player_id: userState.id,
             event_type: 'card_trade',
             card_name: 'Card trade',
             step: 'select_player',
             message: 'Selecciona un jugador para intercambiar cartas'
           },
-        })
+      })
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+    }
 
-        gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        })
-
-        setSelectedCards([])
-        setHasPLayedEvent(true)
-
-      } catch (err) {
-        console.error("Error playing Card Trade:", err)
-        setError(err.message)
-        setTimeout(() => setError(null), 5000)
-      } finally {
-        setLoading(false)
-      }
-    } else if (selectedCards[0]?.name === "Dead card folly") {
-      console.log("Attempting to play Dead Card Folly")
-
-      setLoading(true)
-      setError(null)
-
-      try {
-        const cardId = Number(selectedCards[0]?.id)
-        if (isNaN(cardId)) throw new Error("Invalid card ID")
-        
-
-        setSelectedCardIdForEvent(cardId);
-
-        // Abre el modal con el cardId en el payload
-        gameDispatch({
-          type: "EVENT_DEAD_CARD_FOLLY_START",
-          payload: {
+    // ----------  Card trade ----------
+    if (card.name === "Dead card folly") {
+      await startActionWithCounterCheck({
+        roomId: gameState.roomId,
+        userId: userState.id,
+        cardsIds: [card.id],
+        actionType: 'EVENT',
+        endpoint: null,
+        payload: null,
+        setError,
+        setLoading,
+        gameDispatch,
+        requiresEndpoint: false, 
+        actionIdentifier: "EVENT_DEAD_CARD_FOLLY_START",
+        actionPayload: {
             playerId: userState.id,
-            cardId: cardId,
+            cardId: card.id,
             message: "Jugaste Dead Card Folly. Elegí una dirección.",
           },
-        })
+      })
+      setSelectedCardIdForEvent(cardId);
+      setSelectedCards([])
+      setHasPLayedEvent(true)
+    }  
 
-          gameDispatch({
-          type: 'UPDATE_DRAW_ACTION',
-          payload: { skipDiscard: true },
-        })
-
-        setSelectedCards([])
-        setHasPLayedEvent(true)
-        
-      } catch (err) {
-        console.error("Error playing Dead Card Folly:", err)
-        setError(err.message)
-        setTimeout(() => setError(null), 5000)
-      } finally {
-        setLoading(false)
-      }
-
-    } else {
-      setError("Esta carta aún no está implementada")
-      setTimeout(() => setError(null), 3000)
-    }
+    // La carta no esta implementada    
+    setError("Esta carta aún no está implementada")
+    setTimeout(() => setError(null), 3000)
+    return;
   }
 
   const handleDiscard = async () => {
-
     if (selectedCards.length === 0) {
       setError('Debes seleccionar al menos una carta para descartar')
       return
     }
-
     setLoading(true)
     setError(null)
-
     try {
       const cardsWithOrder = selectedCards.map((card, index) => ({
         order: index + 1,
@@ -574,87 +481,70 @@ export default function GameScreen() {
   }
 
   // Handler cuando P1 selecciona su carta propia para intercambiar
-// Handler cuando P1 selecciona su carta propia para intercambiar
-const handleSelectOwnCardForTrade = async (selectedCardId) => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const { actionInProgress } = gameState.eventCards || {};
-
-    if (!actionInProgress || actionInProgress.eventType !== 'card_trade') {
-      throw new Error("No hay una acción de Card Trade en progreso");
-    }
-
-    const targetPlayerId = actionInProgress.targetPlayerId;
-    if (!targetPlayerId) {
-      throw new Error("No se ha seleccionado un jugador objetivo");
-    }
-
-    const response = await fetch(
-      `http://localhost:8000/api/game/${gameState.roomId}/event/card-trade/play`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP_USER_ID': userState.id.toString(),
-        },
-        body: JSON.stringify({
-          own_card_id: selectedCardId, 
-          target_player_id: targetPlayerId
-        }),
+  // Handler cuando P1 selecciona su carta propia para intercambiar
+  const handleSelectOwnCardForTrade = async (selectedCardId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { actionInProgress } = gameState.eventCards || {};
+      if (!actionInProgress || actionInProgress.eventType !== 'card_trade') {
+        throw new Error("No hay una acción de Card Trade en progreso");
       }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(getErrorMessage(response.status, errorData));
-    }
-
-    const data = await response.json();
-    console.log("Card Trade initiated successfully:", data);
-
-    gameDispatch({
-      type: 'EVENT_CARD_TRADE_UPDATE',
-      payload: {
-        step: 'waiting_target',
-        actionId: data.action_id,
-        targetPlayerId: targetPlayerId,
-        message: `Esperando que ${gameState.jugadores.find(p => p.player_id === targetPlayerId)?.name || 'el jugador'} seleccione su carta...`
+      const targetPlayerId = actionInProgress.targetPlayerId;
+      if (!targetPlayerId) {
+        throw new Error("No se ha seleccionado un jugador objetivo");
       }
-    });
-
-    setSelectedCards([]); // Limpiar selección
-
-  } catch (err) {
-    console.error("Error selecting own card for trade:", err);
-    setError(err.message);
-    setTimeout(() => setError(null), 5000);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/card-trade/play`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP_USER_ID': userState.id.toString(),
+          },
+          body: JSON.stringify({
+            own_card_id: selectedCardId, 
+            target_player_id: targetPlayerId
+          }),
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(getErrorMessage(response.status, errorData));
+      }
+      const data = await response.json();
+      gameDispatch({
+        type: 'EVENT_CARD_TRADE_UPDATE',
+        payload: {
+          step: 'waiting_target',
+          actionId: data.action_id,
+          targetPlayerId: targetPlayerId,
+          message: `Esperando que ${gameState.jugadores.find(p => p.player_id === targetPlayerId)?.name || 'el jugador'} seleccione su carta...`
+        }
+      });
+      setSelectedCards([]); // Limpiar selección
+    } catch (err) {
+      console.error("Error selecting own card for trade:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handler cuando P2 selecciona su carta para completar el intercambio
   const handleSelectTargetCardForTrade = async (selectedCardId) => {
     setLoading(true)
     setError(null)
-
     try {
       const { actionInProgress } = gameState.eventCards
-      
       if (!actionInProgress || actionInProgress.eventType !== 'card_trade') {
         throw new Error("No hay una acción de Card Trade en progreso")
       }
-
       const actionId = actionInProgress.actionId
-      
       if (!actionId) {
         throw new Error("No action ID found")
       }
-
       const response = await fetch(
         `http://localhost:8000/api/game/${gameState.roomId}/event/card-trade/complete`,
         {
@@ -669,16 +559,12 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
           }),
         }
       )
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         console.error("Backend error:", errorData)
         throw new Error(getErrorMessage(response.status, errorData))
       }
-
       const data = await response.json()
-      console.log("Card Trade completed successfully:", data)
-
       gameDispatch({
         type: 'EVENT_STEP_UPDATE',
         payload: {
@@ -686,7 +572,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
           message: 'Intercambio de cartas completado'
         }
       })
-
     } catch (err) {
       console.error("Error completing card trade:", err)
       setError(err.message)
@@ -697,10 +582,8 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
   }
 
   const handlePlayerSelect = async (jugadorId) => {
-    
     const { actionInProgress } = gameState.eventCards;
     const currentEventType = actionInProgress?.eventType;
-    
     const { current: detectiveAction } = gameState.detectiveAction;
     const detectiveSetType = detectiveAction?.setType;
     const actionId = detectiveAction?.actionId;
@@ -721,6 +604,7 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
 
     // Caso 0: Cards Off the Table
     if (currentEventType === 'cards_off_table') {
+      // Se obtuvo el jugador objetivo, ahora se inicia la accion
       setLoading(true);
       setError(null);
 
@@ -769,18 +653,20 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
       }
       return;
     }
-    
-    // Caso 1: Another Victim (selecting target player for set steal)
+
+    // Caso 1: Another Victim
     if (currentEventType === 'another_victim') {
+      // se obtuvo el jugador objetivo, ahora seleccionar el set
       gameDispatch({
         type: 'EVENT_ANOTHER_VICTIM_SELECT_PLAYER',
         payload: jugadorId,
       });
       return;
     }
-    
-    // Caso 2: Detective Action - seleccion de jugador objetivo para accion de detective
+
+    // Caso 2: Detective Action
     if (detectiveAction && actionId) {
+      // Se obtuvo el jugador objetivo
       gameDispatch({
         type: 'DETECTIVE_TARGET_CONFIRMED',
         payload: {
@@ -788,10 +674,8 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
           targetPlayerData: jugadorId,
         },
       });
-
-      // si es marple --> seleccionar secreto tamb
+      // Caso 2.a: Tambien seleccionar el secreto a ocular/revelar
       if (detectiveSetType == "marple" || detectiveSetType == "poirot" || detectiveSetType == "pyne") {
-        // seleccionar secreto
         gameDispatch({
           type: 'DETECTIVE_PLAYER_SELECTED',
           payload: {
@@ -800,10 +684,14 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
             needsSecret: true,
           },
         })
-
-      } else {
-        // si es otro no seleccionar secreto
+      } else { // Caso 2.b: El objetivo tiene que seleccionar el secreto a ocultar/revelar
         try {
+          const payload = {
+            actionId: actionId,
+            executorId: userState.id,
+            targetPlayerId: jugadorId,
+            secretId: null,
+          }
           const response = await fetch(
             `http://localhost:8000/api/game/${gameState.roomId}/detective-action`,
             {
@@ -812,12 +700,7 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
                 'Content-Type': 'application/json',
                 HTTP_USER_ID: userState.id.toString(),
               },
-              body: JSON.stringify({
-                actionId: actionId,
-                executorId: userState.id,
-                targetPlayerId: jugadorId,
-                secretId: null,
-              }),
+              body: JSON.stringify(payload),
             }
           );
           
@@ -837,10 +720,7 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
               needsSecret: false,
             },
           })
-        } catch (error) {
-          console.error('Error selecting target player:', error);
-
-          // Reset seleccion del jugador si hay error
+        } catch (error) { // Si hubo error resetear la seleccion de jugador
           gameDispatch({
             type: 'DETECTIVE_SET_SUBMITTED',
             payload: {
@@ -897,65 +777,33 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
 
     const hasWildcard = checkForWildcard(cardsToUse);
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/play-detective-set`,
-        {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            owner: userState.id,
-            setType,
-            cards: cardsToUse.map(card => card.id), 
-            hasWildcard,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al crear el set");
-      }
-
-      const data = await response.json();
-
-      // Dispatch the action that prepares for player selection
-      gameDispatch({
-        type: 'DETECTIVE_SET_SUBMITTED',
-        payload: {
-          actionId: data.actionId,
-          setType: setType, 
-          stage: 'awaiting_player_selection',
-          cards: cardsToUse,
-          hasWildcard: hasWildcard,
-          allowedPlayers: data.nextAction.allowedPlayers || [],
-          secretsPool: data.nextAction.metadata?.secretsPool || [],
-        },
-      });
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-
     
-      setSelectedCards([]);
-      setHasPLayedSet(true);
-
-    } catch (err) {
-      console.error("❌ Error al crear set:", err);
-      setError(err.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
+    const payload = {
+      owner: userState.id,
+      setType,
+      cards: cardsToUse.map(c => c.id),
+      hasWildcard,
+    };
+    
+    await startActionWithCounterCheck({
+      roomId: gameState.roomId,
+      userId: userState.id,
+      cardsIds: cardsToUse.map(c => c.id),
+      actionType: 'CREATE_SET',
+      setPosition: null,
+      endpoint: "/play-detective-set",
+      payload,
+      setLoading,
+      setError,
+      gameDispatch,
+      requiresEndpoint: true, 
+      actionIdentifier: "DETECTIVE_SET_SUBMITTED",
+      actionPayload: { setType, cardsToUse, hasWildcard},
+    });
+    setLoading(false);
+    setSelectedCards([]);
+    setHasPLayedSet(true);
+    return;
   };
 
   const handleAddToSet = async (set, detectiveToAdd) => {
@@ -972,7 +820,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
         return;
     }
 
-
     const nameToSetType = {
       "Hercule Poirot": "poirot",
       "Miss Marple": "marple",
@@ -986,8 +833,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
 
     // 1. validar que el set es del tipo del detective 
     const setType = detectSetType(set.cards)
-
-    console.log("tipo de set: " + setType)
 
     // 2. validar que el detective no es una wildcard
     const hasWildcard = checkForWildcard([detectiveToAdd]);
@@ -1011,73 +856,35 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
       }
     } 
 
-    setLoading(true);
-    setError(null);
+    const payload = {
+      owner: userState.id,
+      setType,
+      card: detectiveToAdd.id,
+      setPosition: set.position,
+    };
 
-    try {
-      const response = await fetch(
-        `http://localhost:8000/api/game/${gameState.roomId}/add-to-set`,
-        {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            HTTP_USER_ID: userState.id.toString(),
-          },
-          body: JSON.stringify({
-            owner: userState.id,
-            setType,
-            card: detectiveToAdd.id, 
-            setPosition: set.position
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error al agregar al set");
-      }
-
-      const data = await response.json();
-      console.log("detective agregado exitosamente!");
-      console.log("Action ID:", data.actionId);
-      console.log("Next Action:", data.nextAction);
-
-      // Dispatch the action that prepares for player selection
-      gameDispatch({
-        type: 'DETECTIVE_SET_SUBMITTED',
-        payload: {
-          actionId: data.actionId,
-          setType: setType, // Use the detected setType
-          stage: 'awaiting_player_selection',
-          cards: [detectiveToAdd, ...set.cards],
-          hasWildcard: checkForWildcard(set.cards),
-          allowedPlayers: data.nextAction.allowedPlayers || [],
-          secretsPool: data.nextAction.metadata?.secretsPool || [],
-        },
-      });
-
-      gameDispatch({
-        type: 'UPDATE_DRAW_ACTION',
-        payload: { skipDiscard: true },
-      });
-
-      setSelectedCards([]);
-      setHasPLayedSet(true);
-    } catch (err) {
-      console.error("❌ Error al crear set:", err);
-      setError(err.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
+    await startActionWithCounterCheck({
+      roomId: gameState.roomId,
+      userId: userState.id,
+      cardsIds: [detectiveToAdd.id],
+      actionType: 'ADD_TO_SET',
+      setPosition: set.position,
+      endpoint: "/add-to-set",
+      payload,
+      gameDispatch,
+      requiresEndpoint: true, 
+      actionIdentifier: "DETECTIVE_SET_SUBMITTED",
+      actionPayload: { setType, detectiveToAdd, set },
+    });
+    setLoading(flase);
+    setSelectedCards([]);
+    setHasPLayedSet(true);
+    return;
   };
 
   const handleSelectSet = async (selectedSet) => {
-    if (!selectedSet) {
-      console.warn("No set selected");
-      return;
-    }
-    
+    if (!selectedSet) { console.warn("No set selected"); return; }
+    // se selecciono un set para robar con another victim
     setLoading(true);
     setError(null);
 
@@ -1220,7 +1027,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
   };
 
-  // Helper: Detectar el tipo de set basado en las cartas seleccionadas
   const detectSetType = selectedCards => {
     if (selectedCards.length === 0) return null;
 
@@ -1280,7 +1086,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     return uniqueTypes[0];
   };
 
-  // Helper: Verificar si hay un comodín (Harley Quin) en las cartas seleccionadas
   const checkForWildcard = selectedCards => {
     return selectedCards.some(card => card.name === "Harley Quin Wildcard");
   };
@@ -1333,41 +1138,39 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
   }
 
-  /*Handler de delay murder escape*/ 
   const handleConfirmDelayEscape = async (quantity) => {
-  try {
-    const cardId = selectedCards[0]?.id
+    try {
+      const cardId = selectedCards[0]?.id
 
-    const response = await fetch(
-      `http://localhost:8000/api/game/${gameState.roomId}/event/delay-murderer-escape`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP_USER_ID': userState.id.toString(),
-        },
-        body: JSON.stringify({
-          card_id: cardId,
-          quantity: quantity, 
-        }),
-      }
-    )
+      const response = await fetch(
+        `http://localhost:8000/api/game/${gameState.roomId}/event/delay-murderer-escape`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP_USER_ID': userState.id.toString(),
+          },
+          body: JSON.stringify({
+            card_id: cardId,
+            quantity: quantity, 
+          }),
+        }
+      )
 
-    const data = await response.json()
-    console.log(' Delay escape completado:', data)
+      const data = await response.json()
+      console.log(' Delay escape completado:', data)
 
-    gameDispatch({
-      type: 'EVENT_DELAY_ESCAPE_COMPLETE',
-      payload: data,
-    })
+      gameDispatch({
+        type: 'EVENT_DELAY_ESCAPE_COMPLETE',
+        payload: data,
+      })
 
-  } catch (err) {
-    console.error('Error en delay escape:', err)
-    setError(err.message)
+    } catch (err) {
+      console.error('Error en delay escape:', err)
+      setError(err.message)
+    }
   }
-}
 
-  /*Handler OneMoreSecret, hace el 2 post*/
   const handleOneMoreSecret = async (selectedSecret) => {
     try {
       setLoading(true)
@@ -1415,7 +1218,6 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
   }
 
-    //handler seleccionar jugador de one more
   const handleOneMoreSelectPlayer = async (jugadorId) => {
     try {
       setLoading(true);
@@ -1472,66 +1274,64 @@ const handleSelectOwnCardForTrade = async (selectedCardId) => {
     }
   };
 
-  //--------HANDLERS DEAD CARD FOLLY-------------//
-const handleDirection = async (direction) => {
-  try {
-    setLoading(true);
-    setError(null);
+  const handleDirection = async (direction) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const cardId = selectedCardIdForEvent;
+      const cardId = selectedCardIdForEvent;
 
-    if (!cardId || isNaN(cardId)) {
-      throw new Error("No se encontró un card_id válido para Dead Card Folly");
-    }
-    
-    const playerId = userState.id;
-    const roomId = gameState.roomId;
-
-    const response = await fetch(
-      `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "http-user-id": playerId.toString(),
-        },
-        body: JSON.stringify({
-          player_id: playerId,
-          card_id: cardId,
-          direction: direction.toUpperCase(), // "LEFT" o "RIGHT"
-        }),
+      if (!cardId || isNaN(cardId)) {
+        throw new Error("No se encontró un card_id válido para Dead Card Folly");
       }
-    );
+      
+      const playerId = userState.id;
+      const roomId = gameState.roomId;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Error en backend:", errorData);
-      throw new Error(errorData.detail || `Error jugando Dead Card Folly: ${response.status}`);
+      const response = await fetch(
+        `http://localhost:8000/api/game/${roomId}/event/dead-card-folly/play`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "http-user-id": playerId.toString(),
+          },
+          body: JSON.stringify({
+            player_id: playerId,
+            card_id: cardId,
+            direction: direction.toUpperCase(), // "LEFT" o "RIGHT"
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error en backend:", errorData);
+        throw new Error(errorData.detail || `Error jugando Dead Card Folly: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      gameDispatch({
+        type: "EVENT_DEAD_CARD_FOLLY_SELECT",
+        payload: {
+          action_id: data.action_id,
+          direction,
+          player_id: playerId,
+          message: `You chose ${direction}`,
+        },
+      });
+
+      setSelectedCardIdForEvent(null);
+
+    } catch (err) {
+      console.error("Error jugando Dead Card Folly:", err);
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json();
-
-    gameDispatch({
-      type: "EVENT_DEAD_CARD_FOLLY_SELECT",
-      payload: {
-        action_id: data.action_id,
-        direction,
-        player_id: playerId,
-        message: `You chose ${direction}`,
-      },
-    });
-
-
-    setSelectedCardIdForEvent(null);
-
-  } catch (err) {
-    console.error("Error jugando Dead Card Folly:", err);
-    setError(err.message);
-    setTimeout(() => setError(null), 5000);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleExchange = async (selectedCardId) => {
     try {
@@ -1601,11 +1401,6 @@ const handleDirection = async (direction) => {
     }
   };
 
-
-
-
-
-
   const getErrorMessage = (status, errorData) => {
     switch (status) {
       case 400:
@@ -1622,13 +1417,10 @@ const handleDirection = async (direction) => {
   }
 
   const printCardBacks = (n, type) => {
-
     const arrayForMap = []
-
     for (let i = 0; i < n; i++) {
       arrayForMap.push(i)
     }
-
     return (
       <div className='flex gap-5'>
         {arrayForMap.map(img => (
@@ -1645,7 +1437,6 @@ const handleDirection = async (direction) => {
 
   const getNombreTurnoActual = (id) => {
     const jugador = gameState.jugadores.find(player => player.player_id == id);
-
     if (jugador) {
       if (jugador.name == userState.name) return "Yo";
 
@@ -1677,15 +1468,18 @@ const handleDirection = async (direction) => {
       }}
     >
       
-      {/* Error display */}
-      {error && (
-        <div
-          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl"
-          style={{ zIndex: 9999, minWidth: '300px' }}
-        >
-          {error}
-        </div>
-      )}
+    {/* Error display */}
+    {error && (
+      <div
+        className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl"
+        style={{ zIndex: 9999, minWidth: '300px' }}
+      >
+        {error}
+      </div>
+    )}
+
+    {/* Nsf Banner */}
+    { gameState.nsfCounter.active && <NsfBanner handler={handlePlayNotSoFast} />}
 
     {/* MAIN CONTENT AREA (Tabs) */}
     <div className="relative flex-1 min-h-screen px-4 py-3">
@@ -1774,8 +1568,7 @@ const handleDirection = async (direction) => {
               </>
             ) : (         /*  Tab de otro jugador  */
 
-              <div className='flex flex-col items-center gap-5 overflow-y-auto h-96'>
-                
+              <div className='flex flex-col items-center gap-5 overflow-y-auto px-4' style={{ height: 'calc(100vh - 120px)' }}>                
                 {/* Secretos de otro jugador */}
                 <div className="">
                   <h2 className="text-white text-xl font-bold mb-2 text-center">
