@@ -1,6 +1,3 @@
-import { useGame } from "../context/GameContext";
-import { useUser } from "../context/UserContext";
-
 export const startActionWithCounterCheck = async ({
   roomId,
   userId,
@@ -19,12 +16,9 @@ export const startActionWithCounterCheck = async ({
   if (!setLoading || !setError) {
     throw new Error("setLoading and setError are required");
   }
-
   setLoading(true);
   setError(null);
-
   try {
-    // 1. Check if counter window is needed
     const request = {
         playerId: userId, // ID del jugador que inicia la acción
         cardIds: cardsIds, // Lista de IDs de cartas (cardsXgame.id) jugadas en la acción
@@ -33,8 +27,6 @@ export const startActionWithCounterCheck = async ({
             setPosition: setPosition ? setPosition : null, // Posición del set al que se agrega la carta (obligatorio si actionType=ADD_TO_SET)")
         }
     }
-
-    console.log(request);
     const response = await fetch(
       `http://localhost:8000/api/game/${roomId}/start-action`,
       {
@@ -46,12 +38,10 @@ export const startActionWithCounterCheck = async ({
         body: JSON.stringify(request),
       }
     );
-
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || "Start Action Failed");
     }
-
     // 2. No es cancelable entonces continuar con el efecto de la accion
     if (!data.cancellable) {
       return await resumeAction({
@@ -65,8 +55,6 @@ export const startActionWithCounterCheck = async ({
           gameDispatch,
         });
     }
-
-    console.log("SAVING DATA " + requiresEndpoint ? endpoint : actionIdentifier );
     // 3. Si es cancelable entonces guardar datos de la accion, y esperar la validacion e inicio de cadena de NSF para todos por wsocket
     gameDispatch({
         type: 'SAVE_ACTION_DATA', 
@@ -97,7 +85,6 @@ export const callOriginalEndpoint = async ({
   actionPayload,
   gameDispatch,
 }) => {
-  console.log("CALLING ORIGINAL ENDPOITN " + endpoint)
   const resp = await fetch(
     `http://localhost:8000/api/game/${roomId}${endpoint}`,
     {
@@ -109,13 +96,10 @@ export const callOriginalEndpoint = async ({
       body: JSON.stringify(payload),
     }
   );
-
   const data = await resp.json();
-
   if (!resp.ok) {
     throw new Error(data.detail || "Action failed");
   }
-
   // Continua con el efecto de la carta/set
   if (endpoint = "/look-into-ashes/play") {
     gameDispatch({
@@ -123,7 +107,6 @@ export const callOriginalEndpoint = async ({
       payload: { action_id: data.action_id, available_cards: data.available_cards } 
     })
   }
-
   if (endpoint = "/play-detective-set") {
     gameDispatch({
           type: actionIdentifier,
@@ -138,7 +121,6 @@ export const callOriginalEndpoint = async ({
       }
     });
   }
-
   if (endpoint = "/add-to-set") {
     gameDispatch({ 
           type: actionIdentifier, 
@@ -153,17 +135,20 @@ export const callOriginalEndpoint = async ({
         } 
     });
   }
-
+  if (endpoint = "/event/one-more") {
+    gameDispatch({
+      type: actionIdentifier,
+      payload: {
+        action_id: data.action_id,
+        available_secrets: data.available_secrets,
+      },
+    })
+  }
   gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
-
   return data;
 };
 
 export const playNotSoFast = async (card, userId, roomId, actionId, setError) => {
-    console.log('CARD FOR NSF: ', card );
-    console.log('PLAYER WHO COUNTERS: ', userId)
-    console.log('ACTIONID ', actionId);
-
     try {
       const request = {
         actionId: actionId,
@@ -181,13 +166,10 @@ export const playNotSoFast = async (card, userId, roomId, actionId, setError) =>
           body: JSON.stringify(request),
         }
       );
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.detail || "Action failed");
       }
-
       return response.ok;
     } catch (err) {
       setError(err.message);
@@ -204,10 +186,9 @@ export const resumeAction = async ({
   actionPayload,
   gameDispatch,
 }) => {
-  console.log("RESUMING ACTION ", requiresEndpoint ? endpoint : actionIdentifier);
   try {
     if (requiresEndpoint) {
-      // Flow A: Call endpoint first, then dispatch with response data
+      // llmar al endpoint
       const actionData = await callOriginalEndpoint({
         roomId,
         userId,
@@ -217,16 +198,14 @@ export const resumeAction = async ({
         actionPayload,
         gameDispatch
       });
-      
       return actionData;
     } else {
-      // Flow B: Just dispatch to start selection flow (no endpoint needed)
+      // Continuar con la accion sin endpoint
       gameDispatch({ 
         type: actionIdentifier, 
         payload: actionPayload 
       });
       gameDispatch({ type: "UPDATE_DRAW_ACTION", payload: { skipDiscard: true } });
-
       return true;
     }
   } catch (error) {
@@ -242,16 +221,13 @@ export const cancelEffect = async ({
   cardsIds,
   additionalData
 }) => {
-  console.log("CANCELING EFFECT " + actionId)
   try {
     const request = {
       actionId: actionId,
       playerId: userId, 
       cardIds: cardsIds,
       additionalData: additionalData,
-    }
-    console.log("request to cancel: " + request.additionalData);
-    
+    }    
     const response = await fetch(
       `http://localhost:8000/api/game/${roomId}/instant/not-so-fast/cancel`,
       {
@@ -263,13 +239,10 @@ export const cancelEffect = async ({
         body: JSON.stringify(request),
       }
     );
-
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.detail || "Cancel action failed");
     }
-
     return data;
   } catch (error) {
     console.error("Cancel effect error:", error);

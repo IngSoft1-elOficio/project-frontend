@@ -2279,11 +2279,6 @@ describe('GameContext', () => {
           result.current.connectToGame('room-123', 'user-456')
         })
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          '🔌 Connecting web-socket to roomId:',
-          'room-123'
-        )
-
         consoleLogSpy.mockRestore()
       })
 
@@ -2317,11 +2312,6 @@ describe('GameContext', () => {
         act(() => {
           result.current.disconnectFromGame()
         })
-
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-          '🔌 Disconnecting from RoomId = ',
-          'room-999'
-        )
 
         consoleLogSpy.mockRestore()
       })
@@ -2585,12 +2575,6 @@ describe('GameContext', () => {
       act(() => {
         result.current.connectToGame('room-123', 'user-456')
       })
-
-      // Verificar log de conexión
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-123'
-      )
 
       // Simular evento connected
       const connectedHandler = mockSocket.on.mock.calls.find(
@@ -2992,12 +2976,6 @@ describe('GameContext', () => {
         result.current.disconnectFromGame()
       })
 
-      // Verificar que se llamó el console.log con el roomId correcto
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Disconnecting from RoomId = ',
-        'room-xyz-789'
-      )
-
       consoleLogSpy.mockRestore()
     })
 
@@ -3015,20 +2993,10 @@ describe('GameContext', () => {
         result.current.connectToGame('room-alpha', 'user-1')
       })
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-alpha'
-      )
-
       // Reconectar a otra sala
       act(() => {
         result.current.connectToGame('room-beta', 'user-2')
       })
-
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔌 Connecting web-socket to roomId:',
-        'room-beta'
-      )
 
       consoleLogSpy.mockRestore()
     })

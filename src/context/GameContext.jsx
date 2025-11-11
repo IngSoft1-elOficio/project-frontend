@@ -8,7 +8,7 @@ import {
   useCallback,
 } from 'react'
 import io from 'socket.io-client'
-import { resumeAction, cancelEffect } from '../helpers/NFS'
+import { resumeAction, cancelEffect } from '../helpers/NSF'
 
 const GameContext = createContext()
 
@@ -190,7 +190,6 @@ const gameInitialState = {
         }
 
       case 'UPDATE_GAME_STATE_PUBLIC':
-
         return {
           ...state,
           roomId: action.payload.room_id ?? state.roomId,
@@ -345,17 +344,33 @@ const gameInitialState = {
         }
       
       case 'NSF_PLAYED':
+        const nsfPlayedLog = {
+          id: `instant-${Date.now()}`,
+          message: action.payload.message,
+          type: 'instant',
+          timestamp: new Date().toISOString(),
+          playerId: action.payload.player_id,
+        };
+
         return {
           ...state,
           nsfCounter: {
             ...state.nsfCounter,
             nsfActionId: action.payload.nsf_action_id,
-            nsfChain: [ ...state.nsfCounter.nsfChain, { playerId: action.payload.card_id, timestamp: action.payload.timestamp } ],
-          }
+            nsfChain: [ ...state.nsfCounter.nsfChain, { playerId: action.payload.player_id, timestamp: action.payload.timestamp } ],
+          },
+          logs: [...state.logs, nsfPlayedLog].slice(-50)
         }
 
       case 'NSF_COUNTER_COMPLETE':
         // Se termino la cadena de NSF entonces se retoma la accion
+        const nsfComplete = {
+          id: `instant-${Date.now()}`,
+          message: action.payload.message,
+          type: 'instant',
+          timestamp: new Date().toISOString(),
+        }
+
         return {
           ...state,
           nsfCounter: {
@@ -371,7 +386,8 @@ const gameInitialState = {
               actionPayload: null,
             },
             nsfChain: []
-          }
+          },
+          logs: [...state.logs, nsfComplete].slice(-50)
         }
 
       // ---------------------
@@ -1561,8 +1577,6 @@ export const GameProvider = ({ children }) => {
       socketRef.current = null
       gameDispatch({ type: 'SOCKET_DISCONNECTED' })
     }
-    // Optional: Clear processed actions
-    processedNsfActions.current.clear()
   }, [gameState.roomId])
 
   return (
