@@ -266,6 +266,8 @@ export default function GameScreen() {
 
     // ----------  And then there was one more... ----------
     if (card.name === "And then there was one more...") {
+      const hasVisibleSecret = gameState.secretsFromAllPlayers.some(s => s.hidden === false);
+      if (!hasVisibleSecret) return;
       const payload = {
         card_id: card.id
       }
@@ -312,6 +314,7 @@ export default function GameScreen() {
       })
       setSelectedCards([])
       setHasPLayedEvent(true)
+      return;
     }
 
     // ----------  Card trade ----------
@@ -339,6 +342,7 @@ export default function GameScreen() {
 
       setSelectedCards([])
       setHasPLayedEvent(true)
+      return;
     }  
 
     // La carta no esta implementada    
